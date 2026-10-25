@@ -3,21 +3,21 @@
 """
 run
 
-The write_file test of Man-In-Grey's file command language. It runs the
+The write_file test of Man_In_Grey's file command language. It runs the
 promoted Man_In_Grey, from $REPO_HOME/consumer, through an unblessed gate,
 with constraints it writes for the files it expects, and checks:
 
-  run_1      the stage beside this file: each composer's file written, and
+  run_1      orchestrate composer/: each composer's file written, and
              out/obsolete.conf, made by the test beforehand, unlinked; the
              files are compared with expected/run_1
-  run_2      the same stage again: replace_keep files kept as backups named
+  run_2      orchestrate composer/ again: replace_keep files kept as backups named
              <file>.YYYYMMDDTHHMMSSZ, the replace file overwritten with no
              backup; compared with expected/run_2
-  create     stage_create: a file opened in create mode is written once, and
+  create     compose composer_create/new.py: a file opened in create mode is written once, and
              a second run is refused by the filesystem check
-  refused    stage_refused: a journal opening one allowed file and one the
+  refused    orchestrate composer_refused/: a journal opening one allowed file and one the
              constraints do not allow is refused whole by the constraint check
-  argument   stage_argument: a composer giving a wrong mode fails when it
+  argument   orchestrate composer_argument/: a composer giving a wrong mode fails when it
              places the command, and no journal reaches the gate
 
 A refused run is to leave every file as it was. Backup names carry the time
@@ -143,8 +143,8 @@ def compare(log ,run_name ,work_dpath):
       problem.append(f"owner uid {path.lstat().st_uid}, expected {os.getuid()}")
     log.check(not problem ,what ,"; ".join(problem) or None)
 
-def run_Man_In_Grey(program ,stage ,work_dpath ,constraint_fpath):
-  command = [str(program) ,"--stage" ,str(TEST_DPATH / stage) ,"--constraints" ,str(constraint_fpath)]
+def run_Man_In_Grey(program ,command ,path ,work_dpath ,constraint_fpath):
+  command = [str(program) ,command ,str(TEST_DPATH / path) ,"--constraints" ,str(constraint_fpath)]
   result = subprocess.run(command ,cwd=work_dpath ,capture_output=True ,text=True)
   return result.returncode ,(result.stdout + result.stderr).strip()
 
@@ -196,7 +196,7 @@ def test(repo_home):
 
   # run_1 and run_2
   for run_name in ("run_1" ,"run_2"):
-    status ,output = run_Man_In_Grey(program ,"stage" ,work_dpath ,constraint_fpath)
+    status ,output = run_Man_In_Grey(program ,"orchestrate" ,"composer" ,work_dpath ,constraint_fpath)
     if check_status(log ,f"{run_name} Man_In_Grey exits 0" ,status ,0 ,output):
       compare(log ,run_name ,work_dpath)
     else:
@@ -204,25 +204,25 @@ def test(repo_home):
       return log.summary()
 
   # create: once, then refused
-  status ,output = run_Man_In_Grey(program ,"stage_create" ,work_dpath ,constraint_fpath)
+  status ,output = run_Man_In_Grey(program ,"compose" ,"composer_create/new.py" ,work_dpath ,constraint_fpath)
   check_status(log ,"create Man_In_Grey exits 0" ,status ,0 ,output)
   new = out / "new.conf"
   log.check(new.is_file() and new.read_text() == "made once\n" and stat.S_IMODE(new.stat().st_mode) == 0o600
             ,"create out/new.conf" ,None if new.is_file() else "not written")
   before = snapshot(out)
-  status ,output = run_Man_In_Grey(program ,"stage_create" ,work_dpath ,constraint_fpath)
+  status ,output = run_Man_In_Grey(program ,"compose" ,"composer_create/new.py" ,work_dpath ,constraint_fpath)
   check_status(log ,"create again is refused by the filesystem check" ,status ,1 ,output ,"filesystem: refused")
   log.check(snapshot(out) == before ,"create again changes nothing")
 
   # a journal the constraints refuse
   before = snapshot(out)
-  status ,output = run_Man_In_Grey(program ,"stage_refused" ,work_dpath ,constraint_fpath)
+  status ,output = run_Man_In_Grey(program ,"orchestrate" ,"composer_refused" ,work_dpath ,constraint_fpath)
   check_status(log ,"refused is refused by the constraint check" ,status ,1 ,output ,"constraint: refused")
   log.check(snapshot(out) == before ,"refused changes nothing, the allowed file included")
 
   # a composer with a wrong argument
   before = snapshot(out)
-  status ,output = run_Man_In_Grey(program ,"stage_argument" ,work_dpath ,constraint_fpath)
+  status ,output = run_Man_In_Grey(program ,"orchestrate" ,"composer_argument" ,work_dpath ,constraint_fpath)
   check_status(log ,"argument fails in the composer" ,status ,2 ,output ,"wrong_mode.py: open: mode 'overwrite'")
   log.check(snapshot(out) == before ,"argument changes nothing")
 

@@ -1,6 +1,6 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-FileLanguage - a small command language for writing files, Man-In-Grey's
+FileLanguage - a small command language for writing files, Man_In_Grey's
 test language. It is a constrained form of the POSIX file interface.
 
   open(directory ,name ,mode ,owner ,permission)   produces a symbol for the file

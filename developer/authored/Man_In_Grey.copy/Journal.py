@@ -1,6 +1,6 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-Journal - the journal of Man-In-Grey, independent of any command language.
+Journal - the journal of Man_In_Grey, independent of any command language.
 
 A composer places commands into a journal. A command is data: the name of
 the command, its arguments, and the composer that placed it. A command whose

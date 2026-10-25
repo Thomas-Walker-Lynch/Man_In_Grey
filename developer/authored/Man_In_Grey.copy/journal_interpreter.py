@@ -1,6 +1,6 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-journal_interpreter - the general journal interpreter of Man-In-Grey.
+journal_interpreter - the general journal interpreter of Man_In_Grey.
 
 A bespoke journal interpreter is a gate, a guard and this general
 interpreter. The bespoke interpreter chooses the command language and the
