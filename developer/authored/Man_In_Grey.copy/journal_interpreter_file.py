@@ -6,15 +6,17 @@ journal_interpreter_file
 The bespoke journal interpreter for the file command language, started by
 its gate, Man_In_Grey_file_gate, with the journal on standard input.
 
-Its constraints are the file constraints_file.json beside it. When it runs
-privileged, that file, this program, and the modules it loads are to be
-owned by root and writable by no one else, or it refuses to run. When it runs
-unprivileged, through a gate that was not blessed, the caller can give other
+Its constraints are the file constraints_file.json beside it. On every run,
+that file, this program, the modules it loads, and the directory holding
+them are to be owned by root or by the interpreter account, the account
+this program runs as, and writable by no other account, or it refuses to
+run. Through a gate that was not blessed, the caller can give other
 constraints with --constraints, since nothing then runs with more than the
-caller's own rights.
+caller's own rights; that file is checked the same way.
 
 Usage: journal_interpreter_file [--constraints <file>] [--print] [--stop-after <check>]
-  --constraints <file>   constraints to use in place of constraints_file.json; unprivileged only
+  --constraints <file>   constraints to use in place of constraints_file.json; refused when the
+                         gate changed the account or the interpreter account is root
   --print                print the journal as decoded
   --stop-after <check>   stop after decode, wellformed, constraint, validity or filesystem
 """
@@ -33,25 +35,25 @@ MODULE = ("Journal.py" ,"FileLanguage.py" ,"journal_interpreter.py" ,"journal_in
 def privileged():
   return os.geteuid() != os.getuid() or os.getegid() != os.getgid()
 
-def owned_by_root_problem(path):
+def trusted_owner_problem(path):
+  "None when path is owned by root or the interpreter account and writable by no other account"
   try:
     st = os.lstat(path)
   except OSError as error:
     return f"{path}: {error.strerror}"
-  if st.st_uid != 0:
-    return f"{path} is not owned by root"
+  if st.st_uid not in (0 ,os.geteuid()):
+    return f"{path} is owned by uid {st.st_uid}, neither root nor the interpreter account"
   if st.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
-    return f"{path} is writable by an account other than root"
+    return f"{path} is writable by group or other accounts"
   return None
 
-# Running privileged, every file this program loads is checked before any of
-# it is imported: a module runs code when it is imported.
-if privileged():
-  for each in [HERE_DPATH ,CONSTRAINT_FILE] + [HERE_DPATH / m for m in MODULE]:
-    problem = owned_by_root_problem(each)
-    if problem:
-      print(f"error: refusing to run privileged: {problem}" ,file=sys.stderr)
-      sys.exit(2)
+# Every file this program loads is checked before any of it is imported, on
+# every run: a module runs code when it is imported.
+for each in [HERE_DPATH ,CONSTRAINT_FILE] + [HERE_DPATH / m for m in MODULE]:
+  problem = trusted_owner_problem(each)
+  if problem:
+    print(f"error: refusing to run: {problem}" ,file=sys.stderr)
+    sys.exit(2)
 
 import journal_interpreter
 import FileLanguage
@@ -59,9 +61,12 @@ import FileLanguage
 
 def load_constraint(given):
   if given is not None:
-    if privileged():
-      raise RuntimeError("--constraints is refused when running privileged")
+    if privileged() or os.geteuid() == 0:
+      raise RuntimeError("--constraints is refused when the gate changed the account or the interpreter account is root")
     path = Path(given)
+    problem = trusted_owner_problem(path)
+    if problem:
+      raise RuntimeError(f"refusing the constraints: {problem}")
   else:
     path = CONSTRAINT_FILE
   with open(path ,encoding="utf-8") as f:

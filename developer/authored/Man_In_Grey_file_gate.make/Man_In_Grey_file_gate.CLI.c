@@ -8,9 +8,10 @@
 
   The journal interpreter is at a path fixed when the gate is compiled,
   relative to the gate: ../Man_In_Grey/journal_interpreter_file.py. The caller
-  cannot name another. When running privileged, the gate refuses to start it
-  unless the interpreter, and every directory above it, is owned by root and
-  writable by no other account.
+  cannot name another. The gate refuses to start it unless the interpreter,
+  and every directory above it, is owned by root or by the interpreter
+  account, and writable by no other account. The check is made on every run,
+  blessed or not.
 
   The journal arrives on standard input and is passed on unread. Every
   argument is passed on to the journal interpreter, except --print-flags,
@@ -50,8 +51,12 @@ Local bool privileged(void){
   return geteuid() != getuid() || getegid() != getgid();
 }
 
-/* path and every directory above it: owned by root, writable by no other account */
-Local void check_owned_by_root(const char *path){
+/*
+  path and every directory above it: owned by root or by the interpreter
+  account, the effective uid, and writable by no other account
+*/
+Local void check_trusted_owner(const char *path){
+  uid_t interpreter_uid = geteuid();
   char prefix[PATH_MAX];
   size_t length = strlen(path);
   if(length >= sizeof prefix) die("path too long: %s" ,path);
@@ -60,11 +65,13 @@ Local void check_owned_by_root(const char *path){
     memcpy(prefix ,path ,i); prefix[i] = '\0';
     struct stat st;
     if( lstat(prefix ,&st) != 0 ) die("cannot examine %s: %s" ,prefix ,strerror(errno));
-    if( st.st_uid != 0 ) die("refusing to run privileged: %s is not owned by root" ,prefix);
-    if( st.st_mode & (S_IWGRP | S_IWOTH) ) die("refusing to run privileged: %s is writable by an account other than root" ,prefix);
+    if( st.st_uid != 0 && st.st_uid != interpreter_uid )
+      die("refusing to run: %s is owned by uid %ld, neither root nor the interpreter account" ,prefix ,(long)st.st_uid);
+    if( st.st_mode & (S_IWGRP | S_IWOTH) )
+      die("refusing to run: %s is writable by group or other accounts" ,prefix);
   }
   struct stat st;
-  if( lstat("/" ,&st) != 0 || st.st_uid != 0 ) die("refusing to run privileged: / is not owned by root");
+  if( lstat("/" ,&st) != 0 || st.st_uid != 0 ) die("refusing to run: / is not owned by root");
 }
 
 Local void print_flags(void){
@@ -90,7 +97,7 @@ int main(int argc ,char **argv){
   char interpreter[PATH_MAX];
   if( !realpath(candidate ,interpreter) ) die("journal interpreter not found: %s" ,candidate);
 
-  if( privileged() ) check_owned_by_root(interpreter);
+  check_trusted_owner(interpreter);
 
   /* harden the process before starting the interpreter */
   uid_t caller_uid = getuid();

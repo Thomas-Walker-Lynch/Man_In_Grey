@@ -288,14 +288,21 @@ def execute(data ,log):
     for index in sorted(opened):
       record = opened[index]
       argument ,dirfd ,fd ,tmp = record["argument"] ,record["dirfd"] ,record["fd"] ,record["tmp"]
+      target = argument["name"]
+      where = f"{argument['directory']}/{target}"
       account = pwd.getpwnam(argument["owner"])
       os.fsync(fd)
-      os.fchown(fd ,account.pw_uid ,account.pw_gid)
+      # Only root can give a file away. Any other interpreter account makes
+      # files it already owns, so the owner is changed only when it differs.
+      st = os.fstat(fd)
+      if (st.st_uid ,st.st_gid) != (account.pw_uid ,account.pw_gid):
+        try:
+          os.fchown(fd ,account.pw_uid ,account.pw_gid)
+        except OSError as error:
+          raise OSError(error.errno ,f"{where}: cannot give it the owner {argument['owner']} and that account's group: {error.strerror}")
       os.fchmod(fd ,argument["permission"])
       os.fsync(fd)
       os.close(fd); record["fd"] = None
-      target = argument["name"]
-      where = f"{argument['directory']}/{target}"
       if argument["mode"] == "create":
         os.link(tmp ,target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd ,follow_symlinks=False)
         os.unlink(tmp ,dir_fd=dirfd)
