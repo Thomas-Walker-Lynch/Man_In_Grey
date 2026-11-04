@@ -3,10 +3,23 @@
 
 import os
 import sys
+import json
 import argparse
 import tempfile
 
 PROJECT_ROLES = ["administrator", "consumer", "developer", "tester"]
+
+# Role shells stack: setup run inside a role shell starts a shell in the new
+# role, and exiting it returns to the shell it was started from. A loop
+# through setup, such as one started from ~/.bashrc, is stopped at this depth.
+DEPTH_MAX = 8
+
+# The environment setup was first run from, before any role, recorded so that
+# every role shell starts from it rather than from the role shell around it.
+BASE_KEY = "RT_SETUP_BASE"
+
+# The outer role's values, for handing an Emacs shell buffer back on exit.
+OUTER_KEY = ("REPO_HOME", "PROJECT", "ROLE", "PATH")
 
 def main():
     parser = argparse.ArgumentParser(
@@ -15,19 +28,35 @@ def main():
     parser.add_argument("role", choices=PROJECT_ROLES, help="The project role to assume.")
     args = parser.parse_args()
 
-    env = os.environ.copy()
+    outer = os.environ.copy()
 
-    # A role shell started inside another role shell inherits the outer
-    # project's PATH, REPO_HOME and functions, and a loop through setup would
-    # start shells without end. RT_SETUP_DEPTH counts the role shells this
-    # process is inside; any nesting is refused.
-    depth = env.get("RT_SETUP_DEPTH", "0")
+    # A role shell started inside another would otherwise inherit the outer
+    # role's environment: its tool directory on PATH, its variables, and the
+    # shell functions the shared setup exports. So every role shell starts
+    # from the base environment, the one setup was first run from, however
+    # deeply role shells are stacked. RT_SETUP_DEPTH counts the role shells
+    # this process is inside.
+    depth = outer.get("RT_SETUP_DEPTH", "0")
     depth = int(depth) if depth.isdigit() else 0
-    if depth > 0:
-        print(f"setup: already inside a role shell ({env.get('PROJECT', '?')} {env.get('ROLE', '?')}).")
-        print("setup: type 'exit' to leave it, then run setup again.")
+    if depth >= DEPTH_MAX:
+        print(f"setup: already {depth} role shells deep; refusing, to stop a loop through setup.")
         sys.exit(1)
+
+    base = None
+    if depth > 0 and BASE_KEY in outer:
+        try:
+            base = json.loads(outer[BASE_KEY])
+        except ValueError:
+            base = None
+    if not isinstance(base, dict):
+        base = {k: v for k, v in outer.items() if not k.startswith("RT_SETUP_")}
+
+    env = dict(base)
+    env[BASE_KEY] = json.dumps(base)
     env["RT_SETUP_DEPTH"] = str(depth + 1)
+    if depth > 0:
+        for key in OUTER_KEY:
+            env[f"RT_SETUP_OUTER_{key}"] = outer.get(key, "")
 
     # Python-domain logic: Variables and Paths
     #   The project is the directory holding this file, whatever REPO_HOME the
@@ -67,6 +96,11 @@ def main():
         'fi',
         'if [[ -n "${INSIDE_EMACS}" ]] && command -v env_to_emacs >/dev/null 2>&1; then',
         '    env_to_emacs',
+        '    # inside another role shell: on exit, hand the Emacs buffer back to the outer role',
+        '    if [[ -n "${RT_SETUP_OUTER_ROLE:-}" ]]; then',
+        '        rt_setup_env_to_emacs="$(command -v env_to_emacs)"',
+        '        trap \'REPO_HOME="$RT_SETUP_OUTER_REPO_HOME" PROJECT="$RT_SETUP_OUTER_PROJECT" ROLE="$RT_SETUP_OUTER_ROLE" PATH="$RT_SETUP_OUTER_PATH" "$rt_setup_env_to_emacs"\' EXIT',
+        '    fi',
         'fi',
         'rm -f "${BASH_SOURCE[0]}"'
     ]
