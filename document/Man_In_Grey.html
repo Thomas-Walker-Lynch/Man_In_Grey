@@ -26,7 +26,7 @@
       <RT·title
         title="Man_In_Grey"
         author="Thomas Walker Lynch"
-        date="2026-11-05"
+        date="2026-11-06"
         copyright="2026 Reasoning Technology">
       </RT·title>
 
@@ -67,31 +67,28 @@
             The ordered instructions the composers place, encoded as binary data in CBOR.
           </RT·entry>
           <RT·entry key="instruction">
-            A journal entry. It consists of an instruction name followed by arguments.
+            A journal entry. It consists of an instruction operation specifier followed by arguments.
           </RT·entry>
           <RT·entry key="symbol">
             In the sense of this manual, a <RT·term>symbol</RT·term> is a placeholder for an instruction result. Currently it is merely an index into the journal's instruction list.
           </RT·entry>
           <RT·entry key="instruction language">
-            A grammar that describes the available instructions, and for each instruction specifies the number of arguments it takes.
+            A grammar that describes the available instruction formats. Each instruction currently has the format of an instruction operation specifier followed by arguments.
           </RT·entry>
           <RT·entry key="gate">
             A compiled program that is invoked with a journal on its standard input, runs the guard on it, and when the guard approves the journal, runs the interpreter on it.
           </RT·entry>
           <RT·entry key="guard">
-            A program, started by the gate. It is given a journal, and either rejects it, or approves it by writing the one line <RT·code>guard &lt;name&gt; check passed</RT·code> and exiting 0.
+            A program, started by the gate. It is given a journal, and either rejects it, or approves it by writing the one line <RT·code>guard &lt;language&gt; check passed</RT·code> and exiting 0.
           </RT·entry>
           <RT·entry key="constraint">
             Any semantic that participates in the <RT·term>guard</RT·term> code's approval process.
           </RT·entry>
           <RT·entry key="interpreter, journal interpreter">
-            The program, started by the gate once the guard has approved the journal, that executes the journal's instructions in order.
+            The interpreter is invoked by the gate after, and only if, the guard has approved the journal. The interperter walks the journal while executing the instructions in order.
           </RT·entry>
           <RT·entry key="real uid, effective uid">
-            The two user ids a process carries. The effective uid determines what the process is permitted to do, and the real uid names the account the process was started for. See <a href="#sec-account"><RT·Counter·read snapshot="sec-account" key="counter count"></RT·Counter·read></a>.
-          </RT·entry>
-          <RT·entry key="orchestrator account, composer account, gate invoking account, gate owner account, guard account, interpreter account">
-            For each program, the account of its effective uid. The gate has two: account A, the gate invoking account, of its real uid; and account B, of its effective uid, which is the gate owner account when the gate is setuid. See <a href="#sec-account"><RT·Counter·read snapshot="sec-account" key="counter count"></RT·Counter·read></a>.
+            The two user ids a process carries. The effective uid determines what the process is permitted to do, and the real uid identifies the ultimate invoking process's real uid. See <a href="#sec-account"><RT·Counter·read snapshot="sec-account" key="counter count"></RT·Counter·read></a>.
           </RT·entry>
         </RT·dictionary>
       </RT·section>
@@ -109,6 +106,9 @@
         </p>
         <p>
           The journal is encoded in CBOR, whose strings are length-prefixed. Decoding CBOR makes maps, lists, strings and bytes, and cannot run code, so a journal reaches account B as data and nothing else. 
+        </p>
+        <p>
+          Man_In_Grey replaces the template, not the syntax of the file being written. Content is still to be well formed for the program that reads the file, so a composer writing HTML escapes a <RT·code>&lt;</RT·code> in its text as HTML requires. An instruction language can take that work over too, as the example in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a> does.
         </p>
       </RT·section>
 
@@ -128,46 +128,40 @@
       </RT·section>
 
       <RT·section id="sec-account">
-        <RT·name>Account and uid</RT·name>
-        <p>
-          Each account has a number, its user id, or <RT·code>uid</RT·code>. A file records the uid of the account that owns it, and a process carries two uids, its <RT·term>real uid</RT·term> and its <RT·term>effective uid</RT·term>. When a person logs in, the login program starts his shell with both uids set to that of his account, and every process started from the shell inherits them. In everyday speech such processes are said to be owned by the person, or to run under his account. As the two uids of a process can differ, this manual names the one it means, as in "the guard runs with the effective uid of account B".
-        </p>
-        <p>
-          The effective uid determines a process's permissions. The kernel compares it with a file's owner and permission bits when the process opens the file, and only a process whose effective uid is 0, root's, can do what is reserved to root. The real uid names the account the process was started for. Among its other uses, the kernel lets a process send a signal to another process whose real uid equals its own real or effective uid.
-        </p>
-        <p>
-          A process inherits both uids from the process that invoked it, unless the program file it runs has its <RT·code>setuid</RT·code> permission bit set. The kernel then takes the effective uid from the file's owner instead, and the real uid is inherited as before. A process therefore gets its effective uid in one of two ways: from the process that invoked it, or from the owner of a setuid program file. Groups work the same way, with a real gid, an effective gid and a <RT·code>setgid</RT·code> bit, beside the supplementary groups, which are inherited unchanged.
-        </p>
-        <p>
-          By convention, the gate is the only program of Man_In_Grey ever given the setuid bit. For each of the other programs, the account of its effective uid is named after the program: the orchestrator account, the composer account, the guard account and the interpreter account. The gate has two accounts. Account A, the <RT·term>gate invoking account</RT·term>, is the account of the gate's real uid, which the gate inherits from the program that invoked it. It is that program's real uid, and usually its effective uid too. Account B is the account of the gate's effective uid. When the gate is setuid, account B is the <RT·term>gate owner account</RT·term>, the account that owns the gate's file.
-        </p>
-        <p>
-          When the gate is not setuid, it inherits its effective uid from the invoking program as well, so accounts A and B are the same whenever that program's two uids are. They are also the same when the gate is setuid and owned by account A, as when a gate's owner invokes it. The gate starts the guard and the interpreter, and neither of their files is setuid, so both keep the gate's uids: the real uid of account A and the effective uid of account B. The guard account and the interpreter account are therefore account B.
-        </p>
-        <p>
-          The guard knows accounts A and B for certain, as the kernel gives them to it as its real and effective uid. However, apart from knowing that account A provided the journal, it has no way of externally verifying the journal's provenance. Note the further discussion of this topic in <a href="#sec-composer"><RT·Counter·read snapshot="sec-composer" key="counter count"></RT·Counter·read></a>.
-        </p>
+        <RT·name>Permissions</RT·name>
 
         <RT·section>
-          <RT·name>With an orchestrator</RT·name>
+          <RT·name>uid</RT·name>
           <p>
-            Man_In_Grey's orchestrator calls each composer as a function in its own process, so the composers run with the orchestrator's uids, and the composer account is the orchestrator account. The orchestrator then invokes the gate, so account A is the account of the orchestrator's real uid. When the orchestrator is started from a person's shell, both of its uids are those of his account, and the orchestrator account, the composer account and account A are all his account.
+            Each account has a number called its user id, or <RT·code>uid</RT·code>. Each file has an owner, noted with a uid. Each process is associated with two uids, its <RT·term>real uid</RT·term> and its <RT·term>effective uid</RT·term>. When a person logs in, the login program starts his shell with both uids set to that of his account, and every process started from the shell inherits them. In colloquial speech such processes are said to be owned by the person, or to run under his account. However, the two uids associated with a process can differ, so these colloquialisms are imprecise.
+          </p>
+          <p>
+            The effective uid determines a process's permissions. So for example when opening a file, the kernel compares the process's effective uid with a file's owner and permission bits to determine if the process is allowed to open the file. Among its other uses, the kernel lets a process send a signal to another process whose real uid equals its own real or effective uid.
+          </p>
+          <p>
+            A process inherits both uids from the process that invoked it, unless the program file it runs has its <RT·code>setuid</RT·code> permission bit set. In which case, the kernel then takes the effective uid from the file's owner instead, while the real uid remains inherited as before. A process therefore gets its effective uid in one of two ways: from the process that invoked it, or from the owner of a setuid program file. (Groups work the same way, with a real gid, an effective gid and a <RT·code>setgid</RT·code> bit, beside the supplementary groups, which are inherited unchanged.)
+          </p>
+          <p>
+            By convention, the gate is the only program of Man_In_Grey that can optionally be given the setuid bit. When the gate is not setuid, it inherits its effective and real uids from the program that invoked it. When it is setuid, it inherits its real uid from the program that invoked it, and it inherits its effective uid from its file owner. Thus, the gate process has reliable information directly from the kernel on who invoked it, as that is its real uid. It also has reliable information directly from the kernel on who owned its executable file, as that becomes its effective uid.
+          </p>
+
+          <p>
+            Due to this mechanism the effective uid for a setuid gate program can be different than the effective uid of the program that invoked it. In the chain of events of program A running and then invoking the gate, the effective uid in that thread of execution will start as the effective uid for program A, and then the effective uid will change to match the uid of the gate executable file owner. We can say that the effective uid change from A to B, where A is the invoking programs effective uid, an B is the owner of the gate executable file.
           </p>
         </RT·section>
 
         <RT·section>
-          <RT·name>Without an orchestrator</RT·name>
+          <RT·name>Orchestrator</RT·name>
           <p>
-            Man_In_Grey's orchestrator is one program that can invoke the gate, and any program can: an application acting as its own orchestrator, a shell pipeline, a service, or a command that sends a saved journal. All the gate knows is that a program whose real uid is account A's invoked it.
+            The orchestrator is a utility program provided with Man_In_Grey. The orchestrator calls one or more composer programs, then sends the resulting journal to a gate program. Like all processes, when the orchestrator program runs, it has a real and effective uid. When the orchestrator is run from a shell, these are both inherited from the shell, and are typically pointing to the login user. In any case, the composers that it invokes will then run with the same effective and real uids as the orchestrator. When the gate executable file has its setuid bit set, when the gate is invoke by the orchestrator, the gate will inherit its real uid from the orchestrator, and will take its effective uid from the gate's executable file owner.
           </p>
+
           <p>
-            Account A therefore answers for every journal it gives the gate. The guard cannot tell a journal from a careful composer from one typed by hand, copied from elsewhere, or made by code another account slipped into one of account A's programs. What bounds account A is everything its constraints allow, not what its composers happen to produce, so the constraints for each account are best written as narrowly as that account needs.
+            An application making use of Man_In_Grey can bypass the orchestrator and call the composers and gate on its own. When this happens the gate's real ID will be that of the application. For a setuid gate, its effective uid still comes from its file owner.
           </p>
+
           <p>
-            Likewise, anything that can run code with account A's uid has account A's use of the gate. Keeping the composers to account A, as <a href="#sec-composer"><RT·Counter·read snapshot="sec-composer" key="counter count"></RT·Counter·read></a> describes, is one part of keeping that code to account A; the other programs account A runs are the rest.
-          </p>
-          <p>
-            The gate's own protections hold whatever program invokes it, since none of them depends on the caller. The invoking program sets more of the gate's starting state than its arguments, standard input and environment, though: it can leave file descriptors open, lower resource limits, and send signals. The gate settles the first two before anything else; signals it cannot stop. See <a href="#sec-gate"><RT·Counter·read snapshot="sec-gate" key="counter count"></RT·Counter·read></a> and <a href="#sec-problem"><RT·Counter·read snapshot="sec-problem" key="counter count"></RT·Counter·read></a>.
+            It is possible that the application is design such that the gate executable file does not have its setuid bit set, or that it does have its setuid set but the gate owner is the same as that of the orchestrator or that of the direct calling application. In such a case, the execution thread will keep the same real and effective uids the entire time it runs. In this mode the Man_In_Grey can not achieve anything the application could not have achieved on its own, but it still might be a convenient expression of the desired functionality.
           </p>
         </RT·section>
       </RT·section>
@@ -175,18 +169,38 @@
       <RT·section id="sec-gate">
         <RT·name>Gate</RT·name>
         <p>
-          A setuid program owned by root runs with root's effective uid, while its real uid still names the account that invoked it. That is how <RT·code>passwd</RT·code> lets a person change his own password in <RT·code>/etc/shadow</RT·code>, and how it knows whose password to change. A setuid gate works the same way: owned by account B, it runs with the effective uid of account B and the real uid of account A.
+          The gate is compiled because Linux ignores the setuid bit on a script started with <RT·code>#!</RT·code>. Given no arguments, the gate prints its usage. Its command <RT·code>flags</RT·code> reports the gate's real and effective uid and gid with their names, whether they differ, the name of the gate's instruction language, and the paths of the guard and the interpreter.
         </p>
+        <RT·code>
+        2026-11-06 07:55:01 Z [:] Thomas·developer@IdealX
+        §/home/Thomas·developer/project/Man_In_Grey/consumer§
+        > ./Man_In_Grey_gate/Man_In_Grey_file_gate flags
+        real.uid=2005
+        real.user_name=Thomas·developer
+        real.gid=2005
+        real.group_name=Thomas·developer
+        effective.uid=2005
+        effective.user_name=Thomas·developer
+        effective.gid=2005
+        effective.group_name=Thomas·developer
+        uid_differ=0
+        gid_differ=0
+        language=file
+        guard.path=/home/Thomas·developer/project/Man_In_Grey/consumer/Man_In_Grey/guard_file.py
+        interpreter.path=/home/Thomas·developer/project/Man_In_Grey/consumer/Man_In_Grey/interpreter_file.py
+        </RT·code>
+
         <p>
-          The gate is compiled because Linux ignores the setuid bit on a script started with <RT·code>#!</RT·code>: between the kernel opening the script and the interpreter reading it, the script could be swapped. Given no arguments, the gate prints its usage. Its command <RT·code>flags</RT·code> reports account A, account B, whether they differ, and the guard's name and the paths of the guard and the interpreter. Its command <RT·code>admit</RT·code> takes the journal on standard input, with the options <RT·code>constraints &lt;file&gt;</RT·code> and <RT·code>check_only</RT·code>. When the gate is asked to <RT·code>admit</RT·code> a journal, it:
+          Th <RT·code>admit</RT·code> command takes the journal on standard input, with the options <RT·code>constraints &lt;file&gt;</RT·code> and <RT·code>check_only</RT·code>. When the gate is asked to <RT·code>admit</RT·code> a journal, it:
         </p>
+
         <ol>
           <li>opens <RT·code>/dev/null</RT·code> on any of descriptors 0, 1 and 2 the invoking program left closed, and closes every descriptor above 2, so nothing the invoking program opened reaches the guard or the interpreter;</li>
           <li>raises each resource limit that could stop the guard or the interpreter partway, file size and CPU time to unlimited, address space and data size to 1 GiB, stack size to 8 MiB, and open files to 64, as far as the hard limit allows, or past it when account B is root; and refuses when one stays too low;</li>
           <li>finds the guard and the interpreter at paths fixed when the gate is compiled, relative to the gate itself, so account A cannot name others;</li>
           <li>refuses unless the guard and the interpreter, and every directory above them, are owned by root or by account B, and writable by no other account;</li>
           <li>clears the environment, setting only <RT·code>PATH</RT·code> and <RT·code>LANG</RT·code>, sets the file mode mask to <RT·code>077</RT·code>, marks the process not dumpable, and changes directory to <RT·code>/</RT·code>;</li>
-          <li>records account A in <RT·code>MIG_GATE_INVOKING_UID</RT·code>, <RT·code>MIG_GATE_INVOKING_GID</RT·code> and <RT·code>MIG_GATE_INVOKING_NAME</RT·code>;</li>
+          <li>records its real ids, account A's, in <RT·code>MIG_REAL_UID</RT·code>, <RT·code>MIG_REAL_GID</RT·code> and <RT·code>MIG_REAL_USER_NAME</RT·code>;</li>
           <li>reads the journal from its standard input, up to 16 MiB;</li>
           <li>starts <RT·code>/usr/bin/python3 -E -s -B</RT·code> on the guard, with the journal on its standard input, and goes on only when the guard approves the journal;</li>
           <li>starts the interpreter the same way, with the same journal.</li>
@@ -201,12 +215,12 @@
           The constraints, not the gate, decide which accounts can give a journal. The gate decides only whether the guard and the interpreter it would start can be trusted, and whether the guard approved the journal.
         </p>
         <p>
-          A gate that is not setuid keeps the uids of the program that invoked it, so accounts A and B are normally the same, and the guard still applies. When they are the same, the guard accepts constraints given with <RT·code>constraints &lt;file&gt;</RT·code>, checked as its own files are, since nothing runs with more than account A's own rights. When they differ, or account B is root, the guard refuses them and reads only its own constraints file. A gate that is not setuid is the convenient way to use Man_In_Grey on files the person owns, and the way to prototype an instruction language before making a gate setuid for it.
+          A gate that is not setuid keeps the uids of the program that invoked it, so accounts A and B are normally the same, and the guard still applies. When they are the same, the guard and the interpreter accept constraints given with <RT·code>constraints &lt;file&gt;</RT·code>, which the gate passes to both, checked as their own files are, since nothing runs with more than account A's own rights. When they differ, or account B is root, both refuse them and read only the constraints file installed beside them. A gate that is not setuid is the convenient way to use Man_In_Grey on files the person owns, and the way to prototype an instruction language before making a gate setuid for it.
         </p>
         <RT·section>
           <RT·name>One gate per instruction language</RT·name>
           <p>
-            Man_In_Grey's general gate is the library module <RT·code>Gate.lib.c</RT·code>, whose function <RT·code>Man_In_Grey_gate·Gate·run</RT·code> takes the guard's name, the guard's path and the interpreter's path, and the command line. An instruction language's gate is a <RT·code>*.CLI.c</RT·code> of three lines that calls it with the three fixed. The gate of the file language:
+            Man_In_Grey's general gate is the library module <RT·code>Gate.lib.c</RT·code>, whose function <RT·code>Man_In_Grey_gate·Gate·run</RT·code> takes the name of the instruction language, the guard's path and the interpreter's path, and the command line. An instruction language's gate is a <RT·code>*.CLI.c</RT·code> of three lines that calls it with the three fixed. The gate of the file language:
           </p>
           <RT·code>
             #include "Gate.lib.c"
@@ -217,7 +231,7 @@
             }
           </RT·code>
           <p>
-            The general gate is curried, with its first three arguments supplied when the gate is compiled. Whoever invokes a gate can choose neither program it runs; if he could, he could give it a guard that approves everything. The guard's name holds no space and no control character, and the gate refuses to run when it does.
+            The general gate is curried, with its first three arguments supplied when the gate is compiled. Whoever invokes a gate can choose neither program it runs; if he could, he could give it a guard that approves everything. The language name holds no space and no control character, and the gate refuses to run when it does. Man_In_Grey has two gates: the file language's, above, and <RT·code>Man_In_Grey_emplace_bio_gate</RT·code>, the gate of the example language in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>.
           </p>
         </RT·section>
         <RT·section>
@@ -260,7 +274,7 @@
         <RT·section>
           <RT·name>Verdict</RT·name>
           <p>
-            A guard reads the journal on its standard input. Its standard error is for the person: one line per finding, as <RT·code>&lt;tag&gt;: &lt;message&gt;</RT·code>, the first two <RT·code>name:</RT·code> and <RT·code>version:</RT·code>, then such lines as <RT·code>check_passed: wellformed</RT·code> or <RT·code>constraint_broken: &lt;what is wrong&gt;</RT·code>. Its standard output is for the verdict alone. A guard approves a journal by writing exactly one line there, <RT·code>guard &lt;name&gt; check passed</RT·code>, with the name the gate has compiled in, and exiting 0. The gate takes the journal as approved on that line and that status together, and on nothing else, and only then admits it to the interpreter; a guard that refuses exits 1, and one that cannot check exits 2.
+            A guard reads the journal on its standard input. Its standard error is for the person: one line per finding, as <RT·code>&lt;tag&gt;: &lt;message&gt;</RT·code>, the first two <RT·code>name:</RT·code> and <RT·code>version:</RT·code>, then such lines as <RT·code>check_passed: wellformed</RT·code> or <RT·code>constraint_broken: &lt;what is wrong&gt;</RT·code>. Its standard output is for the verdict alone. A guard approves a journal by writing exactly one line there, <RT·code>guard &lt;language&gt; check passed</RT·code>, with the language name the gate has compiled in, and exiting 0. The gate takes the journal as approved on that line and that status together, and on nothing else, and only then admits it to the interpreter; a guard that refuses exits 1, and one that cannot check exits 2.
           </p>
           <p>
             The verdict travels out of band from the findings. A finding quotes the journal, a file name for instance, and goes to standard error, so nothing in a journal can put a line on standard output. A crash cannot approve a journal either: an uncaught Python exception exits 1, and a guard that dies leaves no verdict.
@@ -271,7 +285,7 @@
       <RT·section id="sec-interpreter">
         <RT·name>Interpreter</RT·name>
         <p>
-          The gate starts the interpreter only after the guard has approved the journal, with the effective uid of account B and the same journal on its standard input. The interpreter does not check the constraints; that is the guard's work. It decodes the journal, checks once more that the journal is well formed, and then executes the instructions in order.
+          The gate starts the interpreter only after the guard has approved the journal, with the effective uid of account B and the same journal on its standard input. The interpreter does not check the constraints; that is the guard's work. It reads them, from the same file as the guard, only for what execution needs, as the example language's interpreter takes from them the directory its pages go in. It decodes the journal, checks once more that the journal is well formed, and then executes the instructions in order.
         </p>
         <p>
           The interpreter writes one line to standard output for each thing it does, as <RT·code>&lt;tag&gt;: &lt;message&gt;</RT·code>, and the gate copies each line to the person and to the system log by the output rule. Its exit status is 0 when the journal was executed, 1 when execution failed, and 2 when the journal could not be read or is not well formed.
@@ -288,6 +302,9 @@
         </p>
         <p>
           The instruction language is not specific to Man_In_Grey. An application that mounts home directories has a language of mount and unmount; one that manages accounts has a language for making and deleting them. Each gate starts the guard and the interpreter of one instruction language, and they refuse a journal written in another.
+        </p>
+        <p>
+          A language can be made as narrow as its application. The narrower it is, the less a journal can say, and the less the guard has to rule out. The file language can name any file, so its constraints list the files allowed. The example language, <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>, can name no file at all: what it writes, and where, follows from the account that gives the journal.
         </p>
 
         <RT·section id="sec-file-language">
@@ -394,20 +411,27 @@
         <RT·section>
           <RT·name>Building</RT·name>
           <p>
-            Man_In_Grey is a Harmony project with two namespaces: <RT·code>Man_In_Grey.copy</RT·code>, the Python programs, and <RT·code>Man_In_Grey_gate.make</RT·code>, the general gate and the file language's gate. In the developer role, from its directory <RT·code>developer/</RT·code>, <RT·code>build "*"</RT·code> and <RT·code>promote write</RT·code> place them in the following layout, which is how each part finds the others:
+            Man_In_Grey is a Harmony project with two namespaces: <RT·code>Man_In_Grey.copy</RT·code>, the Python programs, and <RT·code>Man_In_Grey_gate.make</RT·code>, the general gate and the gates of the file language and the example language. In the developer role, from its directory <RT·code>developer/</RT·code>, <RT·code>build "*"</RT·code> and <RT·code>promote write</RT·code> place them in the following layout, which is how each part finds the others:
           </p>
           <RT·code>
-            consumer/Man_In_Grey/Man_In_Grey                the command a person runs
-            consumer/Man_In_Grey/Man_In_Grey.py             the orchestrator
-            consumer/Man_In_Grey/Journal.py                 symbols, instructions, the journal, CBOR
-            consumer/Man_In_Grey/FileLanguage.py            the file language: interface, checks, execution
-            consumer/Man_In_Grey/Guard.py                   the general guard
-            consumer/Man_In_Grey/Interpreter.py             the general interpreter
-            consumer/Man_In_Grey/guard_file.py              the file language's guard
-            consumer/Man_In_Grey/interpreter_file.py        the file language's interpreter
-            consumer/Man_In_Grey/constraints_file.json      its constraints, refusing everything
-            consumer/Man_In_Grey_gate/Man_In_Grey_file_gate the file language's gate
-            consumer/Man_In_Grey_gate/libMan_In_Grey.a      the general gate, for other gates
+            consumer/Man_In_Grey/Man_In_Grey                       the command a person runs
+            consumer/Man_In_Grey/Man_In_Grey.py                    the orchestrator
+            consumer/Man_In_Grey/install_gate                      installs a gate setuid, run by root
+            consumer/Man_In_Grey/Journal.py                        symbols, instructions, the journal, CBOR
+            consumer/Man_In_Grey/Constraint.py                     loading the constraints
+            consumer/Man_In_Grey/Guard.py                          the general guard
+            consumer/Man_In_Grey/Interpreter.py                    the general interpreter
+            consumer/Man_In_Grey/FileLanguage.py                   the file language: interface, checks, execution
+            consumer/Man_In_Grey/guard_file.py                     the file language's guard
+            consumer/Man_In_Grey/interpreter_file.py               the file language's interpreter
+            consumer/Man_In_Grey/constraints_file.json             its constraints, refusing everything
+            consumer/Man_In_Grey/EmplaceBioLanguage.py             the example language
+            consumer/Man_In_Grey/guard_emplace_bio.py              its guard
+            consumer/Man_In_Grey/interpreter_emplace_bio.py        its interpreter
+            consumer/Man_In_Grey/constraints_emplace_bio.json      its constraints, refusing everything
+            consumer/Man_In_Grey_gate/Man_In_Grey_file_gate        the file language's gate
+            consumer/Man_In_Grey_gate/Man_In_Grey_emplace_bio_gate the example language's gate
+            consumer/Man_In_Grey_gate/libMan_In_Grey.a             the general gate, for other gates
           </RT·code>
           <p>
             The same layout is staged in <RT·code>developer/scratchpad/made/</RT·code>, so an experiment in the developer role of the Man_In_Grey project runs from there. Both sides need the Python package <RT·code>cbor2</RT·code>, each in its own Python. <RT·code>Man_In_Grey</RT·code>, and any program using the journal interface, runs on the first <RT·code>python3</RT·code> on <RT·code>PATH</RT·code>, which in a Harmony role is the project's linked Python when there is one; install the package into it with <RT·code>python3 -m pip install cbor2</RT·code>. The gate always starts <RT·code>/usr/bin/python3 -E -s</RT·code>, so the guard and the interpreter use neither a person's Python nor a copy installed with <RT·code>pip install --user</RT·code> into <RT·code>~/.local</RT·code>. The system Python needs the package from the distribution, installed by root: <RT·code>python-cbor2</RT·code> on Arch, <RT·code>python3-cbor2</RT·code> on Debian, and on openSUSE, which names packages for the Python they are built for, <RT·code>python313-cbor2</RT·code> for Python 3.13. To see what the interpreter will see: <RT·code>/usr/bin/python3 -E -s -c 'import cbor2; print(cbor2.__file__)'</RT·code>.
@@ -444,7 +468,7 @@
             </RT·entry>
           </RT·dictionary>
           <p>
-            <RT·code>Man_In_Grey orchestrate &lt;path&gt;</RT·code> runs the one composer in a composer file, or every composer in a composer directory. No option given to Man_In_Grey reaches <RT·code>compose</RT·code>; a composer's settings are written in the composer itself.
+            <RT·code>Man_In_Grey orchestrate &lt;path&gt;</RT·code> runs the one composer in a composer file, or every composer in a composer directory. No option given to Man_In_Grey reaches <RT·code>compose</RT·code>; a composer's settings are written in the composer itself. The <RT·code>journal_iface</RT·code> a composer is given is that of the gate's instruction language: the orchestrator asks the gate for its flags, and loads the module named for its <RT·code>language</RT·code>, <RT·code>FileLanguage.py</RT·code> for <RT·code>file</RT·code> and <RT·code>EmplaceBioLanguage.py</RT·code> for <RT·code>emplace_bio</RT·code>.
           </p>
         </RT·section>
 
@@ -463,10 +487,10 @@
               Run the composer in a composer file, or every composer in a composer directory, and invoke the gate with the journal.
             </RT·entry>
             <RT·entry key="gate &lt;file&gt;">
-              The gate to invoke. Default: <RT·code>../Man_In_Grey_gate/Man_In_Grey_file_gate</RT·code> from <RT·code>Man_In_Grey.py</RT·code>.
+              The gate to invoke, which also sets the instruction language the composers write in. Default: <RT·code>../Man_In_Grey_gate/Man_In_Grey_file_gate</RT·code> from <RT·code>Man_In_Grey.py</RT·code>.
             </RT·entry>
             <RT·entry key="constraints &lt;file&gt;">
-              Constraints for a run in which accounts A and B are the same, given to the guard; refused when they differ or account B is root.
+              Constraints for a run in which accounts A and B are the same, given to the guard and the interpreter; refused when they differ or account B is root.
             </RT·entry>
             <RT·entry key="print">
               Print the journal after composing.
@@ -486,27 +510,248 @@
         <RT·section id="sec-install">
           <RT·name>Installing a setuid gate</RT·name>
           <p>
-            As root, copy <RT·code>consumer/Man_In_Grey/</RT·code> and <RT·code>consumer/Man_In_Grey_gate/</RT·code> side by side into a directory owned by root and writable by no other account, make every file owned by root and not group- or other-writable, put the application's constraints in <RT·code>constraints_file.json</RT·code>, and make the gate owned by account B and setuid. The kernel ignores the setuid and setgid bits on a file system mounted <RT·code>nosuid</RT·code>, as removable drives and some separately mounted <RT·code>/home</RT·code> directories are, so the directory is to be on a file system mounted without it. For root as account B:
+            A setuid gate is installed by root, with <RT·code>install_gate</RT·code>, which is promoted beside <RT·code>Man_In_Grey</RT·code>:
           </p>
           <RT·code>
-            chown root:root Man_In_Grey_gate/Man_In_Grey_file_gate
-            chmod 4755 Man_In_Grey_gate/Man_In_Grey_file_gate
-            Man_In_Grey_gate/Man_In_Grey_file_gate flags
+            sudo consumer/Man_In_Grey/install_gate install &lt;gate&gt; owner &lt;account&gt; into &lt;directory&gt; [constraints &lt;file&gt;]
           </RT·code>
           <p>
-            <RT·code>4755</RT·code> is the mode <RT·code>755</RT·code> with the setuid bit, <RT·code>4000</RT·code>, added. For an account B other than root, give the gate account B as its owner and account B's group as its group, and set the setgid bit, <RT·code>2000</RT·code>, too: <RT·code>chmod 6755</RT·code>. Only root can give a file away, so an interpreter whose effective uid is that of an account B other than root can make files only account B owns, and its group has to be account B's group too. <RT·code>flags</RT·code> reports account A, account B, whether they differ, and the guard's name and the paths the gate finds the guard and the interpreter at. Promotion replaces files and sets neither the owner nor the setuid bit, so the installation is redone after each promotion that changes the interpreter. The installation step is a candidate for Man_In_Grey itself, once there is a language for installing programs.
+            It copies <RT·code>Man_In_Grey/</RT·code> and the one gate named from <RT·code>Man_In_Grey_gate/</RT·code> into the directory, side by side, as the gate's compiled paths expect. Every file and directory it installs is owned by root and writable by no other account, except the gate, which it gives to account B, the owner account named, and then makes setuid. The order matters, since changing a file's owner clears its setuid bit. For root as account B the gate's mode is <RT·code>4755</RT·code>, the mode <RT·code>755</RT·code> with the setuid bit, <RT·code>4000</RT·code>, added. For any other account B it is <RT·code>6755</RT·code>, with the setgid bit, <RT·code>2000</RT·code>, too, and account B's group as the gate's group. Only root can give a file away, so an interpreter whose effective uid is that of an account B other than root makes files account B owns, with the effective gid's group; setgid makes that account B's group.
+          </p>
+          <p>
+            The constraints given with <RT·code>constraints &lt;file&gt;</RT·code> are installed as <RT·code>constraints_&lt;language&gt;.json</RT·code>. Without the option, an installed constraints file is kept, and a first installation gets the one promoted with Man_In_Grey, which refuses everything. <RT·code>install_gate</RT·code> refuses a directory that is not absolute, that an account other than root owns or can write, or that is on a file system mounted <RT·code>nosuid</RT·code>, where the kernel ignores the setuid and setgid bits, as it does on removable drives and some separately mounted <RT·code>/home</RT·code> directories. It ends by printing the installed gate's flags, as root sees them: real uid root's, effective uid account B's. Promotion replaces files and sets neither the owner nor the setuid bit, so the installation is redone after each promotion that changes the gate, the guard or the interpreter. The installation is a candidate for Man_In_Grey itself, once there is a language for installing programs.
           </p>
         </RT·section>
 
         <RT·section>
           <RT·name>Testing</RT·name>
           <p>
-            The tester's test <RT·code>tester/authored/write_file</RT·code> runs the promoted Man_In_Grey through a gate that is not setuid, so accounts A and B are the same, with constraints it writes into its scratchpad directory, and checks twenty-five things. Two runs of composers using every mode and <RT·code>unlink</RT·code> are compared with <RT·code>expected/run_1</RT·code> and <RT·code>expected/run_2</RT·code>, with backup times replaced by the letters <RT·code>YYYYMMDDTHHMMSSZ</RT·code>. A file opened in <RT·code>create</RT·code> mode is written once and refused the second time. A journal with one allowed file and one the constraints do not list is refused whole. A composer giving a wrong mode fails before any journal reaches the gate. A composer directory holding a composer other accounts can write is refused by the orchestrator. A <RT·code>check_only</RT·code> run is approved by the guard and changes nothing. A run under a file size limit the gate cannot raise is refused before the guard starts. Each refusal leaves every file as it was. Since the gate checks ownership on every run, every directory from <RT·code>/</RT·code> down to the promoted interpreter is to be writable by no account but its owner. In the tester role, from its directory <RT·code>tester/</RT·code>:
+            The tester has two tests. Each runs the promoted Man_In_Grey through a gate that is not setuid, so accounts A and B are the same, with constraints it writes into its scratchpad directory. The test <RT·code>tester/authored/write_file</RT·code> runs the file language's gate, and checks twenty-five things. Two runs of composers using every mode and <RT·code>unlink</RT·code> are compared with <RT·code>expected/run_1</RT·code> and <RT·code>expected/run_2</RT·code>, with backup times replaced by the letters <RT·code>YYYYMMDDTHHMMSSZ</RT·code>. A file opened in <RT·code>create</RT·code> mode is written once and refused the second time. A journal with one allowed file and one the constraints do not list is refused whole. A composer giving a wrong mode fails before any journal reaches the gate. A composer directory holding a composer other accounts can write is refused by the orchestrator. A <RT·code>check_only</RT·code> run is approved by the guard and changes nothing. A run under a file size limit the gate cannot raise is refused before the guard starts. Each refusal leaves every file as it was. Since the gate checks ownership on every run, every directory from <RT·code>/</RT·code> down to the promoted interpreter is to be writable by no account but its owner. In the tester role, from its directory <RT·code>tester/</RT·code>:
           </p>
           <RT·code>
             authored/write_file/run test
             authored/write_file/run clean
           </RT·code>
+          <p>
+            The test <RT·code>tester/authored/emplace_bio</RT·code> runs the example language's gate, and checks twenty-six things. A page with every style and with text that looks like markup is compared with <RT·code>expected/page.html</RT·code>, and its picture with the one given. A later run with a JPEG places it and removes the PNG, and a run with no picture removes the JPEG. A <RT·code>check_only</RT·code> run changes nothing. Seven journals are then made without the journal interface and given to the gate directly, as a program other than the orchestrator could: one whose text instruction carries a file name, one with a style the language does not have, one with text before any paragraph, one with an SVG picture, one with more text than its constraints allow, one from an account its constraints do not list, and one for a page that has been made a symbolic link. Each is refused by the check that is to refuse it, and changes nothing:
+          </p>
+          <RT·code>
+            authored/emplace_bio/run test
+            authored/emplace_bio/run clean
+          </RT·code>
+        </RT·section>
+      </RT·section>
+
+      <RT·section id="sec-example">
+        <RT·name>Example: emplace_bio</RT·name>
+        <p>
+          A host publishes a bio page for each of the accounts it allows, at <RT·code>/srv/http/bio/&lt;user_name&gt;.html</RT·code>, with the account's picture beside it. The directory belongs to the web server's account, <RT·code>http</RT·code> on Arch and <RT·code>www-data</RT·code> on Debian, so a person cannot write his page there himself. He writes a composer giving his display name, his text and his picture, and runs Man_In_Grey with the gate <RT·code>Man_In_Grey_emplace_bio_gate</RT·code>, which the administrator has installed setuid to the web server's account. The interpreter then runs with the effective uid of <RT·code>http</RT·code>, and builds the page.
+        </p>
+        <p>
+          Here account B is not root, and the gate stands between two ordinary accounts. The example is made so that a reader can see each step is safe: a person can change only his own page, and only to a page made of his text and picture.
+        </p>
+
+        <RT·section>
+          <RT·name>The instruction language</RT·name>
+          <RT·dictionary key="Instruction" definition="Meaning">
+            <RT·entry key="display_name(text)">
+              The page's title and heading. Given once.
+            </RT·entry>
+            <RT·entry key="paragraph()">
+              Starts a paragraph.
+            </RT·entry>
+            <RT·entry key="text(content ,style)">
+              A run of text in the current paragraph. <RT·code>style</RT·code> is a list drawn from <RT·code>strong</RT·code>, <RT·code>emphasis</RT·code>, <RT·code>underline</RT·code> and <RT·code>strikethrough</RT·code>; an empty list is plain text.
+            </RT·entry>
+            <RT·entry key="picture(content)">
+              The bytes of a PNG or JPEG image. At most once.
+            </RT·entry>
+          </RT·dictionary>
+          <p>
+            No instruction names a file. The page's file names come from the user name of the real uid, which the kernel gives the guard and the interpreter, so a person can write only his own page. The directory comes from the constraints, which the administrator installs. A journal describes the whole page: a run that gives no picture removes the picture an earlier run placed.
+          </p>
+          <p>
+            Decoration travels out of band. A run's styles are a list beside its text, not marks in it, and the interpreter turns each style into one fixed tag with no attribute: <RT·code>&lt;strong&gt;</RT·code>, <RT·code>&lt;em&gt;</RT·code>, <RT·code>&lt;u&gt;</RT·code> and <RT·code>&lt;s&gt;</RT·code>, nested in that order. It writes the rest of the page from a fixed form, and escapes every text it is given, so nothing a person gives becomes markup. There is nothing to sanitize: an attribute such as <RT·code>onload</RT·code>, or a <RT·code>&lt;script&gt;</RT·code> element, cannot be expressed in the language.
+          </p>
+        </RT·section>
+
+        <RT·section>
+          <RT·name>The composer</RT·name>
+          <p>
+            The composer is Thomas's own program, running with his uid. It holds the text in code and reads the picture from beside the composer directory:
+          </p>
+          <RT·code>
+            # composer/bio.py
+
+            from pathlib import Path
+
+            DISPLAY_NAME = "Thomas"
+
+            BIO = [
+              [("I write " ,[]) ,("software" ,["emphasis"]) ,(" and " ,[]) ,("documentation" ,["strong"]) ,("." ,[])]
+              ,[("Text such as &lt;b&gt;this&lt;/b&gt; is shown as written." ,[])]
+            ]
+
+            def compose(prov ,journal_iface):
+              journal_iface.display_name(DISPLAY_NAME)
+              for paragraph in BIO:
+                journal_iface.paragraph()
+                for content ,style in paragraph:
+                  journal_iface.text(content ,style)
+              journal_iface.picture((Path(prov.composer_root_dpath).parent / "picture.jpg").read_bytes())
+          </RT·code>
+          <p>
+            A composer could as well read a file in a notation its author likes, such as <RT·code>*emphasis*</RT·code>, and turn it into runs. That conversion runs with the person's own uid, so a mistake in it stays on his side; the gate only ever receives runs and style names.
+          </p>
+        </RT·section>
+
+        <RT·section>
+          <RT·name>The constraints</RT·name>
+          <RT·code>
+            {
+              "gate_invoking_account": ["Thomas", "Alice"],
+              "directory": "/srv/http/bio",
+              "text_max_bytes": 8192,
+              "picture_max_bytes": 1048576
+            }
+          </RT·code>
+          <p>
+            One constraints file serves every account, since the page's name follows from the account. <RT·code>gate_invoking_account</RT·code> lists the accounts that can have a page. <RT·code>text_max_bytes</RT·code> bounds the display name and text together, and <RT·code>picture_max_bytes</RT·code> the picture.
+          </p>
+        </RT·section>
+
+        <RT·section>
+          <RT·name>The guard</RT·name>
+          <RT·dictionary key="Check" definition="What it looks at">
+            <RT·entry key="wellformed">
+              Only the four instructions, with exactly their arguments; one display name; at most one picture; text only within a paragraph, and no paragraph without text; every style one of the four, none twice; no control character in any text.
+            </RT·entry>
+            <RT·entry key="constraint">
+              Account A is listed in <RT·code>gate_invoking_account</RT·code>; the text and the picture are within their limits; the constraints give an absolute directory.
+            </RT·entry>
+            <RT·entry key="content">
+              The picture begins with the signature of a PNG or a JPEG file. SVG is refused on purpose: it is a document that can hold script, and run it when opened by itself.
+            </RT·entry>
+            <RT·entry key="filesystem">
+              The directory exists, is reached through no symbolic link, and can be written by the effective uid's account; the account's page and pictures, where they exist, are regular files.
+            </RT·entry>
+          </RT·dictionary>
+          <p>
+            The filesystem check asks whether the effective uid can write the directory. Python's <RT·code>os.access</RT·code>, like the system call <RT·code>access</RT·code> under it, answers for the real uid unless asked with <RT·code>effective_ids=True</RT·code>, since it was made for setuid programs to ask what the person who ran them could do.
+          </p>
+        </RT·section>
+
+        <RT·section>
+          <RT·name>The interpreter</RT·name>
+          <p>
+            The interpreter writes the picture and the page to temporary files in the directory, gives each permission <RT·code>0644</RT·code>, and renames each into place, then removes a picture the page no longer shows. The files are owned by <RT·code>http</RT·code>, the effective uid that made them. The page Thomas's composer gives:
+          </p>
+          <RT·code>
+            &lt;!DOCTYPE html&gt;
+            &lt;html&gt;
+            &lt;head&gt;
+            &lt;meta charset="utf-8"&gt;
+            &lt;meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'"&gt;
+            &lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;
+            &lt;title&gt;Thomas&lt;/title&gt;
+            &lt;/head&gt;
+            &lt;body&gt;
+            &lt;h1&gt;Thomas&lt;/h1&gt;
+            &lt;img src="Thomas.jpg" alt="Thomas"&gt;
+            &lt;p&gt;I write &lt;em&gt;software&lt;/em&gt; and &lt;strong&gt;documentation&lt;/strong&gt;.&lt;/p&gt;
+            &lt;p&gt;Text such as &amp;lt;b&amp;gt;this&amp;lt;/b&amp;gt; is shown as written.&lt;/p&gt;
+            &lt;/body&gt;
+            &lt;/html&gt;
+          </RT·code>
+          <p>
+            The interpreter's own form is built the way a composer builds a file: constant strings with the escaped texts between them. The <RT·code>Content-Security-Policy</RT·code> line tells the browser to run no script and load nothing but images from the same site, a second wall behind the first, since the page cannot hold script anyway.
+          </p>
+        </RT·section>
+
+        <RT·section>
+          <RT·name>Installing</RT·name>
+          <p>
+            The administrator makes the directory, owned by the web server's account, and installs the gate, as root, with the constraints above in <RT·code>bio.json</RT·code>:
+          </p>
+          <RT·code>
+            sudo install -d -o http -g http -m 755 /srv/http/bio
+            sudo consumer/Man_In_Grey/install_gate install Man_In_Grey_emplace_bio_gate owner http into /usr/local/lib/Man_In_Grey constraints bio.json
+          </RT·code>
+          <RT·code>
+            install_gate: installed /usr/local/lib/Man_In_Grey/Man_In_Grey/
+            install_gate: installed /usr/local/lib/Man_In_Grey/Man_In_Grey/constraints_emplace_bio.json from /root/bio.json
+            install_gate: installed /usr/local/lib/Man_In_Grey/Man_In_Grey_gate/Man_In_Grey_emplace_bio_gate, owner http:http, mode 6755
+            install_gate: its flags, as seen by root:
+            real.uid=0
+            real.user_name=root
+            real.gid=0
+            real.group_name=root
+            effective.uid=996
+            effective.user_name=http
+            effective.gid=995
+            effective.group_name=http
+            uid_differ=1
+            gid_differ=1
+            language=emplace_bio
+            guard.path=/usr/local/lib/Man_In_Grey/Man_In_Grey/guard_emplace_bio.py
+            interpreter.path=/usr/local/lib/Man_In_Grey/Man_In_Grey/interpreter_emplace_bio.py
+            install_gate: run it as: /usr/local/lib/Man_In_Grey/Man_In_Grey/Man_In_Grey orchestrate &lt;composer&gt; gate /usr/local/lib/Man_In_Grey/Man_In_Grey_gate/Man_In_Grey_emplace_bio_gate
+          </RT·code>
+          <p>
+            The web server is to serve <RT·code>/srv/http/bio</RT·code> as static files, with no server-side processing, which is how it serves an <RT·code>.html</RT·code> file unless configured otherwise.
+          </p>
+        </RT·section>
+
+        <RT·section>
+          <RT·name>Running</RT·name>
+          <p>
+            Thomas runs the installed Man_In_Grey from his bio directory, which holds <RT·code>composer/</RT·code> and <RT·code>picture.jpg</RT·code>:
+          </p>
+          <RT·code>
+            /usr/local/lib/Man_In_Grey/Man_In_Grey/Man_In_Grey orchestrate composer gate /usr/local/lib/Man_In_Grey/Man_In_Grey_gate/Man_In_Grey_emplace_bio_gate
+          </RT·code>
+          <RT·code>
+            gate: asked: real uid 2006 (Thomas), effective uid 996 (http), journal of 1857 bytes
+            guard: name: emplace_bio
+            guard: version: 1
+            guard: constraints: /usr/local/lib/Man_In_Grey/Man_In_Grey/constraints_emplace_bio.json
+            guard: journal: 10 instructions
+            guard: check_passed: wellformed
+            guard: check_passed: constraint
+            guard: check_passed: content
+            guard: check_passed: filesystem
+            gate: admitted: guard emplace_bio check passed
+            interpreter: emplaced: /srv/http/bio/Thomas.jpg
+            interpreter: emplaced: /srv/http/bio/Thomas.html
+            gate: executed: the journal was executed
+          </RT·code>
+          <p>
+            An account the constraints do not list is refused before anything is written:
+          </p>
+          <RT·code>
+            gate: asked: real uid 2007 (alice), effective uid 996 (http), journal of 1855 bytes
+            guard: name: emplace_bio
+            guard: version: 1
+            guard: constraints: /usr/local/lib/Man_In_Grey/Man_In_Grey/constraints_emplace_bio.json
+            guard: journal: 10 instructions
+            guard: check_passed: wellformed
+            guard: constraint_broken: gate invoking account 'alice' is not allowed to give journals to this gate
+            gate: refused: by the guard
+          </RT·code>
+          <p>
+            The constraints list <RT·code>Alice</RT·code>, and account names are compared exactly, so the account <RT·code>alice</RT·code> is not her. A person who gives <RT·code>constraints &lt;file&gt;</RT·code> to this gate is refused too, since its real and effective ids differ.
+          </p>
+        </RT·section>
+
+        <RT·section>
+          <RT·name>Why it is safe</RT·name>
+          <ul>
+            <li>A journal names no file, and the guard refuses an instruction with any argument the language does not have, so a journal cannot point the interpreter anywhere. The page's name comes from the kernel's real uid, and its directory from the administrator's constraints.</li>
+            <li>The interpreter runs with the effective uid of <RT·code>http</RT·code>, not root, so even a fault in it reaches only what the web server's account can write.</li>
+            <li>The page's text cannot become markup, since the interpreter escapes it and writes every tag itself. The page cannot become server code either: its name always ends in <RT·code>.html</RT·code>, never <RT·code>.php</RT·code> or <RT·code>.htaccess</RT·code>.</li>
+            <li>The guard refuses a page or picture that has been made a symbolic link, and a directory reached through one, so a link cannot redirect the write to another file of <RT·code>http</RT·code>'s.</li>
+            <li>The picture is published as given. The content check confirms its format, not what it shows, nor what its metadata says: a JPEG from a phone can carry the place it was taken. A composer that is to strip such metadata does so before placing the picture.</li>
+          </ul>
         </RT·section>
       </RT·section>
 
