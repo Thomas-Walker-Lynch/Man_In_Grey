@@ -156,4 +156,4 @@ def instruction_line(index ,instruction):
     else:
       part.append(f"{name}={value!r}")
   composer = instruction.get("composer")
-  return f"@{index:<3} {instruction['name']:<8} {' '.join(part)}" + (f"   ({composer})" if composer else "")
+  return f"@{index:<3} {instruction['name']:<12} {' '.join(part)}" + (f"   ({composer})" if composer else "")

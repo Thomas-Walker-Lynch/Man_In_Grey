@@ -1,6 +1,6 @@
 /*
   Man_In_Grey_file_gate - the gate of the file instruction language: the general
-  gate with its guard's name and the guard's and interpreter's paths fixed.
+  gate with the language name and the guard's and interpreter's paths fixed.
 */
 #include "Gate.lib.c"
 

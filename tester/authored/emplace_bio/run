@@ -1,0 +1,292 @@
+#!/usr/bin/env python3
+# -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
+"""
+run
+
+The emplace_bio test of Man_In_Grey's example language. It copies the
+promoted Man_In_Grey, from $REPO_HOME/consumer, into its scratchpad
+directory, puts constraints of its own at the top of the copy's
+guard_emplace_bio.py, placing pages in its scratchpad, and runs that copy
+through the emplace_bio gate, not setuid. It checks:
+
+  page       orchestrate composer/: <user_name>.html is compared with
+             expected/page.html, every text in it escaped, every style one tag,
+             and <user_name>.png is the given picture
+  jpeg       orchestrate composer_jpeg/: the JPEG is placed as <user_name>.jpg, and
+             the PNG an earlier run placed is removed
+  none       orchestrate composer_no_picture/: the page shows no picture, and the
+             JPEG is removed
+  check_only orchestrate composer/ with check_only: approved, and nothing changes
+
+and, with journals made without the journal interface and given to the gate
+directly, as a program other than the orchestrator could:
+
+  name       a text instruction with a file name among its arguments: refused by
+             the wellformed check, since the language has no way to name a file
+  style      a style the language does not have: refused by the wellformed check
+  order      text before any paragraph: refused by the wellformed check
+  svg        an SVG picture: refused by the content check
+  long       more text than is_allowed_text_size allows: refused by the constraint check
+  account    an account is_allowed_account does not allow: refused by the constraint check
+  link       a page that has been made a symbolic link: refused by the filesystem check
+
+A refused run is to leave every file as it was.
+
+The test reads consumer/ and writes only in its scratchpad directory,
+$REPO_HOME/tester/scratchpad/emplace_bio, where it runs its copy of
+Man_In_Grey from tree/.
+
+Usage: run <command>
+  help | -h | --help   print this message (also printed when given no arguments)
+  test                 run the test; the exit status is 0 only when every check passes
+  clean                delete the test's scratchpad directory
+"""
+
+import sys ,os ,stat ,json ,shutil ,subprocess ,getpass ,urllib.parse
+sys.dont_write_bytecode = True
+from pathlib import Path
+
+TEST_NAME = "emplace_bio"
+TEST_DPATH = Path(__file__).resolve().parent
+GATE_NAME = "Man_In_Grey_emplace_bio_gate"
+
+
+# --------------------------------------------------------------------------------
+# the log
+
+TAG_WIDTH = 10
+
+class Log:
+  def __init__(self):
+    self.count = {"passed": 0 ,"failed": 0}
+
+  def check(self ,passed ,what ,detail=None):
+    tag = "passed" if passed else "failed"
+    self.count[tag] += 1
+    print(f"  {tag:<{TAG_WIDTH}}{what}" + (f"  ({detail})" if detail else ""))
+    return passed
+
+  def note(self ,text):
+    for line in text.splitlines():
+      print(f"  {'':<{TAG_WIDTH}}{line}")
+
+  def summary(self):
+    print("summary:")
+    print(f"  {self.count['passed']:>4}  checks passed")
+    print(f"  {self.count['failed']:>4}  checks failed")
+    return 0 if self.count["failed"] == 0 else 1
+
+
+# --------------------------------------------------------------------------------
+# the work
+
+def snapshot(root):
+  "every entry in root, by name, with its content or link target, and its mode"
+  result = {}
+  for path in sorted(root.iterdir()):
+    st = path.lstat()
+    content = os.readlink(path).encode() if stat.S_ISLNK(st.st_mode) else path.read_bytes()
+    result[path.name] = (content ,st.st_mode)
+  return result
+
+def check_status(log ,what ,status ,want ,output ,want_text=None):
+  passed = status == want and (want_text is None or want_text in output)
+  detail = None
+  if status != want:
+    detail = f"exit status {status}, expected {want}"
+  elif not passed:
+    detail = f"the output does not say {want_text!r}"
+  log.check(passed ,what ,detail)
+  if not passed and output:
+    log.note(output)
+  return passed
+
+def make_tree(consumer ,tree):
+  """
+  A copy of the promoted Man_In_Grey/ and Man_In_Grey_gate/, side by side, in
+  tree. The gate refuses a guard in a directory other accounts can write,
+  so tree and the directory holding it are made writable by the owner alone.
+  """
+  tree.mkdir(parents=True)
+  for each in (tree.parent ,tree):
+    os.chmod(each ,0o755)
+  for name in ("Man_In_Grey" ,"Man_In_Grey_gate"):
+    (tree / name).mkdir()
+    os.chmod(tree / name ,0o755)
+    for source in sorted((consumer / name).iterdir()):
+      if source.is_file():
+        shutil.copy2(source ,tree / name / source.name)
+
+def put_constraint(guard_fpath ,constraint):
+  "replace the predicates between the guard's constraint marks with constraint"
+  line_list = guard_fpath.read_text(encoding="utf-8").splitlines()
+  begin ,end = line_list.index("# constraints begin") ,line_list.index("# constraints end")
+  text = "\n".join(line_list[:begin + 1] + ["" ,constraint.strip("\n") ,""] + line_list[end:]) + "\n"
+  guard_fpath.unlink()
+  guard_fpath.write_text(text ,encoding="utf-8")
+  os.chmod(guard_fpath ,0o644)
+
+def write_constraint(tree ,work_dpath ,account ,text_max_bytes=8192):
+  "the test's constraints in its copy of guard_emplace_bio.py, giving account a page in work_dpath/bio"
+  text = (
+    "# written by the emplace_bio test\n\n"
+    "def is_allowed_account(user_name):\n"
+    f"  return user_name == {account!r}\n\n"
+    "def is_allowed_text_size(byte_count):\n"
+    f"  return byte_count <= {text_max_bytes}\n\n"
+    "def is_allowed_picture_size(byte_count):\n"
+    "  return byte_count <= 1 << 20\n\n"
+    "def page_directory():\n"
+    f"  return {str(work_dpath / 'bio')!r}\n"
+  )
+  put_constraint(tree / "Man_In_Grey" / "guard_emplace_bio.py" ,text)
+
+def run_Man_In_Grey(program ,gate ,path ,work_dpath ,*option):
+  command = [str(program) ,"orchestrate" ,str(path) ,"gate" ,str(gate) ,*option]
+  result = subprocess.run(command ,cwd=work_dpath ,capture_output=True ,text=True)
+  return result.returncode ,(result.stdout + result.stderr).strip()
+
+def run_gate(gate ,journal_bytes):
+  "a journal given to the gate directly, with no orchestrator"
+  result = subprocess.run([str(gate) ,"admit"] ,input=journal_bytes ,capture_output=True)
+  return result.returncode ,(result.stdout + result.stderr).decode("utf-8" ,"replace").strip()
+
+def hand_made(Journal ,instruction_list):
+  "a journal of the emplace_bio language holding the instructions given as (name ,argument)"
+  journal = Journal.Journal("emplace_bio")
+  for name ,argument in instruction_list:
+    journal.place(name ,argument)
+  return journal.encode()
+
+def good_page(*extra):
+  return [("display_name" ,{"text": "A. Tester"}) ,("paragraph" ,{}) ,("text" ,{"content": "Hello." ,"style": []}) ,*extra]
+
+def test(repo_home):
+  consumer = repo_home / "consumer"
+  work_dpath = (repo_home / "tester" / "scratchpad" / TEST_NAME).resolve()
+  tree = work_dpath / "tree"
+  program = tree / "Man_In_Grey" / "Man_In_Grey"
+  gate = tree / "Man_In_Grey_gate" / GATE_NAME
+  print(f"run test   in {TEST_DPATH}")
+  print(f"  program  {program}")
+  print(f"  gate     {gate}")
+  print(f"  writes   {work_dpath}")
+  log = Log()
+
+  promoted = os.access(consumer / "Man_In_Grey" / "Man_In_Grey" ,os.X_OK) and os.access(consumer / "Man_In_Grey_gate" / GATE_NAME ,os.X_OK)
+  if not log.check(promoted ,"Man_In_Grey and the emplace_bio gate are promoted"
+                   ,None if promoted else f"the developer promotes Man_In_Grey and {GATE_NAME} first"):
+    return log.summary()
+  sys.path.insert(0 ,str(tree / "Man_In_Grey"))
+  import Journal
+
+  if work_dpath.exists():
+    shutil.rmtree(work_dpath)
+  (work_dpath / "bio").mkdir(parents=True)
+  make_tree(consumer ,tree)
+  person = getpass.getuser()
+  write_constraint(tree ,work_dpath ,person)
+  bio = work_dpath / "bio"
+  page_fpath ,png ,jpg = bio / f"{person}.html" ,bio / f"{person}.png" ,bio / f"{person}.jpg"
+
+  # page
+  status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer" ,work_dpath)
+  if not check_status(log ,"page Man_In_Grey exits 0" ,status ,0 ,output):
+    return log.summary()
+  expected = (TEST_DPATH / "expected" / "page.html").read_text(encoding="utf-8").replace("USER_NAME" ,urllib.parse.quote(person))
+  found = page_fpath.read_text(encoding="utf-8") if page_fpath.is_file() else None
+  log.check(found == expected ,f"page {person}.html is expected/page.html"
+            ,None if found == expected else ("not written" if found is None else "content differs"))
+  log.check(found is not None and "<script" not in found and "&lt;script&gt;" in found ,"page text that looks like markup is escaped")
+  log.check(png.is_file() and png.read_bytes() == (TEST_DPATH / "picture.png").read_bytes() ,f"page {person}.png is the given picture")
+  modes = [stat.S_IMODE(p.stat().st_mode) for p in (page_fpath ,png) if p.exists()]
+  log.check(modes == [0o644 ,0o644] ,"page files have permission 0644" ,None if modes == [0o644 ,0o644] else f"{[oct(m) for m in modes]}")
+
+  # jpeg, then no picture
+  status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer_jpeg" ,work_dpath)
+  check_status(log ,"jpeg Man_In_Grey exits 0" ,status ,0 ,output)
+  log.check(jpg.is_file() and not png.exists() and f'src="{urllib.parse.quote(person)}.jpg"' in page_fpath.read_text()
+            ,"jpeg places the JPEG and removes the PNG")
+  status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer_no_picture" ,work_dpath)
+  check_status(log ,"none Man_In_Grey exits 0" ,status ,0 ,output)
+  log.check(not jpg.exists() and not png.exists() and "<img" not in page_fpath.read_text() ,"none removes the picture")
+
+  # check_only
+  before = snapshot(bio)
+  status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer" ,work_dpath ,"check_only")
+  check_status(log ,"check_only is approved by the guard" ,status ,0 ,output ,"approved: guard emplace_bio check passed")
+  log.check(snapshot(bio) == before ,"check_only changes nothing")
+
+  # journals given to the gate directly
+  svg = (TEST_DPATH / "picture.svg").read_bytes()
+  case_list = (
+    ("name" ,good_page(("text" ,{"content": "x" ,"style": [] ,"name": "/etc/passwd"})) ,{} ,"wellformed_broken:")
+    ,("style" ,good_page(("text" ,{"content": "x" ,"style": ["blink"]})) ,{} ,"wellformed_broken:")
+    ,("order" ,[("display_name" ,{"text": "A. Tester"}) ,("text" ,{"content": "x" ,"style": []}) ,("paragraph" ,{}) ,("text" ,{"content": "y" ,"style": []})]
+      ,{} ,"wellformed_broken:")
+    ,("svg" ,good_page(("picture" ,{"content": svg})) ,{} ,"content_broken:")
+    ,("long" ,good_page() ,{"text_max_bytes": 10} ,"constraint_broken:")
+    ,("account" ,good_page() ,{"account": "nobody_at_all"} ,"constraint_broken:")
+  )
+  for name ,instruction_list ,variation ,want in case_list:
+    write_constraint(tree ,work_dpath ,variation.get("account" ,person) ,variation.get("text_max_bytes" ,8192))
+    before = snapshot(bio)
+    status ,output = run_gate(gate ,hand_made(Journal ,instruction_list))
+    check_status(log ,f"{name} is refused by the {want[:-len('_broken:')]} check" ,status ,1 ,output ,want)
+    log.check(snapshot(bio) == before ,f"{name} changes nothing")
+  write_constraint(tree ,work_dpath ,person)
+
+  # a page made a symbolic link
+  target = work_dpath / "elsewhere.html"
+  target.write_text("not to be overwritten\n")
+  page_fpath.unlink()
+  page_fpath.symlink_to(target)
+  before = snapshot(bio)
+  status ,output = run_gate(gate ,hand_made(Journal ,good_page()))
+  check_status(log ,"link is refused by the filesystem check" ,status ,1 ,output ,"filesystem_broken:")
+  log.check(snapshot(bio) == before and target.read_text() == "not to be overwritten\n" ,"link changes nothing")
+
+  return log.summary()
+
+def clean(repo_home):
+  work_dpath = repo_home / "tester" / "scratchpad" / TEST_NAME
+  print(f"run clean   in {TEST_DPATH}")
+  if work_dpath.exists():
+    shutil.rmtree(work_dpath)
+    print(f"  deleted   {work_dpath}")
+  else:
+    print(f"  kept      {work_dpath}  (there is nothing to delete)")
+  return 0
+
+
+# --------------------------------------------------------------------------------
+# command line
+
+def print_help():
+  print(__doc__.strip())
+  return 0
+
+def CLI(argv=None):
+  if argv is None: argv = sys.argv[1:]
+  if not argv or argv[0] in ("help" ,"-h" ,"--help"): return print_help()
+  command ,rest = argv[0] ,argv[1:]
+  if command not in ("test" ,"clean"):
+    print(f"Error: unknown command '{command}'." ,file=sys.stderr)
+    print_help()
+    return 1
+  if rest:
+    print(f"Error: {command} is given no arguments." ,file=sys.stderr)
+    return 1
+  if not os.environ.get("REPO_HOME"):
+    print("Error: REPO_HOME is not set; enter the tester role with ./setup tester." ,file=sys.stderr)
+    return 1
+  repo_home = Path(os.environ["REPO_HOME"]).resolve()
+  return test(repo_home) if command == "test" else clean(repo_home)
+
+
+if __name__ == "__main__":
+  try:
+    sys.exit(CLI())
+  except BrokenPipeError:
+    os.dup2(os.open(os.devnull ,os.O_WRONLY) ,sys.stdout.fileno())
+    sys.exit(1)

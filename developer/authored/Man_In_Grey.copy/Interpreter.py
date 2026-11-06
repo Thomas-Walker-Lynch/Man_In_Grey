@@ -8,17 +8,19 @@ the journal is well formed, since it decodes the journal anyway, so that a
 malformed journal never reaches execution.
 
 This module is a library. An instruction language's interpreter program calls
-interpret(); see interpreter_file.py.
+interpret(); see interpreter_file.py and interpreter_emplace_bio.py.
 """
 
 import Journal
 
 
-def interpret(journal_bytes ,language ,log):
+def interpret(journal_bytes ,language ,log ,constraint):
   """
-  Given the encoded journal, the instruction language module, and log(tag
-  ,message). Returns 0 when the journal was executed, 1 when execution
-  failed, 2 when the journal could not be read or is not well formed.
+  Given the encoded journal, the instruction language module, log(tag
+  ,message), and the constraint module, which the language reads for what
+  execution needs. Returns 0 when the journal was executed, 1 when
+  execution failed, 2 when the journal could not be read or is not well
+  formed.
   """
   try:
     data = Journal.decode(journal_bytes)
@@ -33,4 +35,4 @@ def interpret(journal_bytes ,language ,log):
     log("wellformed_broken" ,problem)
   if problem_list:
     return 2
-  return language.execute(data ,log)
+  return language.execute(data ,log ,constraint)

@@ -9,8 +9,10 @@ the guard, which checks the journal against its constraints, and, when the
 guard passes the journal, the interpreter, which executes it.
 
 A composer is a Python file defining compose(prov ,journal_iface). prov
-describes where the composer is; journal_iface places instructions of the file
-instruction language: open, write and unlink.
+describes where the composer is; journal_iface places instructions of the
+gate's instruction language. The orchestrator learns the language from the
+gate's flags, and loads the module named for it: the file language from
+FileLanguage.py, emplace_bio from EmplaceBioLanguage.py.
 
 Usage: Man_In_Grey <command> <path> [option ...]
   help | -h                  print this message (also printed when given no arguments)
@@ -21,8 +23,6 @@ Usage: Man_In_Grey <command> <path> [option ...]
 Options:
   gate <file>                the gate to invoke; by default
                              ../Man_In_Grey_gate/Man_In_Grey_file_gate
-  constraints <file>         constraints for a run through a gate that is not setuid,
-                             given to the guard
   print                      print the journal after composing
   compose_only               stop after composing; nothing reaches the gate
   check_only                 have the gate run the guard and not the interpreter
@@ -39,11 +39,10 @@ a composer failed, or the gate, guard or interpreter could not run.
 import sys ,os
 sys.dont_write_bytecode = True
 
-import datetime ,pwd ,runpy ,stat ,subprocess ,traceback
+import datetime ,importlib ,pwd ,re ,runpy ,stat ,subprocess ,traceback
 from pathlib import Path
 
 import Journal
-import FileLanguage
 
 # The promoted layout: this file in Man_In_Grey/, beside Man_In_Grey_gate/.
 # The same layout is staged in developer/scratchpad/made/ and promoted to consumer/.
@@ -51,7 +50,7 @@ HERE_DPATH = Path(__file__).resolve().parent
 DEFAULT_GATE = HERE_DPATH.parent / "Man_In_Grey_gate" / "Man_In_Grey_file_gate"
 
 FLAG = ("print" ,"compose_only" ,"check_only")
-VALUE = ("gate" ,"constraints")
+VALUE = ("gate" ,)
 COMMAND = ("orchestrate" ,)
 
 
@@ -147,12 +146,37 @@ def composer_list(path):
 
 
 # --------------------------------------------------------------------------------
+# the gate's language
+
+def gate_flag(gate_path):
+  """The gate's flags as a dict. Raises RuntimeError."""
+  if not os.access(gate_path ,os.X_OK):
+    raise RuntimeError(f"the gate {gate_path} is missing; in the developer role, build and promote it")
+  result = subprocess.run([str(gate_path) ,"flags"] ,capture_output=True ,text=True)
+  if result.returncode != 0:
+    raise RuntimeError(f"the gate {gate_path} did not report its flags")
+  return dict(line.split("=" ,1) for line in result.stdout.splitlines() if "=" in line)
+
+def language_module(name):
+  """The module of an instruction language: emplace_bio is EmplaceBioLanguage.py. Raises RuntimeError."""
+  if not re.fullmatch(r"[a-z][a-z0-9_]*" ,name or ""):
+    raise RuntimeError(f"the gate names the language {name!r}, which names no module")
+  module = "".join(part.capitalize() for part in name.split("_")) + "Language"
+  if not (HERE_DPATH / f"{module}.py").is_file():
+    raise RuntimeError(f"the gate's language is {name}, and {module}.py is not beside {Path(__file__).name}")
+  language = importlib.import_module(module)
+  if getattr(language ,"NAME" ,None) != name:
+    raise RuntimeError(f"{module}.py is not the module of the language {name}")
+  return language
+
+
+# --------------------------------------------------------------------------------
 # composing, and invoking the gate
 
-def compose_all(composer_root ,prov_list):
+def compose_all(composer_root ,prov_list ,language):
   """Run each composer into one journal. Raises RuntimeError naming the composer that failed."""
-  journal = Journal.Journal(FileLanguage.NAME)
-  journal_iface = FileLanguage.JournalInterface(journal ,Path.cwd())
+  journal = Journal.Journal(language.NAME)
+  journal_iface = language.JournalInterface(journal ,Path.cwd())
   for prov in prov_list:
     rel = prov.composer_rel_fpath.as_posix()
     journal.composer = rel
@@ -178,12 +202,14 @@ def compose_all(composer_root ,prov_list):
   }
   return journal
 
-def orchestrate(path ,gate ,constraints ,flag):
+def orchestrate(path ,gate ,flag):
   path = Path(path).absolute()
+  gate_path = Path(gate).absolute() if gate else DEFAULT_GATE
   try:
+    language = language_module(gate_flag(gate_path).get("language"))
     prov_list = composer_list(path)
     composer_root = path if path.is_dir() else path.parent
-    journal = compose_all(composer_root ,prov_list)
+    journal = compose_all(composer_root ,prov_list ,language)
   except (OSError ,RuntimeError) as error:
     print(f"error: {error}" ,file=sys.stderr)
     return 2
@@ -192,13 +218,7 @@ def orchestrate(path ,gate ,constraints ,flag):
   if "compose_only" in flag:
     return 0
 
-  gate_path = Path(gate) if gate else DEFAULT_GATE
-  if not os.access(gate_path ,os.X_OK):
-    print(f"error: the gate {gate_path} is missing; in the developer role, build and promote it" ,file=sys.stderr)
-    return 2
   command = [str(gate_path) ,"admit"]
-  if constraints:
-    command += ["constraints" ,str(Path(constraints).resolve())]
   if "check_only" in flag:
     command.append("check_only")
   return subprocess.run(command ,input=journal.encode()).returncode
@@ -234,7 +254,7 @@ def CLI(argv=None):
     else:
       print(f"Error: unknown or incomplete option '{word}'." ,file=sys.stderr)
       return 2
-  return orchestrate(path ,value.get("gate") ,value.get("constraints") ,flag)
+  return orchestrate(path ,value.get("gate") ,flag)
 
 
 if __name__ == "__main__":

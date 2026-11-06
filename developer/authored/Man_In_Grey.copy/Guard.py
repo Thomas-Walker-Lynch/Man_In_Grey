@@ -9,7 +9,7 @@ given to report as a tag and a message: <check>_broken for each problem,
 check_passed for each check that found none.
 
 This module is a library. An instruction language's guard program calls check()
-and writes the verdict; see guard_file.py.
+and writes the verdict; see guard_file.py and guard_emplace_bio.py.
 """
 
 import Journal
@@ -17,8 +17,9 @@ import Journal
 
 def check(journal_bytes ,language ,constraint ,gate_invoking_account ,report):
   """
-  Given the encoded journal, the instruction language module, the constraints,
-  the gate invoking account's name, and report(tag ,message). Returns 0 when
+  Given the encoded journal, the instruction language module, its constraint
+  module of predicates, the gate invoking account's name, and report(tag
+  ,message). Returns 0 when
   every check passed, 1 when a check found problems, 2 when the journal
   could not be read.
   """

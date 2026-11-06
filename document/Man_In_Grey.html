@@ -84,6 +84,9 @@
           <RT·entry key="constraint">
             Any semantic that participates in the <RT·term>guard</RT·term> code's approval process.
           </RT·entry>
+          <RT·entry key="constraint predicate">
+            A function written at the top of a guard, between the lines <RT·code># constraints begin</RT·code> and <RT·code># constraints end</RT·code>, that answers whether a journal's request is allowed, such as <RT·code>is_allowed_account(user_name)</RT·code>. See <a href="#sec-guard"><RT·Counter·read snapshot="sec-guard" key="counter count"></RT·Counter·read></a>.
+          </RT·entry>
           <RT·entry key="interpreter, journal interpreter">
             The interpreter is invoked by the gate after, and only if, the guard has approved the journal. The interperter walks the journal while executing the instructions in order.
           </RT·entry>
@@ -191,7 +194,7 @@
         </RT·code>
 
         <p>
-          Th <RT·code>admit</RT·code> command takes the journal on standard input, with the options <RT·code>constraints &lt;file&gt;</RT·code> and <RT·code>check_only</RT·code>. When the gate is asked to <RT·code>admit</RT·code> a journal, it:
+          Th <RT·code>admit</RT·code> command takes the journal on standard input, with the option <RT·code>check_only</RT·code>. When the gate is asked to <RT·code>admit</RT·code> a journal, it:
         </p>
 
         <ol>
@@ -206,7 +209,7 @@
           <li>starts the interpreter the same way, with the same journal.</li>
         </ol>
         <p>
-          The guard and the interpreter, before they import anything, each check that every module they load, and the guard its constraints file, are owned by root or by account B, and writable by no other account. A module runs code when it is imported, so the check comes first.
+          The guard and the interpreter, before they import anything, each check that every module they load, the guard program among them, is owned by root or by account B, and writable by no other account. A module runs code when it is imported, so the check comes first.
         </p>
         <p>
           These checks are made on every run, whether or not the gate is setuid, and whoever account A is. A check that can be got around by other means still catches mistakes, such as a group-writable directory or an interpreter run from the wrong tree. When accounts A and B are the same, account B is the person's own account, so his own files pass.
@@ -215,7 +218,7 @@
           The constraints, not the gate, decide which accounts can give a journal. The gate decides only whether the guard and the interpreter it would start can be trusted, and whether the guard approved the journal.
         </p>
         <p>
-          A gate that is not setuid keeps the uids of the program that invoked it, so accounts A and B are normally the same, and the guard still applies. When they are the same, the guard and the interpreter accept constraints given with <RT·code>constraints &lt;file&gt;</RT·code>, which the gate passes to both, checked as their own files are, since nothing runs with more than account A's own rights. When they differ, or account B is root, both refuse them and read only the constraints file installed beside them. A gate that is not setuid is the convenient way to use Man_In_Grey on files the person owns, and the way to prototype an instruction language before making a gate setuid for it.
+          A gate that is not setuid keeps the uids of the program that invoked it, so accounts A and B are normally the same, and the guard still applies. A gate that is not setuid is the convenient way to use Man_In_Grey on files the person owns, and the way to prototype an instruction language before making a gate setuid for it.
         </p>
         <RT·section>
           <RT·name>One gate per instruction language</RT·name>
@@ -237,7 +240,7 @@
         <RT·section>
           <RT·name>Output rule</RT·name>
           <p>
-            Every line the guard and the interpreter write is copied to the person, marked <RT·code>guard:</RT·code> or <RT·code>interpreter:</RT·code>, and to the system log under the name <RT·code>Man_In_Grey_gate</RT·code>, beside the gate's own lines, marked <RT·code>gate:</RT·code>, saying who asked and what the gate decided. A line breaks the gate's rules when it is not UTF-8, or holds a control character (C0, DEL or C1), or is longer than 4096 bytes, or is one line more than 2000; the gate then stops the program and refuses the journal. Unicode is otherwise welcome, file names in Chinese included. The guard writes any control character it quotes as <RT·code>\u{XXXX}</RT·code>, and the wellformed check refuses a directory, file name or owner that holds one.
+            Every line the guard and the interpreter write is copied to the person, marked <RT·code>guard:</RT·code> or <RT·code>interpreter:</RT·code>, and to the system log under the name <RT·code>Man_In_Grey_gate</RT·code>, beside the gate's own lines, marked <RT·code>gate:</RT·code>. The gate logs each journal's course itself, whatever the guard and the interpreter write: <RT·code>received</RT·code>, with account A, account B and the journal's size; then <RT·code>approved</RT·code> or <RT·code>refused</RT·code>; then <RT·code>interpreting</RT·code>; then <RT·code>interpreted</RT·code> or <RT·code>failed</RT·code>. A line breaks the gate's rules when it is not UTF-8, or holds a control character (C0, DEL or C1), or is longer than 4096 bytes, or is one line more than 2000; the gate then stops the program and refuses the journal. Unicode is otherwise welcome. The guard writes any control character it quotes as <RT·code>\u{XXXX}</RT·code>, and the wellformed check refuses a directory, file name or owner that holds one.
           </p>
         </RT·section>
         <RT·section>
@@ -266,10 +269,33 @@
           The kernel tells the gate which account invoked it, as the real uid, and the gate passes it on, so the guard knows it also. The kernel does not say which program invoked the gate. As the guard invocation is compiled into the gate, the guard can know the provenance of the journal from the point it was given to the gate, but not before that.
         </p>
         <p>
-          Two checks are needed by nearly every guard, whatever its instruction language. The first is that the journal is well formed: that it decodes, names only instructions of its language, and gives each instruction the arguments it takes, of the right kinds. This check carries knowledge of the instruction syntax, so it belongs to the instruction language, and the interpreter makes it again before executing. The second is who account A is. The gate's real uid is account A's, and its real gid and supplementary groups are those it inherited from the invoking program, since the setuid and setgid bits change only the effective ids. All three pass to the guard, which reads them from the kernel, so account A cannot misstate them. A guard can therefore allow a journal from accounts its constraints list, or from the members of a group they name. The file language's guard checks account A by name; a check by group is not yet made.
+          Two checks are needed by nearly every guard, whatever its instruction language. The first is that the journal is well formed: that it decodes, names only instructions of its language, and gives each instruction the arguments it takes, of the right kinds. This check carries knowledge of the instruction syntax, so it belongs to the instruction language. The second is who account A is. The gate's real uid is account A's, and its real gid and supplementary groups are those it inherited from the invoking program, since the setuid and setgid bits change only the effective ids. All three pass to the guard, which reads them from the kernel, so account A cannot misstate them. A guard can therefore allow a journal from the accounts it names, or from the members of a group, as its constraints decide.
         </p>
         <p>
           The other checks a guard makes belong to its instruction language. The file language's four checks are in <a href="#sec-file-language"><RT·Counter·read snapshot="sec-file-language" key="counter count"></RT·Counter·read></a>.
+        </p>
+        <p>
+          A guard's constraints are code. The guard is a Python program, written for one application, so its constraints are Python functions written at the top of the guard itself, where they go with it, and no language for expressing constraints is needed. Each is a <RT·term>constraint predicate</RT·term>, named in the manner of <RT·code>is_allowed_account(user_name)</RT·code> or <RT·code>is_allowed_open(directory ,name ,mode ,owner ,permission)</RT·code>, and the guard refuses a journal when one does not answer <RT·code>True</RT·code>. A predicate can compare with a list, ask whether an account is in a group, or anything else Python can say. The predicates sit between the lines <RT·code># constraints begin</RT·code> and <RT·code># constraints end</RT·code>, so that <RT·code>install_gate</RT·code> can put in an administrator's and keep them when the guard is installed again. As promoted with Man_In_Grey, they refuse every account.
+        </p>
+        <p>
+          Some constraints recur from one guard to the next, and the library module <RT·code>Constraint.py</RT·code> holds them, for a guard's predicates to call:
+        </p>
+        <RT·dictionary key="Predicate" definition="True when">
+          <RT·entry key="is_group_member(user_name ,group_name)">
+            The account is in the group by the group database: listed as a member in <RT·code>/etc/group</RT·code>, or having it as its primary group.
+          </RT·entry>
+          <RT·entry key="has_real_group(group_name)">
+            The gate's real gid or supplementary groups include the group. These are what the invoking program held, passed on by the kernel, so an account that joined the group after its session began does not have it yet, though <RT·code>is_group_member</RT·code> already says yes.
+          </RT·entry>
+          <RT·entry key="is_path_under(path ,directory)">
+            The path is the directory or lies within it, both absolute and in normal form.
+          </RT·entry>
+          <RT·entry key="has_permission_within(permission ,limit)">
+            The permission sets no bit the limit does not: <RT·code>0o600</RT·code> is within <RT·code>0o644</RT·code>, and <RT·code>0o4755</RT·code>, setuid, is within neither <RT·code>0o644</RT·code> nor <RT·code>0o755</RT·code>.
+          </RT·entry>
+        </RT·dictionary>
+        <p>
+          The guard checks and imports its modules, <RT·code>Constraint.py</RT·code> among them, only after its predicates are defined, and calls the predicates only after that, so a predicate can call <RT·code>Constraint.is_group_member</RT·code> by name, though the import comes later in the file. Code at the top level of the constraints runs before the ownership check, so the constraints hold only definitions, and imports of the standard library at most. The interpreter imports the guard program, for what execution needs from its constraints.
         </p>
         <RT·section>
           <RT·name>Verdict</RT·name>
@@ -285,13 +311,13 @@
       <RT·section id="sec-interpreter">
         <RT·name>Interpreter</RT·name>
         <p>
-          The gate starts the interpreter only after the guard has approved the journal, with the effective uid of account B and the same journal on its standard input. The interpreter does not check the constraints; that is the guard's work. It reads them, from the same file as the guard, only for what execution needs, as the example language's interpreter takes from them the directory its pages go in. It decodes the journal, checks once more that the journal is well formed, and then executes the instructions in order.
+          The gate starts the interpreter only after the guard has approved the journal, with the effective uid of account B and the same journal on its standard input. The interpreter does not check the constraints; that is the guard's work. It imports the guard program only for what execution needs from its constraints, as the example language's interpreter calls the guard's <RT·code>page_directory()</RT·code> for the directory its pages go in. It decodes the journal, checks once more that the journal is well formed, and then executes the instructions in order.
         </p>
         <p>
-          The interpreter writes one line to standard output for each thing it does, as <RT·code>&lt;tag&gt;: &lt;message&gt;</RT·code>, and the gate copies each line to the person and to the system log by the output rule. Its exit status is 0 when the journal was executed, 1 when execution failed, and 2 when the journal could not be read or is not well formed.
+          The interpreter writes to standard output, as <RT·code>&lt;tag&gt;: &lt;message&gt;</RT·code>, the highlights of what it does, as its developer chooses them, and the gate copies each line to the person and to the system log by the output rule. A line for each instruction would be impractical: a language that builds a file from many <RT·code>write</RT·code>s would log each, and a line that echoed an instruction's arguments would quote content, which can be long and does not belong in a log. The interpreters of Man_In_Grey write a line for each lasting change, such as a file put in place or removed, and none for an instruction as such. The gate logs the journal's course itself, so the log shows each journal received, approved and interpreted whatever an interpreter writes. The interpreter's exit status is 0 when it finished the journal, 1 when it stopped partway, and 2 when the journal could not be read or is not well formed.
         </p>
         <p>
-          Execution stops at the first error. What the interpreter did before then stays done, except what its instruction language undoes; for the file language, see <a href="#sec-file-language"><RT·Counter·read snapshot="sec-file-language" key="counter count"></RT·Counter·read></a>.
+          Execution stops at the first error. What the interpreter did before then stays done, except what its instruction language undoes; for the file language, see <a href="#sec-file-language"><RT·Counter·read snapshot="sec-file-language" key="counter count"></RT·Counter·read></a>. Playing a journal as a transaction is a possible future feature; see <a href="#sec-transaction"><RT·Counter·read snapshot="sec-transaction" key="counter count"></RT·Counter·read></a>.
         </p>
       </RT·section>
 
@@ -338,7 +364,7 @@
             There is no <RT·code>close</RT·code>. Each opened file is written to a temporary file in its own directory, and after the journal's last instruction every opened file is given its owner and permission and put in place, each in one step: a rename for <RT·code>replace</RT·code>, a hard link that refuses an existing name for <RT·code>create</RT·code>, and for <RT·code>replace_keep</RT·code> a hard link of the old file to its backup name followed by the rename, so the file's name is never absent. Every directory is opened without following a symbolic link, and names are worked on inside the open directory.
           </p>
           <p>
-            Execution stops at the first error, and every temporary file not yet put in place is removed. An <RT·code>unlink</RT·code> earlier in the journal has already happened by then. The interpreter writes a line for each thing it does, such as <RT·code>replaced: /etc/unbound/unbound-US.conf (kept as unbound-US.conf.20261105T083807Z)</RT·code>.
+            Execution stops at the first error, and every temporary file not yet put in place is removed. An <RT·code>unlink</RT·code> earlier in the journal has already happened by then. The interpreter writes a line for each file it puts in place or removes, such as <RT·code>replaced: /etc/unbound/unbound-US.conf (kept as unbound-US.conf.20261105T083807Z)</RT·code>, and none for an <RT·code>open</RT·code> or a <RT·code>write</RT·code>.
           </p>
           <p>
             The guard checks a journal in four steps, each over every instruction, and stops at the first step that finds a problem. It reports each problem as <RT·code>&lt;step&gt;_broken</RT·code> and each step that passes as <RT·code>check_passed</RT·code>:
@@ -348,7 +374,7 @@
               Known instructions with exactly their arguments, of the right kinds; absolute directories in normal form; bare file names; no control character in a directory, file name or owner; every <RT·code>write</RT·code> naming the symbol of an <RT·code>open</RT·code>.
             </RT·entry>
             <RT·entry key="constraint">
-              Account A is listed in <RT·code>gate_invoking_account</RT·code>; every file opened or unlinked is listed, in that mode, with that owner and permission.
+              <RT·code>is_allowed_account</RT·code> allows account A; <RT·code>is_allowed_open</RT·code> allows each file opened, in its mode, with its owner and permission; <RT·code>is_allowed_unlink</RT·code> allows each file removed.
             </RT·entry>
             <RT·entry key="validity">
               Every owner names an account.
@@ -358,21 +384,20 @@
             </RT·entry>
           </RT·dictionary>
           <p>
-            The constraints of the file language are a JSON file:
+            The constraints at the top of the file language's guard, <RT·code>guard_file.py</RT·code>, allowing Thomas to keep one unbound configuration file and to remove another:
           </p>
           <RT·code>
-            {
-              "gate_invoking_account": ["Thomas"],
-              "file": [
-                {"directory": "/etc/unbound", "name": "unbound-US.conf",
-                 "mode": ["replace_keep"], "owner": "root", "permission": "0644"},
-                {"directory": "/etc/unbound", "name": "unbound-old.conf",
-                 "mode": ["unlink"], "owner": "root", "permission": "0644"}
-              ]
-            }
+            def is_allowed_account(user_name):
+              return user_name == "Thomas"
+
+            def is_allowed_open(directory ,name ,mode ,owner ,permission):
+              return (directory ,name ,mode ,owner ,permission) == ("/etc/unbound" ,"unbound-US.conf" ,"replace_keep" ,"root" ,0o644)
+
+            def is_allowed_unlink(directory ,name):
+              return (directory ,name) == ("/etc/unbound" ,"unbound-old.conf")
           </RT·code>
           <p>
-            <RT·code>mode</RT·code> lists the open modes allowed for the file, and <RT·code>unlink</RT·code> when it can be removed. <RT·code>gate_invoking_account</RT·code> lists the accounts allowed to be account A, giving journals to the gate. The constraints file installed with the interpreter lists no account and no file, so it refuses everything until it is replaced by the constraints the application developer wrote.
+            The permission is given to <RT·code>is_allowed_open</RT·code> as an integer, so <RT·code>0o644</RT·code> and <RT·code>"0644"</RT·code> in a composer both arrive as <RT·code>0o644</RT·code>.
           </p>
         </RT·section>
       </RT·section>
@@ -418,17 +443,15 @@
             consumer/Man_In_Grey/Man_In_Grey.py                    the orchestrator
             consumer/Man_In_Grey/install_gate                      installs a gate setuid, run by root
             consumer/Man_In_Grey/Journal.py                        symbols, instructions, the journal, CBOR
-            consumer/Man_In_Grey/Constraint.py                     loading the constraints
             consumer/Man_In_Grey/Guard.py                          the general guard
+            consumer/Man_In_Grey/Constraint.py                     predicates that recur among guards' constraints
             consumer/Man_In_Grey/Interpreter.py                    the general interpreter
             consumer/Man_In_Grey/FileLanguage.py                   the file language: interface, checks, execution
-            consumer/Man_In_Grey/guard_file.py                     the file language's guard
+            consumer/Man_In_Grey/guard_file.py                     the file language's guard, its constraints at its top
             consumer/Man_In_Grey/interpreter_file.py               the file language's interpreter
-            consumer/Man_In_Grey/constraints_file.json             its constraints, refusing everything
             consumer/Man_In_Grey/EmplaceBioLanguage.py             the example language
             consumer/Man_In_Grey/guard_emplace_bio.py              its guard
             consumer/Man_In_Grey/interpreter_emplace_bio.py        its interpreter
-            consumer/Man_In_Grey/constraints_emplace_bio.json      its constraints, refusing everything
             consumer/Man_In_Grey_gate/Man_In_Grey_file_gate        the file language's gate
             consumer/Man_In_Grey_gate/Man_In_Grey_emplace_bio_gate the example language's gate
             consumer/Man_In_Grey_gate/libMan_In_Grey.a             the general gate, for other gates
@@ -489,9 +512,6 @@
             <RT·entry key="gate &lt;file&gt;">
               The gate to invoke, which also sets the instruction language the composers write in. Default: <RT·code>../Man_In_Grey_gate/Man_In_Grey_file_gate</RT·code> from <RT·code>Man_In_Grey.py</RT·code>.
             </RT·entry>
-            <RT·entry key="constraints &lt;file&gt;">
-              Constraints for a run in which accounts A and B are the same, given to the guard and the interpreter; refused when they differ or account B is root.
-            </RT·entry>
             <RT·entry key="print">
               Print the journal after composing.
             </RT·entry>
@@ -519,21 +539,21 @@
             It copies <RT·code>Man_In_Grey/</RT·code> and the one gate named from <RT·code>Man_In_Grey_gate/</RT·code> into the directory, side by side, as the gate's compiled paths expect. Every file and directory it installs is owned by root and writable by no other account, except the gate, which it gives to account B, the owner account named, and then makes setuid. The order matters, since changing a file's owner clears its setuid bit. For root as account B the gate's mode is <RT·code>4755</RT·code>, the mode <RT·code>755</RT·code> with the setuid bit, <RT·code>4000</RT·code>, added. For any other account B it is <RT·code>6755</RT·code>, with the setgid bit, <RT·code>2000</RT·code>, too, and account B's group as the gate's group. Only root can give a file away, so an interpreter whose effective uid is that of an account B other than root makes files account B owns, with the effective gid's group; setgid makes that account B's group.
           </p>
           <p>
-            The constraints given with <RT·code>constraints &lt;file&gt;</RT·code> are installed as <RT·code>constraints_&lt;language&gt;.json</RT·code>. Without the option, an installed constraints file is kept, and a first installation gets the one promoted with Man_In_Grey, which refuses everything. <RT·code>install_gate</RT·code> refuses a directory that is not absolute, that an account other than root owns or can write, or that is on a file system mounted <RT·code>nosuid</RT·code>, where the kernel ignores the setuid and setgid bits, as it does on removable drives and some separately mounted <RT·code>/home</RT·code> directories. It ends by printing the installed gate's flags, as root sees them: real uid root's, effective uid account B's. Promotion replaces files and sets neither the owner nor the setuid bit, so the installation is redone after each promotion that changes the gate, the guard or the interpreter. The installation is a candidate for Man_In_Grey itself, once there is a language for installing programs.
+            With <RT·code>constraints &lt;file&gt;</RT·code>, a Python file of predicates, <RT·code>install_gate</RT·code> puts them between the constraint marks of the gate's guard. Without it, the constraints of a guard already installed are kept, so installing again brings a new guard and keeps the administrator's constraints; a first installation gets the guard's as promoted, which refuse every account. The constraints of every other installed guard are kept too. <RT·code>install_gate</RT·code> refuses a directory that is not absolute, that an account other than root owns or can write, or that is on a file system mounted <RT·code>nosuid</RT·code>, where the kernel ignores the setuid and setgid bits, as it does on removable drives and some separately mounted <RT·code>/home</RT·code> directories. It ends by printing the installed gate's flags, as root sees them: real uid root's, effective uid account B's. Promotion replaces files and sets neither the owner nor the setuid bit, so the installation is redone after each promotion that changes the gate, the guard or the interpreter. The installation is a candidate for Man_In_Grey itself, once there is a language for installing programs.
           </p>
         </RT·section>
 
         <RT·section>
           <RT·name>Testing</RT·name>
           <p>
-            The tester has two tests. Each runs the promoted Man_In_Grey through a gate that is not setuid, so accounts A and B are the same, with constraints it writes into its scratchpad directory. The test <RT·code>tester/authored/write_file</RT·code> runs the file language's gate, and checks twenty-five things. Two runs of composers using every mode and <RT·code>unlink</RT·code> are compared with <RT·code>expected/run_1</RT·code> and <RT·code>expected/run_2</RT·code>, with backup times replaced by the letters <RT·code>YYYYMMDDTHHMMSSZ</RT·code>. A file opened in <RT·code>create</RT·code> mode is written once and refused the second time. A journal with one allowed file and one the constraints do not list is refused whole. A composer giving a wrong mode fails before any journal reaches the gate. A composer directory holding a composer other accounts can write is refused by the orchestrator. A <RT·code>check_only</RT·code> run is approved by the guard and changes nothing. A run under a file size limit the gate cannot raise is refused before the guard starts. Each refusal leaves every file as it was. Since the gate checks ownership on every run, every directory from <RT·code>/</RT·code> down to the promoted interpreter is to be writable by no account but its owner. In the tester role, from its directory <RT·code>tester/</RT·code>:
+            The tester has two tests. Each copies the promoted Man_In_Grey into its scratchpad directory, puts constraints of its own at the top of the copy's guard, and runs the copy through a gate that is not setuid, so accounts A and B are the same. The gate checks ownership on every run, so the test makes its copy writable by its owner alone, and every directory from <RT·code>/</RT·code> down to the scratchpad directory is to be writable by no account but its owner too. The test <RT·code>tester/authored/write_file</RT·code> runs the file language's gate, and checks twenty-five things. Two runs of composers using every mode and <RT·code>unlink</RT·code> are compared with <RT·code>expected/run_1</RT·code> and <RT·code>expected/run_2</RT·code>, with backup times replaced by the letters <RT·code>YYYYMMDDTHHMMSSZ</RT·code>. A file opened in <RT·code>create</RT·code> mode is written once and refused the second time. A journal with one allowed file and one the constraints do not list is refused whole. A composer giving a wrong mode fails before any journal reaches the gate. A composer directory holding a composer other accounts can write is refused by the orchestrator. A <RT·code>check_only</RT·code> run is approved by the guard and changes nothing. A run under a file size limit the gate cannot raise is refused before the guard starts. Each refusal leaves every file as it was. Since the gate checks ownership on every run, every directory from <RT·code>/</RT·code> down to the promoted interpreter is to be writable by no account but its owner. In the tester role, from its directory <RT·code>tester/</RT·code>:
           </p>
           <RT·code>
             authored/write_file/run test
             authored/write_file/run clean
           </RT·code>
           <p>
-            The test <RT·code>tester/authored/emplace_bio</RT·code> runs the example language's gate, and checks twenty-six things. A page with every style and with text that looks like markup is compared with <RT·code>expected/page.html</RT·code>, and its picture with the one given. A later run with a JPEG places it and removes the PNG, and a run with no picture removes the JPEG. A <RT·code>check_only</RT·code> run changes nothing. Seven journals are then made without the journal interface and given to the gate directly, as a program other than the orchestrator could: one whose text instruction carries a file name, one with a style the language does not have, one with text before any paragraph, one with an SVG picture, one with more text than its constraints allow, one from an account its constraints do not list, and one for a page that has been made a symbolic link. Each is refused by the check that is to refuse it, and changes nothing:
+            The test <RT·code>tester/authored/emplace_bio</RT·code> runs the example language's gate, and checks twenty-six things. A page with every style and with text that looks like markup is compared with <RT·code>expected/page.html</RT·code>, and its picture with the one given. A later run with a JPEG places it and removes the PNG, and a run with no picture removes the JPEG. A <RT·code>check_only</RT·code> run changes nothing. Seven journals are then made without the journal interface and given to the gate directly, as a program other than the orchestrator could: one whose text instruction carries a file name, one with a style the language does not have, one with text before any paragraph, one with an SVG picture, one with more text than its constraints allow, one from an account they do not allow, and one for a page that has been made a symbolic link. Each is refused by the check that is to refuse it, and changes nothing:
           </p>
           <RT·code>
             authored/emplace_bio/run test
@@ -568,7 +588,7 @@
             </RT·entry>
           </RT·dictionary>
           <p>
-            No instruction names a file. The page's file names come from the user name of the real uid, which the kernel gives the guard and the interpreter, so a person can write only his own page. The directory comes from the constraints, which the administrator installs. A journal describes the whole page: a run that gives no picture removes the picture an earlier run placed.
+            No instruction names a file. The page's file names come from the user name of the real uid, which the kernel gives the guard and the interpreter, so a person can write only his own page. The directory comes from <RT·code>page_directory()</RT·code> among the guard's constraints, which the administrator writes. A journal describes the whole page: a run that gives no picture removes the picture an earlier run placed.
           </p>
           <p>
             Decoration travels out of band. A run's styles are a list beside its text, not marks in it, and the interpreter turns each style into one fixed tag with no attribute: <RT·code>&lt;strong&gt;</RT·code>, <RT·code>&lt;em&gt;</RT·code>, <RT·code>&lt;u&gt;</RT·code> and <RT·code>&lt;s&gt;</RT·code>, nested in that order. It writes the rest of the page from a fixed form, and escapes every text it is given, so nothing a person gives becomes markup. There is nothing to sanitize: an attribute such as <RT·code>onload</RT·code>, or a <RT·code>&lt;script&gt;</RT·code> element, cannot be expressed in the language.
@@ -607,17 +627,29 @@
 
         <RT·section>
           <RT·name>The constraints</RT·name>
+          <p>
+            The administrator writes the guard's constraints in a file, here <RT·code>bio_constraint.py</RT·code>, and <RT·code>install_gate</RT·code> puts them at the top of the installed <RT·code>guard_emplace_bio.py</RT·code>:
+          </p>
           <RT·code>
-            {
-              "gate_invoking_account": ["Thomas", "Alice"],
-              "directory": "/srv/http/bio",
-              "text_max_bytes": 8192,
-              "picture_max_bytes": 1048576
-            }
+            def is_allowed_account(user_name):
+              return user_name in ("Thomas" ,"Alice")
+
+            def is_allowed_text_size(byte_count):
+              return byte_count &lt;= 8192
+
+            def is_allowed_picture_size(byte_count):
+              return byte_count &lt;= 1 &lt;&lt; 20
+
+            def page_directory():
+              return "/srv/http/bio"
           </RT·code>
           <p>
-            One constraints file serves every account, since the page's name follows from the account. <RT·code>gate_invoking_account</RT·code> lists the accounts that can have a page. <RT·code>text_max_bytes</RT·code> bounds the display name and text together, and <RT·code>picture_max_bytes</RT·code> the picture.
+            One set of constraints serves every account, since the page's name follows from the account. <RT·code>is_allowed_text_size</RT·code> is given the bytes of the display name and text together. <RT·code>page_directory</RT·code> is not a predicate: the guard checks that it gives an absolute directory, and the interpreter places the pages there. To give a page to every member of a group instead:
           </p>
+          <RT·code>
+            def is_allowed_account(user_name):
+              return Constraint.is_group_member(user_name ,"bio")
+          </RT·code>
         </RT·section>
 
         <RT·section>
@@ -627,7 +659,7 @@
               Only the four instructions, with exactly their arguments; one display name; at most one picture; text only within a paragraph, and no paragraph without text; every style one of the four, none twice; no control character in any text.
             </RT·entry>
             <RT·entry key="constraint">
-              Account A is listed in <RT·code>gate_invoking_account</RT·code>; the text and the picture are within their limits; the constraints give an absolute directory.
+              <RT·code>is_allowed_account</RT·code> allows account A; <RT·code>is_allowed_text_size</RT·code> and <RT·code>is_allowed_picture_size</RT·code> allow the text and the picture; <RT·code>page_directory()</RT·code> gives an absolute directory.
             </RT·entry>
             <RT·entry key="content">
               The picture begins with the signature of a PNG or a JPEG file. SVG is refused on purpose: it is a document that can hold script, and run it when opened by itself.
@@ -671,15 +703,15 @@
         <RT·section>
           <RT·name>Installing</RT·name>
           <p>
-            The administrator makes the directory, owned by the web server's account, and installs the gate, as root, with the constraints above in <RT·code>bio.json</RT·code>:
+            The administrator makes the directory, owned by the web server's account, and installs the gate, as root, with the constraints above:
           </p>
           <RT·code>
             sudo install -d -o http -g http -m 755 /srv/http/bio
-            sudo consumer/Man_In_Grey/install_gate install Man_In_Grey_emplace_bio_gate owner http into /usr/local/lib/Man_In_Grey constraints bio.json
+            sudo consumer/Man_In_Grey/install_gate install Man_In_Grey_emplace_bio_gate owner http into /usr/local/lib/Man_In_Grey constraints bio_constraint.py
           </RT·code>
           <RT·code>
             install_gate: installed /usr/local/lib/Man_In_Grey/Man_In_Grey/
-            install_gate: installed /usr/local/lib/Man_In_Grey/Man_In_Grey/constraints_emplace_bio.json from /root/bio.json
+            install_gate: put the constraints of /root/bio_constraint.py in /usr/local/lib/Man_In_Grey/Man_In_Grey/guard_emplace_bio.py
             install_gate: installed /usr/local/lib/Man_In_Grey/Man_In_Grey_gate/Man_In_Grey_emplace_bio_gate, owner http:http, mode 6755
             install_gate: its flags, as seen by root:
             real.uid=0
@@ -711,35 +743,36 @@
             /usr/local/lib/Man_In_Grey/Man_In_Grey/Man_In_Grey orchestrate composer gate /usr/local/lib/Man_In_Grey/Man_In_Grey_gate/Man_In_Grey_emplace_bio_gate
           </RT·code>
           <RT·code>
-            gate: asked: real uid 2006 (Thomas), effective uid 996 (http), journal of 1857 bytes
+            gate: received: real uid 2006 (Thomas), effective uid 996 (http), journal of 1857 bytes
             guard: name: emplace_bio
-            guard: version: 1
-            guard: constraints: /usr/local/lib/Man_In_Grey/Man_In_Grey/constraints_emplace_bio.json
+            guard: version: 3
+            guard: constraints: /usr/local/lib/Man_In_Grey/Man_In_Grey/guard_emplace_bio.py
             guard: journal: 10 instructions
             guard: check_passed: wellformed
             guard: check_passed: constraint
             guard: check_passed: content
             guard: check_passed: filesystem
-            gate: admitted: guard emplace_bio check passed
+            gate: approved: guard emplace_bio check passed
+            gate: interpreting: /usr/local/lib/Man_In_Grey/Man_In_Grey/interpreter_emplace_bio.py
             interpreter: emplaced: /srv/http/bio/Thomas.jpg
             interpreter: emplaced: /srv/http/bio/Thomas.html
-            gate: executed: the journal was executed
+            gate: interpreted: the interpreter finished the journal
           </RT·code>
           <p>
             An account the constraints do not list is refused before anything is written:
           </p>
           <RT·code>
-            gate: asked: real uid 2007 (alice), effective uid 996 (http), journal of 1855 bytes
+            gate: received: real uid 2007 (alice), effective uid 996 (http), journal of 1855 bytes
             guard: name: emplace_bio
-            guard: version: 1
-            guard: constraints: /usr/local/lib/Man_In_Grey/Man_In_Grey/constraints_emplace_bio.json
+            guard: version: 3
+            guard: constraints: /usr/local/lib/Man_In_Grey/Man_In_Grey/guard_emplace_bio.py
             guard: journal: 10 instructions
             guard: check_passed: wellformed
             guard: constraint_broken: gate invoking account 'alice' is not allowed to give journals to this gate
             gate: refused: by the guard
           </RT·code>
           <p>
-            The constraints list <RT·code>Alice</RT·code>, and account names are compared exactly, so the account <RT·code>alice</RT·code> is not her. A person who gives <RT·code>constraints &lt;file&gt;</RT·code> to this gate is refused too, since its real and effective ids differ.
+            <RT·code>is_allowed_account</RT·code> allows <RT·code>Alice</RT·code>, and compares names exactly, so the account <RT·code>alice</RT·code> is not her.
           </p>
         </RT·section>
 
@@ -811,6 +844,22 @@
           </p>
           <p>
             A smaller step gives the first advantage alone: a symbol that names a field of its instruction's value, as <RT·code>{"symbol": 3 ,"field": "uid"}</RT·code>, keeps index symbols and lets one instruction produce several values.
+          </p>
+        </RT·section>
+
+        <RT·section id="sec-transaction">
+          <RT·name>Transactional play on Btrfs</RT·name>
+          <p>
+            Execution now stops at the first error, and what the interpreter did before then stays done, except what its instruction language undoes. A journal would better be played as a transaction: either every instruction takes effect, or none does. Btrfs gives a way to do this for every instruction language, without each language undoing its own work.
+          </p>
+          <p>
+            A Btrfs subvolume is a directory tree that can be snapshotted. Making a snapshot takes about as long as making a directory, whatever the size of the tree, because the snapshot shares every block with its source; a block is copied only when one side writes it. Before playing a journal, the interpreter would snapshot each subvolume the journal writes in. When the play succeeds, it deletes the snapshots. When the play fails, it puts back each file it changed from the snapshot, then deletes the snapshots. It knows which files those are, since it touched them.
+          </p>
+          <p>
+            Putting back files one at a time is the general case. A running system cannot replace the subvolume it runs from, such as the one holding <RT·code>/etc</RT·code>, so there the rollback is a restore of each changed file, each in one step, by the same rename the file language uses to put a file in place. Where the destination is a subvolume of its own that is not mounted separately and that no program depends on keeping open, such as a web server's page directory, the interpreter could instead play the journal into a snapshot and then exchange the snapshot and the subvolume in one call, <RT·code>renameat2</RT·code> with <RT·code>RENAME_EXCHANGE</RT·code>, so the whole change appears at once or not at all. Whether Btrfs allows that exchange between subvolumes is to be confirmed before the design relies on it.
+          </p>
+          <p>
+            The cost is privilege. Making a snapshot needs ownership of the subvolume, or root, and write access to the directory the snapshot goes in. Deleting one needs <RT·code>CAP_SYS_ADMIN</RT·code>, unless the file system is mounted with <RT·code>user_subvol_rm_allowed</RT·code>. A gate whose account B is not root would need the second, and a gate holding only the capabilities its language needs would need the first, which is nearly root by itself. On other file systems the play stays as it is, and a language undoes its own work where it can, as the file language does by putting its files in place only after its last instruction.
           </p>
         </RT·section>
       </RT·section>

@@ -23,12 +23,8 @@ made, and raises JournalError on a wrong one. The interpreter half holds the
 checks the guard makes of a journal received as data, and the execution the
 interpreter carries out.
 
-Constraints are a map:
-
-  gate_invoking_account  account names allowed to invoke the gate with a journal
-  file                   entries {directory ,name ,mode ,owner ,permission}: the files
-                         the language allows; mode lists the open modes allowed, and
-                         "unlink" when unlink is allowed
+The constraints are predicates written at the top of the guard,
+guard_file.py: is_allowed_account, is_allowed_open and is_allowed_unlink.
 """
 
 import os ,pwd ,stat ,time
@@ -168,30 +164,19 @@ def check_wellformed(data):
   return problem_list
 
 def check_constraint(data ,constraint ,gate_invoking_account):
+  "constraint is the guard, which holds the predicates; a predicate allows only by answering True"
+  if constraint.is_allowed_account(gate_invoking_account) is not True:
+    return [f"gate invoking account {clean(repr(gate_invoking_account))} is not allowed to give journals to this gate"]
   problem_list = []
-  if gate_invoking_account not in constraint.get("gate_invoking_account" ,()):
-    return [f"gate invoking account {gate_invoking_account!r} is not allowed to give journals to this gate"]
-  allowed = {}
-  for entry in constraint.get("file" ,()):
-    allowed[(entry["directory"] ,entry["name"])] = entry
   for index ,instruction in enumerate(data["instruction_list"]):
     name ,argument = instruction["name"] ,instruction["argument"]
-    if name not in ("open" ,"unlink"):
-      continue
-    where = f"{argument['directory']}/{argument['name']}"
-    entry = allowed.get((argument["directory"] ,argument["name"]))
-    if entry is None:
-      problem_list.append(f"@{index} {name}: {where} is not a file the constraints allow"); continue
-    if name == "unlink":
-      if "unlink" not in entry.get("mode" ,()):
-        problem_list.append(f"@{index} unlink: {where} is not allowed to be unlinked")
-      continue
-    if argument["mode"] not in entry.get("mode" ,()):
-      problem_list.append(f"@{index} open: {where} is not allowed in mode {argument['mode']}")
-    if argument["owner"] != entry.get("owner"):
-      problem_list.append(f"@{index} open: {where} is to be owned by {entry.get('owner')!r}, not {argument['owner']!r}")
-    if argument["permission"] != permission_value(entry.get("permission")):
-      problem_list.append(f"@{index} open: {where} is to have permission {entry.get('permission')}, not {argument['permission']:04o}")
+    where = f"{argument.get('directory')}/{argument.get('name')}"
+    if name == "open":
+      if constraint.is_allowed_open(argument["directory"] ,argument["name"] ,argument["mode"] ,argument["owner"] ,argument["permission"]) is not True:
+        problem_list.append(f"@{index} open: {where} in mode {argument['mode']}, owner {argument['owner']}, permission {argument['permission']:04o} is not allowed")
+    elif name == "unlink":
+      if constraint.is_allowed_unlink(argument["directory"] ,argument["name"]) is not True:
+        problem_list.append(f"@{index} unlink: {where} is not allowed to be removed")
   return problem_list
 
 def check_validity(data):
@@ -264,12 +249,12 @@ def _backup_name(dirfd ,name):
       return candidate
     candidate ,n = f"{name}.{stamp}.{n}" ,n + 1
 
-def execute(data ,log):
+def execute(data ,log ,constraint):
   """
   Execute the instructions in order, then put each opened file in place. Stops
   at the first error, removing every temporary file not yet put in place.
   log is given a tag and a message for each thing done. Returns 0, or 1 on
-  an error.
+  an error. The file language needs nothing from its constraint module to execute.
   """
   opened = {}   # symbol index -> {dirfd ,fd ,tmp ,argument}
   try:

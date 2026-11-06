@@ -3,8 +3,8 @@
 
   A gate is a program of its own, made from this module by a three-line
   *.CLI.c whose main calls Man_In_Grey_gate·Gate·run with three things fixed
-  at compile time: the guard's name, the guard's path and the interpreter's
-  path, the two paths relative to the gate itself. The gate invoking account can
+  at compile time: the name of the instruction language, the guard's path and
+  the interpreter's path, the two paths relative to the gate itself. The gate invoking account can
   name neither program; who invokes a gate cannot choose what it runs.
 
   Setuid and owned by account B, a gate runs with the effective uid of
@@ -19,19 +19,23 @@
        2, and raises each resource limit that could stop the guard or the
        interpreter partway, refusing when one stays too low;
     1. refuses unless the guard and the interpreter, and every directory
-       above them, are owned by root or by the interpreter account and
+       above them, are owned by root or by the effective uid's account and
        writable by no other account;
     2. clears the environment, sets the file mode mask to 077, marks the
-       process not dumpable, changes directory to /, and records the
-       gate invoking account in MIG_GATE_INVOKING_UID, MIG_GATE_INVOKING_GID and
-       MIG_GATE_INVOKING_NAME;
+       process not dumpable, changes directory to /, and records its real
+       ids in MIG_REAL_UID, MIG_REAL_GID and MIG_REAL_USER_NAME;
     3. starts the guard with the journal on its standard input, and admits
        the journal only when the guard exits 0 having written exactly one
-       line to standard output: guard <name> check passed;
+       line to standard output: guard <language> check passed;
     4. starts the interpreter with the same journal.
 
-  Every line the guard and the interpreter write is copied to the person and
-  to the system log. A line that is not UTF-8, or holds a control character,
+  The constraints are code installed with the guard, so nothing about them is
+  given to the gate.
+
+  The gate logs each journal's course itself, whatever the guard and the
+  interpreter write: received, then approved or refused, then interpreting,
+  then interpreted or failed. Every line the guard and the interpreter
+  write is copied to the person and to the system log as well. A line that is not UTF-8, or holds a control character,
   or is too long, or one line too many, breaks the gate's rules: the gate
   stops the program and refuses.
 
@@ -44,7 +48,7 @@
 #define Man_In_Grey_gate·Gate·ONCE
 
 int Man_In_Grey_gate·Gate·run(
-  const char *guard_name
+  const char *language
   ,const char *guard_relative
   ,const char *interpreter_relative
   ,int argc
@@ -56,6 +60,7 @@ int Man_In_Grey_gate·Gate·run(
   #include <dirent.h>
   #include <errno.h>
   #include <fcntl.h>
+  #include <grp.h>
   #include <libgen.h>
   #include <limits.h>
   #include <poll.h>
@@ -79,7 +84,7 @@ int Man_In_Grey_gate·Gate·run(
   #define OUTPUT_LINE_COUNT_MAX 2000
   #define VERDICT_MAX 512
 
-  Local const char *Guard_name = "";
+  Local const char *Language = "";
   Local bool Logging = false;
 
   // ------------------------------------------------------------------------------
@@ -91,7 +96,7 @@ int Man_In_Grey_gate·Gate·run(
     vsnprintf(message ,sizeof message ,format ,ap);
     va_end(ap);
     fprintf(stderr ,"gate: %s: %s\n" ,tag ,message);
-    if( Logging ) syslog(LOG_NOTICE ,"%s gate: %s: %s" ,Guard_name ,tag ,message);
+    if( Logging ) syslog(LOG_NOTICE ,"%s gate: %s: %s" ,Language ,tag ,message);
   }
 
   Local void die(const char *format ,...){
@@ -105,10 +110,6 @@ int Man_In_Grey_gate·Gate·run(
 
   // ------------------------------------------------------------------------------
   // the ownership check
-
-  Local bool account_changed(void){
-    return geteuid() != getuid() || getegid() != getgid();
-  }
 
   /* path and every directory above it: owned by root or by the interpreter
      account, the effective uid, and writable by no other account */
@@ -124,7 +125,7 @@ int Man_In_Grey_gate·Gate·run(
       memcpy(prefix ,path ,i); prefix[i] = '\0';
       if( lstat(prefix ,&st) != 0 ) die("cannot examine %s: %s" ,prefix ,strerror(errno));
       if( st.st_uid != 0 && st.st_uid != interpreter_uid )
-        die("%s is owned by uid %ld, neither root nor the interpreter account" ,prefix ,(long)st.st_uid);
+        die("%s is owned by uid %ld, neither root nor the effective uid's account" ,prefix ,(long)st.st_uid);
       if( st.st_mode & (S_IWGRP | S_IWOTH) )
         die("%s is writable by group or other accounts" ,prefix);
     }
@@ -225,7 +226,7 @@ int Man_In_Grey_gate·Gate·run(
     return realpath(candidate ,resolved) != NULL;
   }
 
-  // a guard name: not empty, no space, no control character
+  // a language name: not empty, no space, no control character
   Local bool name_is_valid(const char *name){
     if( !*name ) return false;
     for(const unsigned char *p = (const unsigned char *)name; *p; ++p)
@@ -295,7 +296,7 @@ int Man_In_Grey_gate·Gate·run(
     stream->line[stream->length] = '\0';
     fprintf(stream->echo ,"%s: %s\n" ,child->source ,stream->line);
     fflush(stream->echo);
-    syslog(LOG_NOTICE ,"%s %s: %s" ,Guard_name ,child->source ,stream->line);
+    syslog(LOG_NOTICE ,"%s %s: %s" ,Language ,child->source ,stream->line);
     stream->length = 0;
   }
 
@@ -395,26 +396,38 @@ int Man_In_Grey_gate·Gate·run(
     fprintf(file ,
       "Usage: %s <command> [option ...]\n"
       "  help | -h            print this message (also printed when given no arguments)\n"
-      "  flags                print the gate invoking account, the interpreter account, the guard\n"
-      "                       and the interpreter, and whether the gate changes the account\n"
+      "  flags                print the real and effective ids, whether they differ, the\n"
+      "                       instruction language, and the paths of the guard and interpreter\n"
       "  admit [option ...]   read a journal on standard input, run the guard, and when the\n"
       "                       guard passes the journal, run the interpreter\n"
-      "Options of admit:\n"
-      "  constraints <file>   given to the guard\n"
+      "Option of admit:\n"
       "  check_only           run the guard and not the interpreter\n"
       ,program
     );
   }
 
+  Local const char *user_name(uid_t uid){
+    struct passwd *pw = getpwuid(uid);
+    return pw ? pw->pw_name : "unknown";
+  }
+
+  Local const char *group_name(gid_t gid){
+    struct group *gr = getgrgid(gid);
+    return gr ? gr->gr_name : "unknown";
+  }
+
   Local void print_flags(const char *guard_relative ,const char *interpreter_relative){
-    struct passwd *pw = getpwuid(getuid());
-    printf("gate_invoking.uid=%ld\n" ,(long)getuid());
-    printf("gate_invoking.name=%s\n" ,pw ? pw->pw_name : "unknown");
-    pw = getpwuid(geteuid());
-    printf("interpreter.uid=%ld\n" ,(long)geteuid());
-    printf("interpreter.name=%s\n" ,pw ? pw->pw_name : "unknown");
-    printf("account_changed=%d\n" ,account_changed() ? 1 : 0);
-    printf("guard.name=%s\n" ,Guard_name);
+    printf("real.uid=%ld\n" ,(long)getuid());
+    printf("real.user_name=%s\n" ,user_name(getuid()));
+    printf("real.gid=%ld\n" ,(long)getgid());
+    printf("real.group_name=%s\n" ,group_name(getgid()));
+    printf("effective.uid=%ld\n" ,(long)geteuid());
+    printf("effective.user_name=%s\n" ,user_name(geteuid()));
+    printf("effective.gid=%ld\n" ,(long)getegid());
+    printf("effective.group_name=%s\n" ,group_name(getegid()));
+    printf("uid_differ=%d\n" ,getuid() != geteuid() ? 1 : 0);
+    printf("gid_differ=%d\n" ,getgid() != getegid() ? 1 : 0);
+    printf("language=%s\n" ,Language);
     char resolved[PATH_MAX];
     printf("guard.path=%s\n" ,resolve(guard_relative ,resolved) ? resolved : "(missing)");
     printf("interpreter.path=%s\n" ,resolve(interpreter_relative ,resolved) ? resolved : "(missing)");
@@ -445,13 +458,13 @@ int Man_In_Grey_gate·Gate·run(
   }
 
   int Man_In_Grey_gate·Gate·run(
-    const char *guard_name
+    const char *language
     ,const char *guard_relative
     ,const char *interpreter_relative
     ,int argc
     ,char **argv
   ){
-    Guard_name = guard_name;
+    Language = language;
     const char *program = argc > 0 ? argv[0] : "gate";
     if( argc < 2 || !strcmp(argv[1] ,"help") || !strcmp(argv[1] ,"-h") || !strcmp(argv[1] ,"--help") ){
       print_usage(stdout ,program);
@@ -466,10 +479,8 @@ int Man_In_Grey_gate·Gate·run(
       print_usage(stderr ,program);
       return 2;
     }
-    const char *constraints = NULL;
     bool check_only = false;
     for(int i = 2; i < argc; ++i){
-      if( !strcmp(argv[i] ,"constraints") && i + 1 < argc ){ constraints = argv[++i]; continue; }
       if( !strcmp(argv[i] ,"check_only") ){ check_only = true; continue; }
       fprintf(stderr ,"gate: usage: unknown or incomplete option '%s'\n" ,argv[i]);
       return 2;
@@ -478,26 +489,25 @@ int Man_In_Grey_gate·Gate·run(
     settle_descriptors();
     settle_limits();
 
-    if( !name_is_valid(guard_name) ) die("the guard name compiled into this gate is empty or holds a space or control character");
+    if( !name_is_valid(language) ) die("the language name compiled into this gate is empty or holds a space or control character");
     char guard_path[PATH_MAX] ,interpreter_path[PATH_MAX];
     if( !resolve(guard_relative ,guard_path) ) die("the guard is missing: %s" ,guard_relative);
     if( !resolve(interpreter_relative ,interpreter_path) ) die("the interpreter is missing: %s" ,interpreter_relative);
     check_trusted_owner(guard_path);
     check_trusted_owner(interpreter_path);
 
-    uid_t gate_invoking_uid = getuid();
-    gid_t gate_invoking_gid = getgid();
-    struct passwd *pw = getpwuid(gate_invoking_uid);
-    char gate_invoking_name[256];
-    snprintf(gate_invoking_name ,sizeof gate_invoking_name ,"%s" ,pw ? pw->pw_name : "unknown");
+    uid_t real_uid = getuid();
+    gid_t real_gid = getgid();
+    char real_user_name[256];
+    snprintf(real_user_name ,sizeof real_user_name ,"%s" ,user_name(real_uid));
 
     clearenv();
     setenv("PATH" ,"/usr/sbin:/usr/bin:/sbin:/bin" ,1);
     setenv("LANG" ,"C.UTF-8" ,1);
     char number[32];
-    snprintf(number ,sizeof number ,"%ld" ,(long)gate_invoking_uid); setenv("MIG_GATE_INVOKING_UID" ,number ,1);
-    snprintf(number ,sizeof number ,"%ld" ,(long)gate_invoking_gid); setenv("MIG_GATE_INVOKING_GID" ,number ,1);
-    setenv("MIG_GATE_INVOKING_NAME" ,gate_invoking_name ,1);
+    snprintf(number ,sizeof number ,"%ld" ,(long)real_uid); setenv("MIG_REAL_UID" ,number ,1);
+    snprintf(number ,sizeof number ,"%ld" ,(long)real_gid); setenv("MIG_REAL_GID" ,number ,1);
+    setenv("MIG_REAL_USER_NAME" ,real_user_name ,1);
     umask(077);
     prctl(PR_SET_DUMPABLE ,0 ,0 ,0 ,0);
     if( chdir("/") != 0 ) die("cannot change directory to /");
@@ -508,13 +518,12 @@ int Man_In_Grey_gate·Gate·run(
 
     size_t journal_length;
     unsigned char *journal = read_journal(&journal_length);
-    say("asked" ,"gate invoking account %s (uid %ld), journal of %zu bytes%s"
-        ,gate_invoking_name ,(long)gate_invoking_uid ,journal_length ,check_only ? ", check only" : "");
+    say("received" ,"real uid %ld (%s), effective uid %ld (%s), journal of %zu bytes%s"
+        ,(long)real_uid ,real_user_name ,(long)geteuid() ,user_name(geteuid()) ,journal_length ,check_only ? ", check only" : "");
 
     // the guard
     char *guard_argument[] = {
-      (char *)PYTHON ,(char *)"-E" ,(char *)"-s" ,(char *)"-B" ,guard_path ,(char *)"check"
-      ,constraints ? (char *)"constraints" : NULL ,(char *)constraints ,NULL
+      (char *)PYTHON ,(char *)"-E" ,(char *)"-s" ,(char *)"-B" ,guard_path ,(char *)"check" ,NULL
     };
     Child guard = {.source = "guard" ,.stdout_is_verdict = true};
     int status = run_child(&guard ,guard_argument ,journal ,journal_length);
@@ -523,7 +532,7 @@ int Man_In_Grey_gate·Gate·run(
       return 2;
     }
     char expected[VERDICT_MAX];
-    snprintf(expected ,sizeof expected ,"guard %s check passed\n" ,guard_name);
+    snprintf(expected ,sizeof expected ,"guard %s check passed\n" ,language);
     if( !WIFEXITED(status) ){
       say("refused" ,"the guard was stopped by signal %d" ,WIFSIGNALED(status) ? WTERMSIG(status) : 0);
       return 2;
@@ -537,12 +546,12 @@ int Man_In_Grey_gate·Gate·run(
       return 2;
     }
     if( strcmp(guard.verdict ,expected) ){
-      say("refused" ,"the guard exited 0 without writing the one line 'guard %s check passed'" ,guard_name);
+      say("refused" ,"the guard exited 0 without writing the one line 'guard %s check passed'" ,language);
       return 2;
     }
-    say("admitted" ,"guard %s check passed" ,guard_name);
+    say("approved" ,"guard %s check passed" ,language);
     if( check_only ){
-      say("not_executed" ,"check_only was asked");
+      say("not_interpreted" ,"check_only was asked");
       return 0;
     }
 
@@ -551,6 +560,7 @@ int Man_In_Grey_gate·Gate·run(
       (char *)PYTHON ,(char *)"-E" ,(char *)"-s" ,(char *)"-B" ,interpreter_path ,(char *)"execute" ,NULL
     };
     Child interpreter = {.source = "interpreter" ,.stdout_is_verdict = false};
+    say("interpreting" ,"%s" ,interpreter_path);
     status = run_child(&interpreter ,interpreter_argument ,journal ,journal_length);
     if( interpreter.broken ){
       say("failed" ,"the interpreter broke the gate's rules: %s; what it had done stays done" ,interpreter.broken);
@@ -561,8 +571,8 @@ int Man_In_Grey_gate·Gate·run(
       return 2;
     }
     switch( WEXITSTATUS(status) ){
-      case 0: say("executed" ,"the journal was executed"); return 0;
-      case 1: say("failed" ,"execution failed"); return 1;
+      case 0: say("interpreted" ,"the interpreter finished the journal"); return 0;
+      case 1: say("failed" ,"the interpreter stopped partway; what it had done stays done"); return 1;
       default: say("failed" ,"the interpreter could not run (exit status %d)" ,WEXITSTATUS(status)); return 2;
     }
   }
