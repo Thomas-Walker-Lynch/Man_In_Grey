@@ -19,23 +19,22 @@ place, each in one step.
 
 The module has two halves. The composer half is JournalInterface, through
 which a composer places commands; it checks every argument when the call is
-made, and raises JournalError on a wrong one. The interpreter half checks a
-journal received as data, against the constraints of a bespoke interpreter,
-and executes it.
+made, and raises JournalError on a wrong one. The interpreter half holds the
+checks the guard makes of a journal received as data, and the execution the
+interpreter carries out.
 
 Constraints are a map:
 
-  caller            account names allowed to hand a journal to the interpreter
-  principal_caller  account names allowed to name a principal other than themselves
-  file              entries {directory ,name ,mode ,owner ,permission}: the files
-                    the language allows; mode lists the open modes allowed, and
-                    "unlink" when unlink is allowed
+  gate_invoking_account  account names allowed to invoke the gate with a journal
+  file                   entries {directory ,name ,mode ,owner ,permission}: the files
+                         the language allows; mode lists the open modes allowed, and
+                         "unlink" when unlink is allowed
 """
 
 import os ,pwd ,stat ,time
 from pathlib import Path
 
-from Journal import JournalError ,Symbol
+from Journal import JournalError ,Symbol ,has_control ,clean
 
 NAME = "file"
 
@@ -52,15 +51,24 @@ ARGUMENT = {
 # argument checks, shared by both halves
 
 def directory_problem(value):
-  if not isinstance(value ,str) or not value.startswith("/") or "\x00" in value:
+  if not isinstance(value ,str) or not value.startswith("/"):
     return "directory is to be an absolute path"
+  if has_control(value):
+    return f"directory {clean(value)} holds a control character"
   if os.path.normpath(value) != value:
     return f"directory {value!r} is not in normal form; give {os.path.normpath(value)!r}"
   return None
 
 def name_problem(value):
-  if not isinstance(value ,str) or not value or "/" in value or value in ("." ,"..") or "\x00" in value:
-    return f"name {value!r} is not a bare file name"
+  if not isinstance(value ,str) or not value or "/" in value or value in ("." ,".."):
+    return f"name {clean(repr(value))} is not a bare file name"
+  if has_control(value):
+    return f"name {clean(value)} holds a control character"
+  return None
+
+def owner_problem(value):
+  if not isinstance(value ,str) or not value or has_control(value):
+    return "owner is to be an account name"
   return None
 
 def permission_value(value):
@@ -94,7 +102,10 @@ class JournalInterface:
     path = Path(directory)
     if not path.is_absolute():
       path = self._working_dpath / path
-    return os.path.normpath(str(path))
+    value = os.path.normpath(str(path))
+    problem = directory_problem(value)
+    if problem: raise JournalError(problem)
+    return value
 
   def open(self ,directory ,name ,mode ,owner ,permission):
     directory = self._directory(directory)
@@ -102,8 +113,8 @@ class JournalInterface:
     if problem: raise JournalError(f"open: {problem}")
     if mode not in MODE:
       raise JournalError(f"open: mode {mode!r} is not one of {', '.join(MODE)}")
-    if not isinstance(owner ,str) or not owner:
-      raise JournalError("open: owner is to be an account name")
+    problem = owner_problem(owner)
+    if problem: raise JournalError(f"open: {problem}")
     value = permission_value(permission)
     if value is None:
       raise JournalError(f"open: permission {permission!r} is not an integer 0 to 0o7777 or three or four octal digits")
@@ -135,19 +146,19 @@ def check_wellformed(data):
   for index ,command in enumerate(data["command_list"]):
     name ,argument = command["command"] ,command["argument"]
     if name not in ARGUMENT:
-      problem_list.append(f"@{index}: unknown command {name!r}"); continue
+      problem_list.append(f"@{index}: unknown command {clean(repr(name))}"); continue
     if set(argument) != set(ARGUMENT[name]):
-      problem_list.append(f"@{index} {name}: arguments {sorted(argument)}, expected {sorted(ARGUMENT[name])}"); continue
+      problem_list.append(f"@{index} {name}: arguments {clean(sorted(argument))}, expected {sorted(ARGUMENT[name])}"); continue
     if name in ("open" ,"unlink"):
       for problem in (directory_problem(argument["directory"]) ,name_problem(argument["name"])):
         if problem: problem_list.append(f"@{index} {name}: {problem}")
     if name == "open":
       if argument["mode"] not in MODE:
-        problem_list.append(f"@{index} open: unknown mode {argument['mode']!r}")
-      if not isinstance(argument["owner"] ,str) or not argument["owner"]:
+        problem_list.append(f"@{index} open: unknown mode {clean(repr(argument['mode']))}")
+      if owner_problem(argument["owner"]):
         problem_list.append(f"@{index} open: owner is not an account name")
       if permission_value(argument["permission"]) is None or not isinstance(argument["permission"] ,int):
-        problem_list.append(f"@{index} open: permission {argument['permission']!r} is not valid")
+        problem_list.append(f"@{index} open: permission {clean(repr(argument['permission']))} is not valid")
     if name == "write":
       file = argument["file"]
       if not Symbol.is_data(file) or data["command_list"][file["symbol"]]["command"] != "open":
@@ -156,13 +167,10 @@ def check_wellformed(data):
         problem_list.append(f"@{index} write: content is not bytes")
   return problem_list
 
-def check_constraint(data ,constraint ,caller):
+def check_constraint(data ,constraint ,gate_invoking_account):
   problem_list = []
-  if caller not in constraint.get("caller" ,()):
-    return [f"caller {caller!r} is not allowed to hand journals to this interpreter"]
-  principal = data.get("principal")
-  if principal is not None and principal != caller and caller not in constraint.get("principal_caller" ,()):
-    problem_list.append(f"caller {caller!r} is not allowed to name the principal {principal!r}")
+  if gate_invoking_account not in constraint.get("gate_invoking_account" ,()):
+    return [f"gate invoking account {gate_invoking_account!r} is not allowed to give journals to this gate"]
   allowed = {}
   for entry in constraint.get("file" ,()):
     allowed[(entry["directory"] ,entry["name"])] = entry
@@ -173,7 +181,7 @@ def check_constraint(data ,constraint ,caller):
     where = f"{argument['directory']}/{argument['name']}"
     entry = allowed.get((argument["directory"] ,argument["name"]))
     if entry is None:
-      problem_list.append(f"@{index} {name}: {where} is not a file this interpreter allows"); continue
+      problem_list.append(f"@{index} {name}: {where} is not a file the constraints allow"); continue
     if name == "unlink":
       if "unlink" not in entry.get("mode" ,()):
         problem_list.append(f"@{index} unlink: {where} is not allowed to be unlinked")
@@ -194,7 +202,7 @@ def check_validity(data):
       try:
         pwd.getpwnam(owner)
       except KeyError:
-        problem_list.append(f"@{index} open: no account is named {owner!r}")
+        problem_list.append(f"@{index} open: no account is named {clean(owner)}")
   return problem_list
 
 def _regular_or_absent(dirfd ,name):
@@ -236,10 +244,10 @@ def check_filesystem(data):
   return problem_list
 
 CHECK = (
-  ("wellformed" ,lambda data ,constraint ,caller: check_wellformed(data))
+  ("wellformed" ,lambda data ,constraint ,gate_invoking_account: check_wellformed(data))
   ,("constraint" ,check_constraint)
-  ,("validity" ,lambda data ,constraint ,caller: check_validity(data))
-  ,("filesystem" ,lambda data ,constraint ,caller: check_filesystem(data))
+  ,("validity" ,lambda data ,constraint ,gate_invoking_account: check_validity(data))
+  ,("filesystem" ,lambda data ,constraint ,gate_invoking_account: check_filesystem(data))
 )
 
 
@@ -260,7 +268,8 @@ def execute(data ,log):
   """
   Execute the commands in order, then put each opened file in place. Stops
   at the first error, removing every temporary file not yet put in place.
-  Returns 0, or 1 on an error.
+  log is given a tag and a message for each thing done. Returns 0, or 1 on
+  an error.
   """
   opened = {}   # symbol index -> {dirfd ,fd ,tmp ,argument}
   try:
@@ -281,7 +290,7 @@ def execute(data ,log):
           if not _regular_or_absent(dirfd ,argument["name"]):
             os.unlink(argument["name"] ,dir_fd=dirfd)
             os.fsync(dirfd)
-            log(f"unlinked  {argument['directory']}/{argument['name']}")
+            log("unlinked" ,f"{argument['directory']}/{argument['name']}")
         finally:
           os.close(dirfd)
 
@@ -306,19 +315,19 @@ def execute(data ,log):
       if argument["mode"] == "create":
         os.link(tmp ,target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd ,follow_symlinks=False)
         os.unlink(tmp ,dir_fd=dirfd)
-        log(f"created   {where}")
+        log("created" ,where)
       else:
         kept = None
         if argument["mode"] == "replace_keep" and not _regular_or_absent(dirfd ,target):
           kept = _backup_name(dirfd ,target)
           os.link(target ,kept ,src_dir_fd=dirfd ,dst_dir_fd=dirfd ,follow_symlinks=False)
         os.rename(tmp ,target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd)
-        log(f"replaced  {where}" + (f"  (kept as {kept})" if kept else ""))
+        log("replaced" ,where + (f" (kept as {kept})" if kept else ""))
       record["tmp"] = None
       os.fsync(dirfd)
     return 0
   except OSError as error:
-    log(f"error     {error}")
+    log("execution_failed" ,str(error))
     return 1
   finally:
     for record in opened.values():

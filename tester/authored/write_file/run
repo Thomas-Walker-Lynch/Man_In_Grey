@@ -4,8 +4,8 @@
 run
 
 The write_file test of Man_In_Grey's file command language. It runs the
-promoted Man_In_Grey, from $REPO_HOME/consumer, through an unblessed gate,
-with constraints it writes for the files it expects, and checks:
+promoted Man_In_Grey, from $REPO_HOME/consumer, through a gate that is not
+setuid, with constraints it writes for the files it expects, and checks:
 
   run_1      orchestrate composer/: each composer's file written, and
              out/obsolete.conf, made by the test beforehand, unlinked; the
@@ -13,12 +13,18 @@ with constraints it writes for the files it expects, and checks:
   run_2      orchestrate composer/ again: replace_keep files kept as backups named
              <file>.YYYYMMDDTHHMMSSZ, the replace file overwritten with no
              backup; compared with expected/run_2
-  create     compose composer_create/new.py: a file opened in create mode is written once, and
-             a second run is refused by the filesystem check
+  create     orchestrate composer_create/new.py: a file opened in create mode is written
+             once, and a second run is refused by the guard's filesystem check
   refused    orchestrate composer_refused/: a journal opening one allowed file and one the
-             constraints do not allow is refused whole by the constraint check
+             constraints do not allow is refused whole by the guard's constraint check
   argument   orchestrate composer_argument/: a composer giving a wrong mode fails when it
              places the command, and no journal reaches the gate
+  writable   orchestrate a composer directory holding a composer other accounts can write:
+             the orchestrator refuses to run it
+  check_only orchestrate composer/ with check_only: the guard approves the journal, and the
+             interpreter is not run
+  limit      orchestrate composer/ with a file size limit the gate cannot raise: the gate
+             refuses before starting the guard
 
 A refused run is to leave every file as it was. Backup names carry the time
 of the run, so names are compared with the time replaced by the letters
@@ -33,7 +39,7 @@ Usage: run <command>
   clean                delete the test's scratchpad directory
 """
 
-import sys ,os ,re ,stat ,json ,shutil ,subprocess ,getpass
+import sys ,os ,re ,stat ,json ,shutil ,subprocess ,getpass ,resource
 from pathlib import Path
 
 TEST_NAME = "write_file"
@@ -143,9 +149,13 @@ def compare(log ,run_name ,work_dpath):
       problem.append(f"owner uid {path.lstat().st_uid}, expected {os.getuid()}")
     log.check(not problem ,what ,"; ".join(problem) or None)
 
-def run_Man_In_Grey(program ,command ,path ,work_dpath ,constraint_fpath):
-  command = [str(program) ,command ,str(TEST_DPATH / path) ,"--constraints" ,str(constraint_fpath)]
-  result = subprocess.run(command ,cwd=work_dpath ,capture_output=True ,text=True)
+def limit_file_size():
+  "run in the child before Man_In_Grey starts: a file size limit, soft and hard, of 1 MiB"
+  resource.setrlimit(resource.RLIMIT_FSIZE ,(1 << 20 ,1 << 20))
+
+def run_Man_In_Grey(program ,path ,work_dpath ,constraint_fpath ,*option ,preexec=None):
+  command = [str(program) ,"orchestrate" ,str(path) ,"constraints" ,str(constraint_fpath) ,*option]
+  result = subprocess.run(command ,cwd=work_dpath ,capture_output=True ,text=True ,preexec_fn=preexec)
   return result.returncode ,(result.stdout + result.stderr).strip()
 
 def check_status(log ,what ,status ,want ,output ,want_text=None):
@@ -163,8 +173,7 @@ def check_status(log ,what ,status ,want ,output ,want_text=None):
 def write_constraint(work_dpath):
   person = getpass.getuser()
   constraint = {
-    "caller": [person]
-    ,"principal_caller": []
+    "gate_invoking_account": [person]
     ,"file": [
       {"directory": str(work_dpath / d) ,"name": n ,"mode": m ,"owner": person ,"permission": p}
       for d ,n ,m ,p in ALLOWED
@@ -196,7 +205,7 @@ def test(repo_home):
 
   # run_1 and run_2
   for run_name in ("run_1" ,"run_2"):
-    status ,output = run_Man_In_Grey(program ,"orchestrate" ,"composer" ,work_dpath ,constraint_fpath)
+    status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer" ,work_dpath ,constraint_fpath)
     if check_status(log ,f"{run_name} Man_In_Grey exits 0" ,status ,0 ,output):
       compare(log ,run_name ,work_dpath)
     else:
@@ -204,27 +213,49 @@ def test(repo_home):
       return log.summary()
 
   # create: once, then refused
-  status ,output = run_Man_In_Grey(program ,"compose" ,"composer_create/new.py" ,work_dpath ,constraint_fpath)
+  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer_create" / "new.py" ,work_dpath ,constraint_fpath)
   check_status(log ,"create Man_In_Grey exits 0" ,status ,0 ,output)
   new = out / "new.conf"
   log.check(new.is_file() and new.read_text() == "made once\n" and stat.S_IMODE(new.stat().st_mode) == 0o600
             ,"create out/new.conf" ,None if new.is_file() else "not written")
   before = snapshot(out)
-  status ,output = run_Man_In_Grey(program ,"compose" ,"composer_create/new.py" ,work_dpath ,constraint_fpath)
-  check_status(log ,"create again is refused by the filesystem check" ,status ,1 ,output ,"filesystem: refused")
+  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer_create" / "new.py" ,work_dpath ,constraint_fpath)
+  check_status(log ,"create again is refused by the filesystem check" ,status ,1 ,output ,"filesystem_broken:")
   log.check(snapshot(out) == before ,"create again changes nothing")
 
   # a journal the constraints refuse
   before = snapshot(out)
-  status ,output = run_Man_In_Grey(program ,"orchestrate" ,"composer_refused" ,work_dpath ,constraint_fpath)
-  check_status(log ,"refused is refused by the constraint check" ,status ,1 ,output ,"constraint: refused")
+  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer_refused" ,work_dpath ,constraint_fpath)
+  check_status(log ,"refused is refused by the constraint check" ,status ,1 ,output ,"constraint_broken:")
   log.check(snapshot(out) == before ,"refused changes nothing, the allowed file included")
 
   # a composer with a wrong argument
   before = snapshot(out)
-  status ,output = run_Man_In_Grey(program ,"orchestrate" ,"composer_argument" ,work_dpath ,constraint_fpath)
+  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer_argument" ,work_dpath ,constraint_fpath)
   check_status(log ,"argument fails in the composer" ,status ,2 ,output ,"wrong_mode.py: open: mode 'overwrite'")
   log.check(snapshot(out) == before ,"argument changes nothing")
+
+  # a composer other accounts can write
+  writable = work_dpath / "composer_writable"
+  writable.mkdir()
+  shutil.copy(TEST_DPATH / "composer" / "unbound_conf.py" ,writable / "unbound_conf.py")
+  os.chmod(writable / "unbound_conf.py" ,0o664)
+  before = snapshot(out)
+  status ,output = run_Man_In_Grey(program ,writable ,work_dpath ,constraint_fpath)
+  check_status(log ,"writable composer is refused by the orchestrator" ,status ,2 ,output ,"writable by group or other accounts")
+  log.check(snapshot(out) == before ,"writable changes nothing")
+
+  # check_only
+  before = snapshot(out)
+  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer" ,work_dpath ,constraint_fpath ,"check_only")
+  check_status(log ,"check_only is approved by the guard" ,status ,0 ,output ,"admitted: guard file check passed")
+  log.check(snapshot(out) == before ,"check_only changes nothing")
+
+  # a resource limit the gate cannot raise
+  before = snapshot(out)
+  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer" ,work_dpath ,constraint_fpath ,preexec=limit_file_size)
+  check_status(log ,"limit is refused by the gate" ,status ,2 ,output ,"the file size (bytes) limit is 1048576")
+  log.check(snapshot(out) == before ,"limit changes nothing")
 
   return log.summary()
 

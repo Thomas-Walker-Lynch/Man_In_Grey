@@ -22,6 +22,19 @@ import cbor2
 JOURNAL_VERSION = 2
 
 
+def is_control(character):
+  "C0 controls, DEL and C1 controls: the characters a gate refuses in what the guard and interpreter write"
+  code = ord(character)
+  return code < 0x20 or code == 0x7F or 0x80 <= code <= 0x9F
+
+def has_control(text):
+  return any(is_control(c) for c in text)
+
+def clean(text):
+  "text with each control character written as \\u{XXXX}, for a message that quotes a journal"
+  return "".join(f"\\u{{{ord(c):04X}}}" if is_control(c) else c for c in str(text))
+
+
 class JournalError(Exception):
   """A journal interface call was given a wrong argument, or a journal is malformed."""
 
@@ -66,14 +79,11 @@ class Command:
 
 class Journal:
   """
-  The commands of one run, in order, for one command language. principal is
-  the account the journal was composed on behalf of, when that is not the
-  account that hands it to the gate.
+  The commands of one run, in order, for one command language.
   """
 
-  def __init__(self ,command_language ,principal=None):
+  def __init__(self ,command_language):
     self.command_language = command_language
-    self.principal = principal
     self.meta = {}
     self.command_list = []
     self.composer = None
@@ -90,8 +100,6 @@ class Journal:
       ,"meta": dict(self.meta)
       ,"command_list": [c.as_data() for c in self.command_list]
     }
-    if self.principal is not None:
-      data["principal"] = self.principal
     return data
 
   def encode(self):
@@ -121,8 +129,6 @@ def decode(journal_bytes):
     raise JournalError(f"journal version {data.get('version')!r}; this interpreter reads version {JOURNAL_VERSION}")
   if not isinstance(data.get("command_language") ,str):
     raise JournalError("the journal names no command language")
-  if "principal" in data and not isinstance(data["principal"] ,str):
-    raise JournalError("the journal's principal is not an account name")
   command_list = data.get("command_list")
   if not isinstance(command_list ,list):
     raise JournalError("the journal has no command list")

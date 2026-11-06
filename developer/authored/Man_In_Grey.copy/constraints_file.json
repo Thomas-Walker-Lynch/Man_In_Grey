@@ -1,5 +1,4 @@
 {
-  "caller": [],
-  "principal_caller": [],
+  "gate_invoking_account": [],
   "file": []
 }
