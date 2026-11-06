@@ -1,16 +1,16 @@
 #!/usr/bin/env -S python3 -B
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-guard_file - the guard of the file instruction language.
+guard_smoke - the guard of the smoke instruction language.
 
-Started by the gate Man_In_Grey_file_gate, with the gate's real and
+Started by the gate Man_In_Grey_smoke_gate, with the gate's real and
 effective ids, and with the journal on standard input. It checks the
 journal, and says what it found on standard error, one line per finding,
 as <tag>: <message>; the first two lines are name: and version:.
 
 When every check passes, it writes one line to standard output,
 
-  guard file check passed
+  guard smoke check passed
 
 and exits 0. That line and that status together are the only verdict the
 gate admits a journal on.
@@ -22,7 +22,7 @@ Before it imports anything, it checks that its modules and their directory
 are owned by root or by the effective uid's account, and writable by no
 other account. A module runs code when it is imported.
 
-Usage: guard_file <command>
+Usage: guard_smoke <command>
   help | -h   print this message (also printed when given no arguments)
   check       check the journal on standard input
 
@@ -65,11 +65,11 @@ sys.dont_write_bytecode = True
 import pwd ,stat
 from pathlib import Path
 
-LANGUAGE = "file"
+LANGUAGE = "smoke"
 VERSION = "3"
 
 HERE_DPATH = Path(__file__).resolve().parent
-MODULE = ("Journal.py" ,"Guard.py" ,"Constraint.py" ,"FileLanguage.py" ,"guard_file.py")
+MODULE = ("Journal.py" ,"Guard.py" ,"Constraint.py" ,"SmokeLanguage.py" ,"guard_smoke.py")
 
 
 def trusted_owner_problem(path):
@@ -101,7 +101,7 @@ try:
   import Journal
   import Guard
   import Constraint
-  import FileLanguage as Language
+  import SmokeLanguage as Language
 except ImportError as error:
   say("cannot_start" ,str(error))
   sys.exit(2)
@@ -130,7 +130,7 @@ def CLI(argv=None):
   argv = sys.argv[1:] if argv is None else argv
   if not argv or argv[0] in ("help" ,"-h" ,"--help"): return print_help()
   if argv != ["check"]:
-    say("usage" ,f"unknown command {Journal.clean(repr(' '.join(argv)))}; run guard_file with no arguments for its usage")
+    say("usage" ,f"unknown command {Journal.clean(repr(' '.join(argv)))}; run guard_smoke with no arguments for its usage")
     return 2
   return check()
 

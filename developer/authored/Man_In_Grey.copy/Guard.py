@@ -9,7 +9,7 @@ given to report as a tag and a message: <check>_broken for each problem,
 check_passed for each check that found none.
 
 This module is a library. An instruction language's guard program calls check()
-and writes the verdict; see guard_file.py and guard_emplace_bio.py.
+and writes the verdict; see guard_emplace_bio.py.
 """
 
 import Journal

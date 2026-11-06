@@ -1,9 +1,9 @@
 #!/usr/bin/env -S python3 -B
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-interpreter_file - the interpreter of the file instruction language.
+interpreter_smoke - the interpreter of the smoke instruction language.
 
-Started by the gate Man_In_Grey_file_gate, with the gate's real and
+Started by the gate Man_In_Grey_smoke_gate, with the gate's real and
 effective ids, and with the journal on standard input, once the guard has
 passed the journal. It executes the journal's instructions, and writes to
 standard output, as <tag>: <message>, a line for each lasting change it
@@ -13,13 +13,13 @@ The gate logs the journal's course itself.
 It checks again that the journal is well formed before executing it. It
 does not check the constraints; that is the guard's work, and the gate
 starts the interpreter only on the guard's verdict. It imports the guard,
-guard_file.py, for what execution needs from the constraints at its top.
+guard_smoke.py, for what execution needs from the constraints at its top.
 
 Before it imports anything, it checks that its modules and their directory
 are owned by root or by the effective uid's account, and writable by no
 other account.
 
-Usage: interpreter_file <command>
+Usage: interpreter_smoke <command>
   help | -h   print this message (also printed when given no arguments)
   execute     execute the journal on standard input
 
@@ -34,7 +34,7 @@ import stat
 from pathlib import Path
 
 HERE_DPATH = Path(__file__).resolve().parent
-MODULE = ("Journal.py" ,"Interpreter.py" ,"Constraint.py" ,"FileLanguage.py" ,"guard_file.py" ,"interpreter_file.py")
+MODULE = ("Journal.py" ,"Interpreter.py" ,"Constraint.py" ,"SmokeLanguage.py" ,"guard_smoke.py" ,"interpreter_smoke.py")
 
 
 def trusted_owner_problem(path):
@@ -61,8 +61,8 @@ for each in [HERE_DPATH] + [HERE_DPATH / m for m in MODULE]:
 try:
   import Journal
   import Interpreter
-  import FileLanguage as Language
-  import guard_file as Guard_program
+  import SmokeLanguage as Language
+  import guard_smoke as Guard_program
 except ImportError as error:
   say("cannot_start" ,str(error))
   sys.exit(2)
@@ -86,7 +86,7 @@ def CLI(argv=None):
   argv = sys.argv[1:] if argv is None else argv
   if not argv or argv[0] in ("help" ,"-h" ,"--help"): return print_help()
   if argv != ["execute"]:
-    say("usage" ,f"unknown command {Journal.clean(repr(' '.join(argv)))}; run interpreter_file with no arguments for its usage")
+    say("usage" ,f"unknown command {Journal.clean(repr(' '.join(argv)))}; run interpreter_smoke with no arguments for its usage")
     return 2
   return execute()
 

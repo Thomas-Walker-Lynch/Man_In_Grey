@@ -11,18 +11,18 @@ guard passes the journal, the interpreter, which executes it.
 A composer is a Python file defining compose(prov ,journal_iface). prov
 describes where the composer is; journal_iface places instructions of the
 gate's instruction language. The orchestrator learns the language from the
-gate's flags, and loads the module named for it: the file language from
-FileLanguage.py, emplace_bio from EmplaceBioLanguage.py.
+gate's flags, and loads the module named for it: emplace_bio from
+EmplaceBioLanguage.py.
 
-Usage: Man_In_Grey <command> <path> [option ...]
+Usage: Man_In_Grey <command> <path> gate <file> [option ...]
   help | -h                  print this message (also printed when given no arguments)
   orchestrate <path>         <path> is a composer file, or a composer directory; every
                              file in a composer directory is a composer, and they run
                              depth first, in order of name at each level
+  gate <file>                the gate to invoke, which also sets the instruction
+                             language the composers write in; required
 
 Options:
-  gate <file>                the gate to invoke; by default
-                             ../Man_In_Grey_gate/Man_In_Grey_file_gate
   print                      print the journal after composing
   compose_only               stop after composing; nothing reaches the gate
   check_only                 have the gate run the guard and not the interpreter
@@ -47,7 +47,6 @@ import Journal
 # The promoted layout: this file in Man_In_Grey/, beside Man_In_Grey_gate/.
 # The same layout is staged in developer/scratchpad/made/ and promoted to consumer/.
 HERE_DPATH = Path(__file__).resolve().parent
-DEFAULT_GATE = HERE_DPATH.parent / "Man_In_Grey_gate" / "Man_In_Grey_file_gate"
 
 FLAG = ("print" ,"compose_only" ,"check_only")
 VALUE = ("gate" ,)
@@ -204,7 +203,10 @@ def compose_all(composer_root ,prov_list ,language):
 
 def orchestrate(path ,gate ,flag):
   path = Path(path).absolute()
-  gate_path = Path(gate).absolute() if gate else DEFAULT_GATE
+  if not gate:
+    print("error: orchestrate is given the gate to invoke, as gate <file>" ,file=sys.stderr)
+    return 2
+  gate_path = Path(gate).absolute()
   try:
     language = language_module(gate_flag(gate_path).get("language"))
     prov_list = composer_list(path)

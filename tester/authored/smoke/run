@@ -3,11 +3,13 @@
 """
 run
 
-The write_file test of Man_In_Grey's file instruction language. It copies
+The smoke test of Man_In_Grey, run through the smoke language. It copies
 the promoted Man_In_Grey, from $REPO_HOME/consumer, into its scratchpad
 directory, puts constraints of its own at the top of the copy's
-guard_file.py, allowing the files it expects, and runs that copy through
-the file language's gate, not setuid. It checks:
+guard_smoke.py, allowing the files it expects, and runs that copy through
+the smoke language's gate, not setuid. The smoke language is not for use
+on a system; it is here to exercise the gate, the guard and the
+interpreter. It checks:
 
   run_1      orchestrate composer/: each composer's file written, and
              out/obsolete.conf, made by the test beforehand, unlinked; the
@@ -33,7 +35,7 @@ of the run, so names are compared with the time replaced by the letters
 YYYYMMDDTHHMMSSZ. Content, mode and owner are compared too.
 
 The test reads consumer/ and writes only in its scratchpad directory,
-$REPO_HOME/tester/scratchpad/write_file, where it runs its copy of
+$REPO_HOME/tester/scratchpad/smoke, where it runs its copy of
 Man_In_Grey from tree/.
 
 Usage: run <command>
@@ -45,7 +47,8 @@ Usage: run <command>
 import sys ,os ,re ,stat ,json ,shutil ,subprocess ,getpass ,resource
 from pathlib import Path
 
-TEST_NAME = "write_file"
+TEST_NAME = "smoke"
+GATE_NAME = "Man_In_Grey_smoke_gate"
 TEST_DPATH = Path(__file__).resolve().parent
 
 OUTPUT_DIR = ("out" ,"out/net" ,"out/web")
@@ -157,7 +160,8 @@ def limit_file_size():
   resource.setrlimit(resource.RLIMIT_FSIZE ,(1 << 20 ,1 << 20))
 
 def run_Man_In_Grey(program ,path ,work_dpath ,*option ,preexec=None):
-  command = [str(program) ,"orchestrate" ,str(path) ,*option]
+  gate = program.parent.parent / "Man_In_Grey_gate" / GATE_NAME
+  command = [str(program) ,"orchestrate" ,str(path) ,"gate" ,str(gate) ,*option]
   result = subprocess.run(command ,cwd=work_dpath ,capture_output=True ,text=True ,preexec_fn=preexec)
   return result.returncode ,(result.stdout + result.stderr).strip()
 
@@ -199,11 +203,11 @@ def put_constraint(guard_fpath ,constraint):
   os.chmod(guard_fpath ,0o644)
 
 def write_constraint(tree ,work_dpath):
-  "the test's constraints in its copy of guard_file.py, allowing the files in ALLOWED to the person running the test"
+  "the test's constraints in its copy of guard_smoke.py, allowing the files in ALLOWED to the person running the test"
   person = getpass.getuser()
   allowed = {(str(work_dpath / d) ,n): (m ,int(p ,8)) for d ,n ,m ,p in ALLOWED}
   text = (
-    "# written by the write_file test\n\n"
+    "# written by the smoke test\n\n"
     f"PERSON = {person!r}\n"
     f"ALLOWED = {allowed!r}\n\n"
     "def is_allowed_account(user_name):\n"
@@ -215,7 +219,7 @@ def write_constraint(tree ,work_dpath):
     "  entry = ALLOWED.get((directory ,name))\n"
     "  return entry is not None and \"unlink\" in entry[0]\n"
   )
-  put_constraint(tree / "Man_In_Grey" / "guard_file.py" ,text)
+  put_constraint(tree / "Man_In_Grey" / "guard_smoke.py" ,text)
 
 def test(repo_home):
   consumer = repo_home / "consumer"
@@ -229,7 +233,7 @@ def test(repo_home):
 
   promoted = os.access(consumer / "Man_In_Grey" / "Man_In_Grey" ,os.X_OK)
   if not log.check(promoted ,"Man_In_Grey is promoted"
-                   ,None if promoted else "the developer promotes Man_In_Grey and Man_In_Grey_file_gate first"):
+                   ,None if promoted else f"the developer promotes Man_In_Grey and {GATE_NAME} first"):
     return log.summary()
 
   if work_dpath.exists():
@@ -286,7 +290,7 @@ def test(repo_home):
   # check_only
   before = snapshot(out)
   status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer" ,work_dpath ,"check_only")
-  check_status(log ,"check_only is approved by the guard" ,status ,0 ,output ,"approved: guard file check passed")
+  check_status(log ,"check_only is approved by the guard" ,status ,0 ,output ,"approved: guard smoke check passed")
   log.check(snapshot(out) == before ,"check_only changes nothing")
 
   # a resource limit the gate cannot raise

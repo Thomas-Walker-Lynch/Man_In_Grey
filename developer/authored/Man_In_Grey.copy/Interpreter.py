@@ -8,7 +8,7 @@ the journal is well formed, since it decodes the journal anyway, so that a
 malformed journal never reaches execution.
 
 This module is a library. An instruction language's interpreter program calls
-interpret(); see interpreter_file.py and interpreter_emplace_bio.py.
+interpret(); see interpreter_emplace_bio.py.
 """
 
 import Journal

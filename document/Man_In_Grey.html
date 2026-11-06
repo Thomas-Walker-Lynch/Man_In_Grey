@@ -46,6 +46,10 @@
         <p>
           This document is both the design of Man_In_Grey and the user manual, as Man_In_Grey is a programmer's tool.
         </p>
+        <p>
+           All programs in Man_In_Grey are written with lead-in 'CLI' functions whose only job is to parse arguments and to format return values. Each CLI will call one or more functions to do the actual work. In this manner programs can be included as modules so as to reuse their helper functions, or to gain access to the main work functions.
+        </p>
+
       </RT·section>
 
       <RT·section id="sec-term">
@@ -118,15 +122,14 @@
       <RT·section id="sec-symbol">
         <RT·name>Symbol</RT·name>
         <p>
-          A composer writes instructions, but it does not run them. When an instruction would produce a result when run, as for example the file <RT·code>open</RT·code> instruction, which returns a file handle, the result does not exist yet at the time the composer runs. Hence, when an instruction is entered into the journal via the journal interface, the interface returns a <RT·term>symbol</RT·term> placeholder. The symbol is then used as an argument by the composer when it enters instructions that are given said result as an argument. In the current implementation a symbol is simply the index into the journal that locates an instruction. Thus, with the current implementation each instruction can have at most one result.
+          A composer writes instructions, but it does not run them. When an instruction would produce a result when run, as for example an instruction that makes an account and returns its uid, the result does not exist yet at the time the composer runs. Hence, when an instruction is entered into the journal via the journal interface, the interface returns a <RT·term>symbol</RT·term> placeholder. The symbol is then used as an argument by the composer when it enters instructions that are given said result as an argument. In the current implementation a symbol is simply the index into the journal that locates an instruction. Thus, with the current implementation each instruction can have at most one result.
         </p>
         <RT·code>
-          file = journal_iface.open("/etc/unbound" ,"unbound-US.conf"
-                                    ,"replace_keep" ,"root" ,0o644)
-          journal_iface.write(file ,"server:\n  verbosity: 1\n")
+          account = journal_iface.make_account("Thomas·www")
+          journal_iface.add_to_group(account ,"http")
         </RT·code>
         <p>
-          In this example <RT·code>file</RT·code> is a result symbol. The value of <RT·code>file</RT·code> will be 0, i.e. the index into the journal of the <RT·code>open</RT·code> instruction.
+          In this example <RT·code>account</RT·code> is a result symbol. The value of <RT·code>account</RT·code> will be 0, i.e. the index into the journal of the <RT·code>make_account</RT·code> instruction. The two instructions are of a language an application that manages accounts would define; the example language in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a> has no instruction that produces a result.
         </p>
       </RT·section>
 
@@ -175,23 +178,24 @@
           The gate is compiled because Linux ignores the setuid bit on a script started with <RT·code>#!</RT·code>. Given no arguments, the gate prints its usage. Its command <RT·code>flags</RT·code> reports the gate's real and effective uid and gid with their names, whether they differ, the name of the gate's instruction language, and the paths of the guard and the interpreter.
         </p>
         <RT·code>
-        2026-11-06 07:55:01 Z [:] Thomas·developer@IdealX
-        §/home/Thomas·developer/project/Man_In_Grey/consumer§
-        > ./Man_In_Grey_gate/Man_In_Grey_file_gate flags
-        real.uid=2005
-        real.user_name=Thomas·developer
-        real.gid=2005
-        real.group_name=Thomas·developer
-        effective.uid=2005
-        effective.user_name=Thomas·developer
-        effective.gid=2005
-        effective.group_name=Thomas·developer
-        uid_differ=0
-        gid_differ=0
-        language=file
-        guard.path=/home/Thomas·developer/project/Man_In_Grey/consumer/Man_In_Grey/guard_file.py
-        interpreter.path=/home/Thomas·developer/project/Man_In_Grey/consumer/Man_In_Grey/interpreter_file.py
+          > /usr/local/lib/Man_In_Grey/Man_In_Grey_gate/Man_In_Grey_emplace_bio_gate flags
+          real.uid=2006
+          real.user_name=Thomas
+          real.gid=2006
+          real.group_name=Thomas
+          effective.uid=996
+          effective.user_name=http
+          effective.gid=995
+          effective.group_name=http
+          uid_differ=1
+          gid_differ=1
+          language=emplace_bio
+          guard.path=/usr/local/lib/Man_In_Grey/Man_In_Grey/guard_emplace_bio.py
+          interpreter.path=/usr/local/lib/Man_In_Grey/Man_In_Grey/interpreter_emplace_bio.py
         </RT·code>
+        <p>
+          Here Thomas asks the example language's gate, <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>, installed setuid to the web server's account <RT·code>http</RT·code>: the real ids are his, and the effective ids are <RT·code>http</RT·code>'s.
+        </p>
 
         <p>
           Th <RT·code>admit</RT·code> command takes the journal on standard input, with the option <RT·code>check_only</RT·code>. When the gate is asked to <RT·code>admit</RT·code> a journal, it:
@@ -223,24 +227,24 @@
         <RT·section>
           <RT·name>One gate per instruction language</RT·name>
           <p>
-            Man_In_Grey's general gate is the library module <RT·code>Gate.lib.c</RT·code>, whose function <RT·code>Man_In_Grey_gate·Gate·run</RT·code> takes the name of the instruction language, the guard's path and the interpreter's path, and the command line. An instruction language's gate is a <RT·code>*.CLI.c</RT·code> of three lines that calls it with the three fixed. The gate of the file language:
+            Man_In_Grey's general gate is the library module <RT·code>Gate.lib.c</RT·code>, whose function <RT·code>Man_In_Grey_gate·Gate·run</RT·code> takes the name of the instruction language, the guard's path and the interpreter's path, and the command line. An instruction language's gate is a <RT·code>*.CLI.c</RT·code> of three lines that calls it with the three fixed. The gate of the example language:
           </p>
           <RT·code>
             #include "Gate.lib.c"
 
             int main(int argc ,char **argv){
-              return Man_In_Grey_gate·Gate·run("file" ,"../Man_In_Grey/guard_file.py"
-                                               ,"../Man_In_Grey/interpreter_file.py" ,argc ,argv);
+              return Man_In_Grey_gate·Gate·run("emplace_bio" ,"../Man_In_Grey/guard_emplace_bio.py"
+                                               ,"../Man_In_Grey/interpreter_emplace_bio.py" ,argc ,argv);
             }
           </RT·code>
           <p>
-            The general gate is curried, with its first three arguments supplied when the gate is compiled. Whoever invokes a gate can choose neither program it runs; if he could, he could give it a guard that approves everything. The language name holds no space and no control character, and the gate refuses to run when it does. Man_In_Grey has two gates: the file language's, above, and <RT·code>Man_In_Grey_emplace_bio_gate</RT·code>, the gate of the example language in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>.
+            The general gate is curried, with its first three arguments supplied when the gate is compiled. Whoever invokes a gate can choose neither program it runs; if he could, he could give it a guard that approves everything. The language name holds no space and no control character, and the gate refuses to run when it does.
           </p>
         </RT·section>
         <RT·section>
           <RT·name>Output rule</RT·name>
           <p>
-            Every line the guard and the interpreter write is copied to the person, marked <RT·code>guard:</RT·code> or <RT·code>interpreter:</RT·code>, and to the system log under the name <RT·code>Man_In_Grey_gate</RT·code>, beside the gate's own lines, marked <RT·code>gate:</RT·code>. The gate logs each journal's course itself, whatever the guard and the interpreter write: <RT·code>received</RT·code>, with account A, account B and the journal's size; then <RT·code>approved</RT·code> or <RT·code>refused</RT·code>; then <RT·code>interpreting</RT·code>; then <RT·code>interpreted</RT·code> or <RT·code>failed</RT·code>. A line breaks the gate's rules when it is not UTF-8, or holds a control character (C0, DEL or C1), or is longer than 4096 bytes, or is one line more than 2000; the gate then stops the program and refuses the journal. Unicode is otherwise welcome. The guard writes any control character it quotes as <RT·code>\u{XXXX}</RT·code>, and the wellformed check refuses a directory, file name or owner that holds one.
+            Every line the guard and the interpreter write is copied to the person, marked <RT·code>guard:</RT·code> or <RT·code>interpreter:</RT·code>, and to the system log under the name <RT·code>Man_In_Grey_gate</RT·code>, beside the gate's own lines, marked <RT·code>gate:</RT·code>. The gate logs each journal's course itself, whatever the guard and the interpreter write: <RT·code>received</RT·code>, with account A, account B and the journal's size; then <RT·code>approved</RT·code> or <RT·code>refused</RT·code>; then <RT·code>interpreting</RT·code>; then <RT·code>interpreted</RT·code> or <RT·code>failed</RT·code>. A line breaks the gate's rules when it is not UTF-8, or holds a control character (C0, DEL or C1), or is longer than 4096 bytes, or is one line more than 2000; the gate then stops the program and refuses the journal. Unicode is otherwise welcome. The guard writes any control character it quotes as <RT·code>\u{XXXX}</RT·code>, and the example language's wellformed check refuses any text that holds one.
           </p>
         </RT·section>
         <RT·section>
@@ -249,7 +253,7 @@
             A setuid gate owned by root gives the interpreter every one of root's rights. Root's rights are a set of about forty separate capabilities, among them <RT·code>CAP_DAC_OVERRIDE</RT·code>, to ignore file permissions; <RT·code>CAP_CHOWN</RT·code>, to change owners; <RT·code>CAP_SYS_ADMIN</RT·code>, to mount; and <RT·code>CAP_SETUID</RT·code>, to become another uid. The design is to give each such gate only the capabilities its instruction language needs.
           </p>
           <p>
-            <RT·code>setcap</RT·code> stores chosen capabilities in a program file's extended attributes. A process running that file holds them while its real and effective uid stay account A's. Capabilities are normally lost when a program <RT·code>exec</RT·code>s one whose file holds none, as the gate does when it starts Python; the gate keeps them by raising them as ambient capabilities first, which survive the <RT·code>exec</RT·code>. A gate for the file language would then be able to write files and change owners, and nothing else. The gain is uneven: <RT·code>CAP_SYS_ADMIN</RT·code>, needed for mounting, is nearly root by itself.
+            <RT·code>setcap</RT·code> stores chosen capabilities in a program file's extended attributes. A process running that file holds them while its real and effective uid stay account A's. Capabilities are normally lost when a program <RT·code>exec</RT·code>s one whose file holds none, as the gate does when it starts Python; the gate keeps them by raising them as ambient capabilities first, which survive the <RT·code>exec</RT·code>. A gate for a language that places files owned by other accounts would then be able to write files and change owners, and nothing else. The gain is uneven: <RT·code>CAP_SYS_ADMIN</RT·code>, needed for mounting, is nearly root by itself.
           </p>
         </RT·section>
         <RT·section>
@@ -272,7 +276,7 @@
           Two checks are needed by nearly every guard, whatever its instruction language. The first is that the journal is well formed: that it decodes, names only instructions of its language, and gives each instruction the arguments it takes, of the right kinds. This check carries knowledge of the instruction syntax, so it belongs to the instruction language. The second is who account A is. The gate's real uid is account A's, and its real gid and supplementary groups are those it inherited from the invoking program, since the setuid and setgid bits change only the effective ids. All three pass to the guard, which reads them from the kernel, so account A cannot misstate them. A guard can therefore allow a journal from the accounts it names, or from the members of a group, as its constraints decide.
         </p>
         <p>
-          The other checks a guard makes belong to its instruction language. The file language's four checks are in <a href="#sec-file-language"><RT·Counter·read snapshot="sec-file-language" key="counter count"></RT·Counter·read></a>.
+          The other checks a guard makes belong to its instruction language. The example language's four checks are in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>.
         </p>
         <p>
           A guard's constraints are code. The guard is a Python program, written for one application, so its constraints are Python functions written at the top of the guard itself, where they go with it, and no language for expressing constraints is needed. Each is a <RT·term>constraint predicate</RT·term>, named in the manner of <RT·code>is_allowed_account(user_name)</RT·code> or <RT·code>is_allowed_open(directory ,name ,mode ,owner ,permission)</RT·code>, and the guard refuses a journal when one does not answer <RT·code>True</RT·code>. A predicate can compare with a list, ask whether an account is in a group, or anything else Python can say. The predicates sit between the lines <RT·code># constraints begin</RT·code> and <RT·code># constraints end</RT·code>, so that <RT·code>install_gate</RT·code> can put in an administrator's and keep them when the guard is installed again. As promoted with Man_In_Grey, they refuse every account.
@@ -311,116 +315,73 @@
       <RT·section id="sec-interpreter">
         <RT·name>Interpreter</RT·name>
         <p>
-          The gate starts the interpreter only after the guard has approved the journal, with the effective uid of account B and the same journal on its standard input. The interpreter does not check the constraints; that is the guard's work. It imports the guard program only for what execution needs from its constraints, as the example language's interpreter calls the guard's <RT·code>page_directory()</RT·code> for the directory its pages go in. It decodes the journal, checks once more that the journal is well formed, and then executes the instructions in order.
+          The gate starts the interpreter only after the guard has approved the journal, with the effective uid of account B and the same journal on its standard input. Generally the interpreter does not check the constraints as that is the guard's work, but some checks will naturally occur as part of interpretation.  Where useful the guard program module can be included so as to pull in the helper functions.
         </p>
         <p>
-          The interpreter writes to standard output, as <RT·code>&lt;tag&gt;: &lt;message&gt;</RT·code>, the highlights of what it does, as its developer chooses them, and the gate copies each line to the person and to the system log by the output rule. A line for each instruction would be impractical: a language that builds a file from many <RT·code>write</RT·code>s would log each, and a line that echoed an instruction's arguments would quote content, which can be long and does not belong in a log. The interpreters of Man_In_Grey write a line for each lasting change, such as a file put in place or removed, and none for an instruction as such. The gate logs the journal's course itself, so the log shows each journal received, approved and interpreted whatever an interpreter writes. The interpreter's exit status is 0 when it finished the journal, 1 when it stopped partway, and 2 when the journal could not be read or is not well formed.
+          The gate logs when a journal is received, approved, and interpreted. The interpreter's exit status is 0 when it finished the journal, 1 when it stopped partway, and 2 when the journal could not be read or is not well formed. The interpreter writes to standard output, as <RT·code>&lt;tag&gt;: &lt;message&gt;</RT·code>, the highlights of what it does, as its developer chooses them.
         </p>
         <p>
-          Execution stops at the first error. What the interpreter did before then stays done, except what its instruction language undoes; for the file language, see <a href="#sec-file-language"><RT·Counter·read snapshot="sec-file-language" key="counter count"></RT·Counter·read></a>. Playing a journal as a transaction is a possible future feature; see <a href="#sec-transaction"><RT·Counter·read snapshot="sec-transaction" key="counter count"></RT·Counter·read></a>.
+          Execution stops at the first error. What the interpreter did before then stays done, except what its instruction language undoes; for the example language, see <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>. Playing a journal as a transaction is a possible future feature; see <a href="#sec-transaction"><RT·Counter·read snapshot="sec-transaction" key="counter count"></RT·Counter·read></a>.
         </p>
       </RT·section>
 
       <RT·section id="sec-language">
         <RT·name>Instruction language</RT·name>
         <p>
-          An instruction language is defined once and used from both sides. Its composer half is its journal interface: one function per instruction, which checks the call's arguments, raises an error on a wrong one, and places the instruction. Its other half is the checks the guard makes, the constraint check among them, and the code the interpreter runs for each instruction. Keeping both halves in one module keeps the two checks in step.
+          An instruction language is defined by the application developer and is built into the application. On the A side of the account divide, the composer writes the language by calling functions on the journal interface, one interface function per instruction. On the B account side of the divide, the guard checks the journal for correct syntax and that other constraints are met. 
         </p>
         <p>
-          The instruction language is not specific to Man_In_Grey. An application that mounts home directories has a language of mount and unmount; one that manages accounts has a language for making and deleting them. Each gate starts the guard and the interpreter of one instruction language, and they refuse a journal written in another.
+          The instruction language is not specific to Man_In_Grey. An application that mounts home directories has a language of mount and unmount; one that manages accounts has a language for making and deleting them. Each gate starts the guard and the interpreter of one instruction language, and they refuse a journal written in another language. These coherency checks are due to the journal carrying the name of its language, and due to syntax checking of the constituent instructions passing.
         </p>
         <p>
-          A language can be made as narrow as its application. The narrower it is, the less a journal can say, and the less the guard has to rule out. The file language can name any file, so its constraints list the files allowed. The example language, <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>, can name no file at all: what it writes, and where, follows from the account that gives the journal.
+          A language can be made as narrow as its application. The narrower it is, the less a journal can say, and the less the guard has to rule out. The example language, <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>, can name no file at all: what it writes, and where, is partially compiled in, and partially derived from the name of the invoking user account.
         </p>
-
-        <RT·section id="sec-file-language">
-          <RT·name>The file language</RT·name>
-          <p>
-            Man_In_Grey's own instruction language is a constrained form of the POSIX file interface:
-          </p>
-          <RT·dictionary key="Instruction" definition="Meaning">
-            <RT·entry key="open(directory ,name ,mode ,owner ,permission)">
-              Produces a symbol for the file. A relative directory is made absolute from the composer's working directory. <RT·code>permission</RT·code> is an integer such as <RT·code>0o644</RT·code>, or three or four octal digits such as <RT·code>"0644"</RT·code>.
-            </RT·entry>
-            <RT·entry key="write(file ,content)">
-              Appends content, text or bytes, to the file an <RT·code>open</RT·code> produced. Text is encoded as UTF-8.
-            </RT·entry>
-            <RT·entry key="unlink(directory ,name)">
-              Removes a file. A file that is absent is not an error.
-            </RT·entry>
-          </RT·dictionary>
-          <RT·dictionary key="Mode of open" definition="Meaning">
-            <RT·entry key="create">
-              The file must not exist.
-            </RT·entry>
-            <RT·entry key="replace">
-              An existing file is discarded.
-            </RT·entry>
-            <RT·entry key="replace_keep">
-              An existing file is kept as <RT·code>&lt;name&gt;.YYYYMMDDTHHMMSSZ</RT·code>, the time in UTC, with <RT·code>.1</RT·code>, <RT·code>.2</RT·code> added when that name is taken.
-            </RT·entry>
-          </RT·dictionary>
-          <p>
-            There is no <RT·code>close</RT·code>. Each opened file is written to a temporary file in its own directory, and after the journal's last instruction every opened file is given its owner and permission and put in place, each in one step: a rename for <RT·code>replace</RT·code>, a hard link that refuses an existing name for <RT·code>create</RT·code>, and for <RT·code>replace_keep</RT·code> a hard link of the old file to its backup name followed by the rename, so the file's name is never absent. Every directory is opened without following a symbolic link, and names are worked on inside the open directory.
-          </p>
-          <p>
-            Execution stops at the first error, and every temporary file not yet put in place is removed. An <RT·code>unlink</RT·code> earlier in the journal has already happened by then. The interpreter writes a line for each file it puts in place or removes, such as <RT·code>replaced: /etc/unbound/unbound-US.conf (kept as unbound-US.conf.20261105T083807Z)</RT·code>, and none for an <RT·code>open</RT·code> or a <RT·code>write</RT·code>.
-          </p>
-          <p>
-            The guard checks a journal in four steps, each over every instruction, and stops at the first step that finds a problem. It reports each problem as <RT·code>&lt;step&gt;_broken</RT·code> and each step that passes as <RT·code>check_passed</RT·code>:
-          </p>
-          <RT·dictionary key="Check" definition="What it looks at">
-            <RT·entry key="wellformed">
-              Known instructions with exactly their arguments, of the right kinds; absolute directories in normal form; bare file names; no control character in a directory, file name or owner; every <RT·code>write</RT·code> naming the symbol of an <RT·code>open</RT·code>.
-            </RT·entry>
-            <RT·entry key="constraint">
-              <RT·code>is_allowed_account</RT·code> allows account A; <RT·code>is_allowed_open</RT·code> allows each file opened, in its mode, with its owner and permission; <RT·code>is_allowed_unlink</RT·code> allows each file removed.
-            </RT·entry>
-            <RT·entry key="validity">
-              Every owner names an account.
-            </RT·entry>
-            <RT·entry key="filesystem">
-              Every directory exists, opens, and passes through no symbolic link; no file is named by two instructions; a file opened in <RT·code>create</RT·code> mode does not exist; an existing file to be replaced or unlinked is a regular file.
-            </RT·entry>
-          </RT·dictionary>
-          <p>
-            The constraints at the top of the file language's guard, <RT·code>guard_file.py</RT·code>, allowing Thomas to keep one unbound configuration file and to remove another:
-          </p>
-          <RT·code>
-            def is_allowed_account(user_name):
-              return user_name == "Thomas"
-
-            def is_allowed_open(directory ,name ,mode ,owner ,permission):
-              return (directory ,name ,mode ,owner ,permission) == ("/etc/unbound" ,"unbound-US.conf" ,"replace_keep" ,"root" ,0o644)
-
-            def is_allowed_unlink(directory ,name):
-              return (directory ,name) == ("/etc/unbound" ,"unbound-old.conf")
-          </RT·code>
-          <p>
-            The permission is given to <RT·code>is_allowed_open</RT·code> as an integer, so <RT·code>0o644</RT·code> and <RT·code>"0644"</RT·code> in a composer both arrive as <RT·code>0o644</RT·code>.
-          </p>
-        </RT·section>
+        <p>
+          Narrowness matters most for content. Constraints on where a file goes, and with what owner and permission, do not make the file safe when account A writes every byte of it. A configuration file is read by a program, often one started by root, and what the file says is what that program does; <RT·code>unbound.conf</RT·code>, for one, can name a Python script for the daemon to load. A language that lets account A write such a file freely gives account A much of the power of the program that reads it, however tightly its constraints fix the destination. The safe design is a language narrow enough that every journal it can express is safe: its interpreter writes the file, and account A supplies only values the language has a place for, as in the example.
+        </p>
       </RT·section>
 
       <RT·section id="sec-journal">
         <RT·name>Journal</RT·name>
         <p>
-          A journal is a CBOR map:
+          A journal is a CBOR map of four entries:
         </p>
         <RT·dictionary key="Entry" definition="Meaning">
           <RT·entry key="version">
-            3.
+            The version of the journal's form, now 3. A guard or interpreter refuses a journal of another version.
           </RT·entry>
           <RT·entry key="instruction_language">
-            The name of the instruction language, such as <RT·code>file</RT·code>.
+            The name of the instruction language the journal is written in, such as <RT·code>emplace_bio</RT·code>. A guard and an interpreter refuse a journal in a language other than their own.
           </RT·entry>
           <RT·entry key="meta">
-            When, where and by whom it was composed, and the composers that ran.
+            When, on which host and by which account the journal was composed, the composer directory, and the composers that ran, in order.
           </RT·entry>
           <RT·entry key="instruction_list">
-            The instructions, each a map of <RT·code>name</RT·code>, <RT·code>argument</RT·code>, and <RT·code>composer</RT·code>. An argument that is a symbol is the map <RT·code>{"symbol": &lt;index&gt;}</RT·code>.
+            The instructions, in the order the composers placed them.
           </RT·entry>
         </RT·dictionary>
+        <p>
+          Each instruction is a map of three entries: <RT·code>name</RT·code>, which instruction it is; <RT·code>argument</RT·code>, a map holding all of the instruction's arguments, each keyed by argument name; and <RT·code>composer</RT·code>, the name of the composer function that placed it. The first four instructions of the journal in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>, decoded, and written in JSON notation:
+        </p>
+        <RT·code>
+          {"name": "display_name", "argument": {"text": "Thomas"}, "composer": "bio.py"}
+          {"name": "paragraph", "argument": {}, "composer": "bio.py"}
+          {"name": "text", "argument": {"content": "I write ", "style": []}, "composer": "bio.py"}
+          {"name": "text", "argument": {"content": "software", "style": ["emphasis"]}, "composer": "bio.py"}
+        </RT·code>
+        <p>
+          An instruction that takes no arguments, such as <RT·code>paragraph</RT·code>, has an empty argument map. Arguments are given by name rather than by position, so the guard's wellformed check can require exactly the arguments an instruction takes: a <RT·code>text</RT·code> instruction carrying a third argument is refused, whatever that argument says.
+        </p>
+        <p>
+          An argument that is a symbol is the map <RT·code>{"symbol": &lt;index&gt;}</RT·code>, where the index locates the instruction that produces the value. In the account language of <a href="#sec-symbol"><RT·Counter·read snapshot="sec-symbol" key="counter count"></RT·Counter·read></a>, the second instruction names the result of the first:
+        </p>
+        <RT·code>
+          {"name": "make_account", "argument": {"name": "Thomas·www"}, "composer": "www.py"}
+          {"name": "add_to_group", "argument": {"account": {"symbol": 0}, "group": "http"}, "composer": "www.py"}
+        </RT·code>
+        <p>
+          The orchestrator runs the composers one after another into a single journal. Before it calls each composer's <RT·code>compose</RT·code>, it records that composer's path, relative to the composer directory, and every instruction placed during the call carries it. A journal composed from a directory of composers therefore shows which composer placed each instruction, and <RT·code>print</RT·code> shows it at the end of each line, which helps in finding the composer that placed a wrong one. The <RT·code>composer</RT·code> entry, like <RT·code>meta</RT·code>, is a note, not evidence: account A writes the whole journal, and could write anything there, so the guard and the interpreter never base a decision on either.
+        </p>
       </RT·section>
 
       <RT·section id="sec-transport">
@@ -436,7 +397,7 @@
         <RT·section>
           <RT·name>Building</RT·name>
           <p>
-            Man_In_Grey is a Harmony project with two namespaces: <RT·code>Man_In_Grey.copy</RT·code>, the Python programs, and <RT·code>Man_In_Grey_gate.make</RT·code>, the general gate and the gates of the file language and the example language. In the developer role, from its directory <RT·code>developer/</RT·code>, <RT·code>build "*"</RT·code> and <RT·code>promote write</RT·code> place them in the following layout, which is how each part finds the others:
+            Man_In_Grey is a Harmony project with two namespaces: <RT·code>Man_In_Grey.copy</RT·code>, the Python programs, and <RT·code>Man_In_Grey_gate.make</RT·code>, the general gate, the example language's gate, and the gate of the smoke test's language. In the developer role, from its directory <RT·code>developer/</RT·code>, <RT·code>build "*"</RT·code> and <RT·code>promote write</RT·code> place them in the following layout, which is how each part finds the others:
           </p>
           <RT·code>
             consumer/Man_In_Grey/Man_In_Grey                       the command a person runs
@@ -446,14 +407,12 @@
             consumer/Man_In_Grey/Guard.py                          the general guard
             consumer/Man_In_Grey/Constraint.py                     predicates that recur among guards' constraints
             consumer/Man_In_Grey/Interpreter.py                    the general interpreter
-            consumer/Man_In_Grey/FileLanguage.py                   the file language: interface, checks, execution
-            consumer/Man_In_Grey/guard_file.py                     the file language's guard, its constraints at its top
-            consumer/Man_In_Grey/interpreter_file.py               the file language's interpreter
-            consumer/Man_In_Grey/EmplaceBioLanguage.py             the example language
-            consumer/Man_In_Grey/guard_emplace_bio.py              its guard
+            consumer/Man_In_Grey/EmplaceBioLanguage.py             the example language: interface, checks, execution
+            consumer/Man_In_Grey/guard_emplace_bio.py              its guard, with its constraints at its top
             consumer/Man_In_Grey/interpreter_emplace_bio.py        its interpreter
-            consumer/Man_In_Grey_gate/Man_In_Grey_file_gate        the file language's gate
             consumer/Man_In_Grey_gate/Man_In_Grey_emplace_bio_gate the example language's gate
+            consumer/Man_In_Grey_gate/Man_In_Grey_smoke_gate       the smoke test's gate, with SmokeLanguage.py,
+                                                                   guard_smoke.py and interpreter_smoke.py
             consumer/Man_In_Grey_gate/libMan_In_Grey.a             the general gate, for other gates
           </RT·code>
           <p>
@@ -464,7 +423,7 @@
         <RT·section id="sec-composer">
           <RT·name>Writing a composer</RT·name>
           <p>
-            Composers are kept in a composer directory, named <RT·code>composer</RT·code> in the examples here. Every file in it is a composer, a Python file defining <RT·code>compose(prov ,journal_iface)</RT·code>; notes such as a README belong a directory up. Its subdirectories are namespaces for the author. They set the order the composers run in: depth first, in order of name at each level, files and subdirectories together, by Unicode code point, so capital letters come before small ones. A composer's place says nothing else; its <RT·code>open</RT·code> and <RT·code>unlink</RT·code> instructions say where its files go.
+            Composers are kept in a composer directory, named <RT·code>composer</RT·code> in the examples here. Every file in it is a composer, a Python file defining <RT·code>compose(prov ,journal_iface)</RT·code>; notes such as a README belong a directory up. Its subdirectories are namespaces for the author. They set the order the composers run in: depth first, in order of name at each level, files and subdirectories together, by Unicode code point, so capital letters come before small ones. A composer's place says nothing else; what a composer does is said by the instructions it places.
           </p>
           <p>
             A composer runs with the orchestrator's uids, which are normally account A's, and so with account A's rights. If another account could change a composer, or add one to a composer directory, that account's code would run with account A's rights, and its instructions would reach the gate in account A's name. Every composer, and every directory from <RT·code>/</RT·code> down to it, is therefore to be owned by account A or by root, and writable by no other account.
@@ -473,12 +432,16 @@
             This ownership protects account A, not account B, and the gate cannot enforce it. The gate is given a journal, never the program that made it, and anything it is told about the composers comes from account A. To the gate and the guard, every journal is account A's, whatever made it. Composer ownership is therefore a convention, kept by whoever installs an application's composers. Man_In_Grey's orchestrator keeps it for its own runs: before running any composer it makes the check, and it refuses a symbolic link in a composer directory. An application that acts as its own orchestrator keeps the convention itself. To run a composer someone else wrote, review it and copy it into your own composer directory.
           </p>
           <RT·code>
-            # composer/unbound-US.conf.py
+            # composer/bio.py
 
             def compose(prov ,journal_iface):
-              file = journal_iface.open("/etc/unbound" ,prov.implied_fname ,"replace_keep" ,"root" ,0o644)
-              journal_iface.write(file ,"server:\n  verbosity: 1\n")
+              journal_iface.display_name("Thomas")
+              journal_iface.paragraph()
+              journal_iface.text("I write software." ,[])
           </RT·code>
+          <p>
+            This composer writes in the example language; <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a> shows a whole one. <RT·code>compose</RT·code> is given <RT·code>prov</RT·code>, which says where the composer is:
+          </p>
           <RT·dictionary key="Field of prov" definition="Meaning">
             <RT·entry key="implied_fname">
               The composer's own file name less <RT·code>.py</RT·code>, for a composer named for the file it writes.
@@ -491,7 +454,7 @@
             </RT·entry>
           </RT·dictionary>
           <p>
-            <RT·code>Man_In_Grey orchestrate &lt;path&gt;</RT·code> runs the one composer in a composer file, or every composer in a composer directory. No option given to Man_In_Grey reaches <RT·code>compose</RT·code>; a composer's settings are written in the composer itself. The <RT·code>journal_iface</RT·code> a composer is given is that of the gate's instruction language: the orchestrator asks the gate for its flags, and loads the module named for its <RT·code>language</RT·code>, <RT·code>FileLanguage.py</RT·code> for <RT·code>file</RT·code> and <RT·code>EmplaceBioLanguage.py</RT·code> for <RT·code>emplace_bio</RT·code>.
+            <RT·code>Man_In_Grey orchestrate &lt;path&gt;</RT·code> runs the one composer in a composer file, or every composer in a composer directory. No option given to Man_In_Grey reaches <RT·code>compose</RT·code>; a composer's settings are written in the composer itself. The <RT·code>journal_iface</RT·code> a composer is given is that of the gate's instruction language: the orchestrator asks the gate for its flags, and loads the module named for its <RT·code>language</RT·code>, <RT·code>EmplaceBioLanguage.py</RT·code> for <RT·code>emplace_bio</RT·code>.
           </p>
         </RT·section>
 
@@ -501,16 +464,16 @@
             A run that changes files is best preceded by two that do not. The first shows the journal while nothing has left the person's account; the second has the guard check the journal, and the gate stop before the interpreter:
           </p>
           <RT·code>
-            Man_In_Grey orchestrate composer print compose_only
-            Man_In_Grey orchestrate composer check_only
-            Man_In_Grey orchestrate composer
+            Man_In_Grey orchestrate composer gate &lt;gate&gt; print compose_only
+            Man_In_Grey orchestrate composer gate &lt;gate&gt; check_only
+            Man_In_Grey orchestrate composer gate &lt;gate&gt;
           </RT·code>
           <RT·dictionary key="Command or option" definition="Meaning">
             <RT·entry key="orchestrate &lt;path&gt;">
               Run the composer in a composer file, or every composer in a composer directory, and invoke the gate with the journal.
             </RT·entry>
             <RT·entry key="gate &lt;file&gt;">
-              The gate to invoke, which also sets the instruction language the composers write in. Default: <RT·code>../Man_In_Grey_gate/Man_In_Grey_file_gate</RT·code> from <RT·code>Man_In_Grey.py</RT·code>.
+              The gate to invoke, which also sets the instruction language the composers write in. Required: the orchestrator has no gate of its own.
             </RT·entry>
             <RT·entry key="print">
               Print the journal after composing.
@@ -523,7 +486,7 @@
             </RT·entry>
           </RT·dictionary>
           <p>
-            The command and its path come first, and the options follow, as plain words; given no arguments, <RT·code>Man_In_Grey</RT·code> prints its help, and so does the gate. The exit status is 0 when the run did what it was asked; 1 when the guard refused the journal or an instruction failed to execute; and 2 when the run could not start, a composer failed or was refused, or the gate, guard or interpreter could not run or broke the gate's rules. The guard's and interpreter's lines are also in the system log; on a system with journald, <RT·code>journalctl -t Man_In_Grey_gate</RT·code> shows them. To undo a <RT·code>replace_keep</RT·code>, rename the backup back.
+            The command and its path come first, then the gate, and the options follow, as plain words; given no arguments, <RT·code>Man_In_Grey</RT·code> prints its help, and so does the gate. The exit status is 0 when the run did what it was asked; 1 when the guard refused the journal or an instruction failed to execute; and 2 when the run could not start, a composer failed or was refused, or the gate, guard or interpreter could not run or broke the gate's rules. The guard's and interpreter's lines are also in the system log; on a system with journald, <RT·code>journalctl -t Man_In_Grey_gate</RT·code> shows them.
           </p>
         </RT·section>
 
@@ -546,19 +509,18 @@
         <RT·section>
           <RT·name>Testing</RT·name>
           <p>
-            The tester has two tests. Each copies the promoted Man_In_Grey into its scratchpad directory, puts constraints of its own at the top of the copy's guard, and runs the copy through a gate that is not setuid, so accounts A and B are the same. The gate checks ownership on every run, so the test makes its copy writable by its owner alone, and every directory from <RT·code>/</RT·code> down to the scratchpad directory is to be writable by no account but its owner too. The test <RT·code>tester/authored/write_file</RT·code> runs the file language's gate, and checks twenty-five things. Two runs of composers using every mode and <RT·code>unlink</RT·code> are compared with <RT·code>expected/run_1</RT·code> and <RT·code>expected/run_2</RT·code>, with backup times replaced by the letters <RT·code>YYYYMMDDTHHMMSSZ</RT·code>. A file opened in <RT·code>create</RT·code> mode is written once and refused the second time. A journal with one allowed file and one the constraints do not list is refused whole. A composer giving a wrong mode fails before any journal reaches the gate. A composer directory holding a composer other accounts can write is refused by the orchestrator. A <RT·code>check_only</RT·code> run is approved by the guard and changes nothing. A run under a file size limit the gate cannot raise is refused before the guard starts. Each refusal leaves every file as it was. Since the gate checks ownership on every run, every directory from <RT·code>/</RT·code> down to the promoted interpreter is to be writable by no account but its owner. In the tester role, from its directory <RT·code>tester/</RT·code>:
+            The tester's test <RT·code>tester/authored/emplace_bio</RT·code> copies the promoted Man_In_Grey into its scratchpad directory, puts constraints of its own at the top of the copy's guard, and runs the copy through the example language's gate, not setuid, so accounts A and B are the same. The gate checks ownership on every run, so the test makes its copy writable by its owner alone, and every directory from <RT·code>/</RT·code> down to the scratchpad directory is to be writable by no account but its owner too.
           </p>
-          <RT·code>
-            authored/write_file/run test
-            authored/write_file/run clean
-          </RT·code>
           <p>
-            The test <RT·code>tester/authored/emplace_bio</RT·code> runs the example language's gate, and checks twenty-six things. A page with every style and with text that looks like markup is compared with <RT·code>expected/page.html</RT·code>, and its picture with the one given. A later run with a JPEG places it and removes the PNG, and a run with no picture removes the JPEG. A <RT·code>check_only</RT·code> run changes nothing. Seven journals are then made without the journal interface and given to the gate directly, as a program other than the orchestrator could: one whose text instruction carries a file name, one with a style the language does not have, one with text before any paragraph, one with an SVG picture, one with more text than its constraints allow, one from an account they do not allow, and one for a page that has been made a symbolic link. Each is refused by the check that is to refuse it, and changes nothing:
+            It checks twenty-six things. A page with every style and with text that looks like markup is compared with <RT·code>expected/page.html</RT·code>, and its picture with the one given. A later run with a JPEG places it and removes the PNG, and a run with no picture removes the JPEG. A <RT·code>check_only</RT·code> run changes nothing. Seven journals are then made without the journal interface and given to the gate directly, as a program other than the orchestrator could: one whose text instruction carries a file name, one with a style the language does not have, one with text before any paragraph, one with an SVG picture, one with more text than its constraints allow, one from an account they do not allow, and one for a page that has been made a symbolic link. Each is refused by the check that is to refuse it, and changes nothing:
           </p>
           <RT·code>
             authored/emplace_bio/run test
             authored/emplace_bio/run clean
           </RT·code>
+          <p>
+            The tester's smoke test, <RT·code>authored/smoke/run test</RT·code>, exercises the gate, the guard and the interpreter through a language of its own that is not for use on a system.
+          </p>
         </RT·section>
       </RT·section>
 
@@ -794,14 +756,11 @@
           <RT·entry key="The gate is built without hardening">
             The old compile script built the gate with <RT·code>-z relro</RT·code>, <RT·code>-z now</RT·code> and <RT·code>-fstack-protector-strong</RT·code>. Harmony's build has no flags for one namespace, so the gate is built without them.
           </RT·entry>
-          <RT·entry key="An unlink is not undone">
-            Execution stops at the first error and removes the temporary files of files not yet put in place, but an <RT·code>unlink</RT·code> that ran earlier in the journal stays done.
-          </RT·entry>
           <RT·entry key="Checks and execution are separate moments">
-            The filesystem check and execution are separate, so a file can appear or change between them. Execution then fails on that instruction rather than acting on the change: a <RT·code>create</RT·code> whose file has appeared is refused by the hard link.
+            The guard's filesystem check and the interpreter's execution are separate moments, so a file can appear or change between them. An interpreter is to be written so that it fails on such a change rather than acting on it: the example language's interpreter opens its directory without following a symbolic link, and a rename into place replaces a symbolic link put there since rather than following it.
           </RT·entry>
           <RT·entry key="Account A can signal the gate">
-            A process whose real or effective uid is account A's can send signals to the gate, the guard and the interpreter, whose real uid is account A's, and so can kill the interpreter partway through a journal. The file language puts its files in place only after the last instruction, which keeps the window small, but an <RT·code>unlink</RT·code> already done, or a file already put in place, stays as it is.
+            A process whose real or effective uid is account A's can send signals to the gate, the guard and the interpreter, whose real uid is account A's, and so can kill the interpreter partway through a journal. The example language writes its files to temporary names and renames each into place, so a page is never half written, but a file already put in place stays as it is.
           </RT·entry>
           <RT·entry key="A guard can pass without reading">
             The gate checks the guard's verdict, not the guard's work: a guard that writes its approval line without reading the journal approves everything. The guard is installed code the application developer writes, and is to be tested as such.
@@ -856,10 +815,10 @@
             A Btrfs subvolume is a directory tree that can be snapshotted. Making a snapshot takes about as long as making a directory, whatever the size of the tree, because the snapshot shares every block with its source; a block is copied only when one side writes it. Before playing a journal, the interpreter would snapshot each subvolume the journal writes in. When the play succeeds, it deletes the snapshots. When the play fails, it puts back each file it changed from the snapshot, then deletes the snapshots. It knows which files those are, since it touched them.
           </p>
           <p>
-            Putting back files one at a time is the general case. A running system cannot replace the subvolume it runs from, such as the one holding <RT·code>/etc</RT·code>, so there the rollback is a restore of each changed file, each in one step, by the same rename the file language uses to put a file in place. Where the destination is a subvolume of its own that is not mounted separately and that no program depends on keeping open, such as a web server's page directory, the interpreter could instead play the journal into a snapshot and then exchange the snapshot and the subvolume in one call, <RT·code>renameat2</RT·code> with <RT·code>RENAME_EXCHANGE</RT·code>, so the whole change appears at once or not at all. Whether Btrfs allows that exchange between subvolumes is to be confirmed before the design relies on it.
+            Putting back files one at a time is the general case. A running system cannot replace the subvolume it runs from, such as the one holding <RT·code>/etc</RT·code>, so there the rollback is a restore of each changed file, each in one step, by the same rename the example language uses to put a file in place. Where the destination is a subvolume of its own that is not mounted separately and that no program depends on keeping open, such as a web server's page directory, the interpreter could instead play the journal into a snapshot and then exchange the snapshot and the subvolume in one call, <RT·code>renameat2</RT·code> with <RT·code>RENAME_EXCHANGE</RT·code>, so the whole change appears at once or not at all. Whether Btrfs allows that exchange between subvolumes is to be confirmed before the design relies on it.
           </p>
           <p>
-            The cost is privilege. Making a snapshot needs ownership of the subvolume, or root, and write access to the directory the snapshot goes in. Deleting one needs <RT·code>CAP_SYS_ADMIN</RT·code>, unless the file system is mounted with <RT·code>user_subvol_rm_allowed</RT·code>. A gate whose account B is not root would need the second, and a gate holding only the capabilities its language needs would need the first, which is nearly root by itself. On other file systems the play stays as it is, and a language undoes its own work where it can, as the file language does by putting its files in place only after its last instruction.
+            The cost is privilege. Making a snapshot needs ownership of the subvolume, or root, and write access to the directory the snapshot goes in. Deleting one needs <RT·code>CAP_SYS_ADMIN</RT·code>, unless the file system is mounted with <RT·code>user_subvol_rm_allowed</RT·code>. A gate whose account B is not root would need the second, and a gate holding only the capabilities its language needs would need the first, which is nearly root by itself. On other file systems the play stays as it is, and a language undoes its own work where it can, as the example language does by writing its files to temporary names and renaming each into place.
           </p>
         </RT·section>
       </RT·section>

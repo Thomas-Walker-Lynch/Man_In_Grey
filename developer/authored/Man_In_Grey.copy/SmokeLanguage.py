@@ -1,7 +1,12 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-FileLanguage - a small instruction language for writing files, Man_In_Grey's
-test language. It is a constrained form of the POSIX file interface.
+SmokeLanguage - the instruction language of the tester's smoke test.
+
+It exists to exercise the gate, the guard library and the interpreter
+library, and is not for use on a system: its constraints can say where a
+file goes, and with what mode, owner and permission, but not what the file
+says, and a configuration file's content is what its reader does. It is a
+constrained form of the POSIX file interface.
 
   open(directory ,name ,mode ,owner ,permission)   produces a symbol for the file
   write(file ,content)                             appends content to the file
@@ -24,7 +29,7 @@ checks the guard makes of a journal received as data, and the execution the
 interpreter carries out.
 
 The constraints are predicates written at the top of the guard,
-guard_file.py: is_allowed_account, is_allowed_open and is_allowed_unlink.
+guard_smoke.py: is_allowed_account, is_allowed_open and is_allowed_unlink.
 """
 
 import os ,pwd ,stat ,time
@@ -32,7 +37,7 @@ from pathlib import Path
 
 from Journal import JournalError ,Symbol ,has_control ,clean
 
-NAME = "file"
+NAME = "smoke"
 
 MODE = ("create" ,"replace" ,"replace_keep")
 
@@ -83,7 +88,7 @@ def permission_value(value):
 
 class JournalInterface:
   """
-  The journal interface of the file language. A composer is given one, and
+  The journal interface of the smoke language. A composer is given one, and
   places instructions with its three functions. open returns a Symbol: the file
   the open instruction will produce when the journal is executed.
   """
@@ -254,7 +259,7 @@ def execute(data ,log ,constraint):
   Execute the instructions in order, then put each opened file in place. Stops
   at the first error, removing every temporary file not yet put in place.
   log is given a tag and a message for each thing done. Returns 0, or 1 on
-  an error. The file language needs nothing from its constraint module to execute.
+  an error. The smoke language needs nothing from its guard's constraints to execute.
   """
   opened = {}   # symbol index -> {dirfd ,fd ,tmp ,argument}
   try:
