@@ -3,11 +3,11 @@
 Interpreter - the general interpreter of Man_In_Grey.
 
 The interpreter executes a journal the guard has passed. It carries out
-commands and does not judge them, with one exception: it checks again that
+instructions and does not judge them, with one exception: it checks again that
 the journal is well formed, since it decodes the journal anyway, so that a
 malformed journal never reaches execution.
 
-This module is a library. A command language's interpreter program calls
+This module is a library. An instruction language's interpreter program calls
 interpret(); see interpreter_file.py.
 """
 
@@ -16,7 +16,7 @@ import Journal
 
 def interpret(journal_bytes ,language ,log):
   """
-  Given the encoded journal, the command language module, and log(tag
+  Given the encoded journal, the instruction language module, and log(tag
   ,message). Returns 0 when the journal was executed, 1 when execution
   failed, 2 when the journal could not be read or is not well formed.
   """
@@ -25,8 +25,8 @@ def interpret(journal_bytes ,language ,log):
   except Journal.JournalError as error:
     log("journal_unreadable" ,str(error))
     return 2
-  if data["command_language"] != language.NAME:
-    log("wrong_language" ,f"the journal is in {data['command_language']!r}; this interpreter executes {language.NAME!r}")
+  if data["instruction_language"] != language.NAME:
+    log("wrong_language" ,f"the journal is in {data['instruction_language']!r}; this interpreter executes {language.NAME!r}")
     return 2
   problem_list = language.check_wellformed(data)
   for problem in problem_list:

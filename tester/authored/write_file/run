@@ -3,7 +3,7 @@
 """
 run
 
-The write_file test of Man_In_Grey's file command language. It runs the
+The write_file test of Man_In_Grey's file instruction language. It runs the
 promoted Man_In_Grey, from $REPO_HOME/consumer, through a gate that is not
 setuid, with constraints it writes for the files it expects, and checks:
 
@@ -18,7 +18,7 @@ setuid, with constraints it writes for the files it expects, and checks:
   refused    orchestrate composer_refused/: a journal opening one allowed file and one the
              constraints do not allow is refused whole by the guard's constraint check
   argument   orchestrate composer_argument/: a composer giving a wrong mode fails when it
-             places the command, and no journal reaches the gate
+             places the instruction, and no journal reaches the gate
   writable   orchestrate a composer directory holding a composer other accounts can write:
              the orchestrator refuses to run it
   check_only orchestrate composer/ with check_only: the guard approves the journal, and the

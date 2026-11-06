@@ -1,11 +1,12 @@
 #!/usr/bin/env -S python3 -B
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-interpreter_file - the interpreter of the file command language.
+interpreter_file - the interpreter of the file instruction language.
 
-Started by the gate Man_In_Grey_file_gate, under the interpreter account,
-with the journal on standard input, once the guard has passed the journal.
-It executes the journal's commands and writes one line to standard output
+Started by the gate Man_In_Grey_file_gate, with the gate's real and
+effective uid, and with the journal on standard input, once the guard has
+passed the journal.
+It executes the journal's instructions and writes one line to standard output
 for each thing done, as <tag>: <message>.
 
 It checks again that the journal is well formed before executing it. It

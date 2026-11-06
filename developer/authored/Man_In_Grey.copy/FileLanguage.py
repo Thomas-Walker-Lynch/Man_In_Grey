@@ -1,6 +1,6 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-FileLanguage - a small command language for writing files, Man_In_Grey's
+FileLanguage - a small instruction language for writing files, Man_In_Grey's
 test language. It is a constrained form of the POSIX file interface.
 
   open(directory ,name ,mode ,owner ,permission)   produces a symbol for the file
@@ -14,11 +14,11 @@ The modes of open:
   replace_keep   an existing file is kept as <name>.YYYYMMDDTHHMMSSZ
 
 There is no close. Each opened file is written to a temporary file in its
-directory, and after the journal's last command every opened file is put in
+directory, and after the journal's last instruction every opened file is put in
 place, each in one step.
 
 The module has two halves. The composer half is JournalInterface, through
-which a composer places commands; it checks every argument when the call is
+which a composer places instructions; it checks every argument when the call is
 made, and raises JournalError on a wrong one. The interpreter half holds the
 checks the guard makes of a journal received as data, and the execution the
 interpreter carries out.
@@ -88,8 +88,8 @@ def permission_value(value):
 class JournalInterface:
   """
   The journal interface of the file language. A composer is given one, and
-  places commands with its three functions. open returns a Symbol: the file
-  the open command will produce when the journal is executed.
+  places instructions with its three functions. open returns a Symbol: the file
+  the open instruction will produce when the journal is executed.
   """
 
   def __init__(self ,journal ,working_dpath):
@@ -123,7 +123,7 @@ class JournalInterface:
     })
 
   def write(self ,file ,content):
-    if not isinstance(file ,Symbol) or self._journal.command_list[file.index].command != "open":
+    if not isinstance(file ,Symbol) or self._journal.instruction_list[file.index].name != "open":
       raise JournalError("write: file is to be the symbol an open returned")
     if isinstance(content ,str):
       content = content.encode("utf-8")
@@ -143,10 +143,10 @@ class JournalInterface:
 
 def check_wellformed(data):
   problem_list = []
-  for index ,command in enumerate(data["command_list"]):
-    name ,argument = command["command"] ,command["argument"]
+  for index ,instruction in enumerate(data["instruction_list"]):
+    name ,argument = instruction["name"] ,instruction["argument"]
     if name not in ARGUMENT:
-      problem_list.append(f"@{index}: unknown command {clean(repr(name))}"); continue
+      problem_list.append(f"@{index}: unknown instruction {clean(repr(name))}"); continue
     if set(argument) != set(ARGUMENT[name]):
       problem_list.append(f"@{index} {name}: arguments {clean(sorted(argument))}, expected {sorted(ARGUMENT[name])}"); continue
     if name in ("open" ,"unlink"):
@@ -161,7 +161,7 @@ def check_wellformed(data):
         problem_list.append(f"@{index} open: permission {clean(repr(argument['permission']))} is not valid")
     if name == "write":
       file = argument["file"]
-      if not Symbol.is_data(file) or data["command_list"][file["symbol"]]["command"] != "open":
+      if not Symbol.is_data(file) or data["instruction_list"][file["symbol"]]["name"] != "open":
         problem_list.append(f"@{index} write: file is not the symbol of an open")
       if not isinstance(argument["content"] ,(bytes ,bytearray)):
         problem_list.append(f"@{index} write: content is not bytes")
@@ -174,8 +174,8 @@ def check_constraint(data ,constraint ,gate_invoking_account):
   allowed = {}
   for entry in constraint.get("file" ,()):
     allowed[(entry["directory"] ,entry["name"])] = entry
-  for index ,command in enumerate(data["command_list"]):
-    name ,argument = command["command"] ,command["argument"]
+  for index ,instruction in enumerate(data["instruction_list"]):
+    name ,argument = instruction["name"] ,instruction["argument"]
     if name not in ("open" ,"unlink"):
       continue
     where = f"{argument['directory']}/{argument['name']}"
@@ -196,9 +196,9 @@ def check_constraint(data ,constraint ,gate_invoking_account):
 
 def check_validity(data):
   problem_list = []
-  for index ,command in enumerate(data["command_list"]):
-    if command["command"] == "open":
-      owner = command["argument"]["owner"]
+  for index ,instruction in enumerate(data["instruction_list"]):
+    if instruction["name"] == "open":
+      owner = instruction["argument"]["owner"]
       try:
         pwd.getpwnam(owner)
       except KeyError:
@@ -218,14 +218,14 @@ def _regular_or_absent(dirfd ,name):
 def check_filesystem(data):
   problem_list = []
   seen = set()
-  for index ,command in enumerate(data["command_list"]):
-    name ,argument = command["command"] ,command["argument"]
+  for index ,instruction in enumerate(data["instruction_list"]):
+    name ,argument = instruction["name"] ,instruction["argument"]
     if name not in ("open" ,"unlink"):
       continue
     directory ,file_name = argument["directory"] ,argument["name"]
     where = f"{directory}/{file_name}"
     if (directory ,file_name) in seen:
-      problem_list.append(f"@{index} {name}: {where} is named by more than one command"); continue
+      problem_list.append(f"@{index} {name}: {where} is named by more than one instruction"); continue
     seen.add((directory ,file_name))
     if os.path.realpath(directory) != directory:
       problem_list.append(f"@{index} {name}: {directory} passes through a symbolic link"); continue
@@ -266,15 +266,15 @@ def _backup_name(dirfd ,name):
 
 def execute(data ,log):
   """
-  Execute the commands in order, then put each opened file in place. Stops
+  Execute the instructions in order, then put each opened file in place. Stops
   at the first error, removing every temporary file not yet put in place.
   log is given a tag and a message for each thing done. Returns 0, or 1 on
   an error.
   """
   opened = {}   # symbol index -> {dirfd ,fd ,tmp ,argument}
   try:
-    for index ,command in enumerate(data["command_list"]):
-      name ,argument = command["command"] ,command["argument"]
+    for index ,instruction in enumerate(data["instruction_list"]):
+      name ,argument = instruction["name"] ,instruction["argument"]
       if name == "open":
         dirfd = os.open(argument["directory"] ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         tmp = f".{argument['name']}.Man_In_Grey.{os.getpid()}.{index}"

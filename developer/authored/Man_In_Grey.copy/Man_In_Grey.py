@@ -3,14 +3,14 @@
 """
 Man_In_Grey
 
-The orchestrator. It runs composers, which place commands into one journal,
+The orchestrator. It runs composers, which place instructions into one journal,
 and invokes a gate with the journal on its standard input. The gate starts
 the guard, which checks the journal against its constraints, and, when the
 guard passes the journal, the interpreter, which executes it.
 
 A composer is a Python file defining compose(prov ,journal_iface). prov
-describes where the composer is; journal_iface places commands of the file
-command language: open, write and unlink.
+describes where the composer is; journal_iface places instructions of the file
+instruction language: open, write and unlink.
 
 Usage: Man_In_Grey <command> <path> [option ...]
   help | -h                  print this message (also printed when given no arguments)
@@ -32,7 +32,7 @@ gate invoking account or by root, and writable by no other account. Symbolic
 links in a composer directory are refused.
 
 Exit status: 0 when the run did what it was asked; 1 when the guard refused
-the journal or a command failed to execute; 2 when the run could not start,
+the journal or an instruction failed to execute; 2 when the run could not start,
 a composer failed, or the gate, guard or interpreter could not run.
 """
 

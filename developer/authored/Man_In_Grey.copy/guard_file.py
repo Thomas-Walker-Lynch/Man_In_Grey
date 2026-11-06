@@ -1,10 +1,10 @@
 #!/usr/bin/env -S python3 -B
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-guard_file - the guard of the file command language.
+guard_file - the guard of the file instruction language.
 
-Started by the gate Man_In_Grey_file_gate, under the interpreter account,
-with the journal on standard input. It checks the journal against the
+Started by the gate Man_In_Grey_file_gate, with the gate's real and
+effective uid, and with the journal on standard input. It checks the journal against the
 constraints, and says what it found on standard error, one line per
 finding, as <tag>: <message>; the first two lines are name: and version:.
 

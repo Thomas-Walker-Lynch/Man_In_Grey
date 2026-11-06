@@ -1,5 +1,5 @@
 /*
-  Man_In_Grey_gate·Gate - the gate of a Man_In_Grey command language.
+  Man_In_Grey_gate·Gate - the gate of a Man_In_Grey instruction language.
 
   A gate is a program of its own, made from this module by a three-line
   *.CLI.c whose main calls Man_In_Grey_gate·Gate·run with three things fixed
@@ -7,10 +7,10 @@
   path, the two paths relative to the gate itself. The gate invoking account can
   name neither program; who invokes a gate cannot choose what it runs.
 
-  Setuid and owned by the interpreter account, account B, a gate runs the
-  guard and the interpreter under account B while the real uid still names
-  the gate invoking account, account A. Not setuid, it runs them under
-  account A.
+  Setuid and owned by account B, a gate runs with the effective uid of
+  account B and the real uid of account A, the gate invoking account. Not
+  setuid, it keeps both uids of the program that invoked it. The guard and
+  the interpreter keep the gate's two uids.
 
   admit reads the journal on standard input, then:
 
