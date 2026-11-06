@@ -133,43 +133,43 @@
         </p>
       </RT·section>
 
-      <RT·section id="sec-account">
-        <RT·name>Permissions</RT·name>
+      <RT·section>
+        <RT·name>uid</RT·name>
+        <p>
+          Each account has a number called its user id, or <RT·code>uid</RT·code>. Each file has an owner, noted with a uid. Each process is associated with two uids, its <RT·term>real uid</RT·term> and its <RT·term>effective uid</RT·term>. When a person logs in, the login program starts his shell with both uids set to that of his account, and every process started from the shell inherits them. In colloquial speech such processes are said to be owned by the person, or to run under his account. However, the two uids associated with a process can differ, so these colloquialisms are imprecise.
+        </p>
+        <p>
+          The effective uid determines a process's permissions. So for example when opening a file, the kernel compares the process's effective uid with a file's owner and permission bits to determine if the process is allowed to open the file. Among its other uses, the kernel lets a process send a signal to another process whose real uid equals its own real or effective uid.
+        </p>
+        <p>
+          A process inherits both uids from the process that invoked it, unless the program file it runs has its <RT·code>setuid</RT·code> permission bit set. In which case, the kernel then takes the effective uid from the file's owner instead, while the real uid remains inherited as before. A process therefore gets its effective uid in one of two ways: from the process that invoked it, or from the owner of a setuid program file. (Groups work the same way, with a real gid, an effective gid and a <RT·code>setgid</RT·code> bit, beside the supplementary groups, which are inherited unchanged.)
+        </p>
+        <p>
+          By convention, the gate is the only program of Man_In_Grey that can optionally be given the setuid bit. When the gate is not setuid, it inherits its effective and real uids from the program that invoked it. When it is setuid, it inherits its real uid from the program that invoked it, and it inherits its effective uid from its file owner. Thus, the gate process has reliable information directly from the kernel on who invoked it, as that is its real uid. It also has reliable information directly from the kernel on who owned its executable file, as that becomes its effective uid.
+        </p>
 
-        <RT·section>
-          <RT·name>uid</RT·name>
-          <p>
-            Each account has a number called its user id, or <RT·code>uid</RT·code>. Each file has an owner, noted with a uid. Each process is associated with two uids, its <RT·term>real uid</RT·term> and its <RT·term>effective uid</RT·term>. When a person logs in, the login program starts his shell with both uids set to that of his account, and every process started from the shell inherits them. In colloquial speech such processes are said to be owned by the person, or to run under his account. However, the two uids associated with a process can differ, so these colloquialisms are imprecise.
-          </p>
-          <p>
-            The effective uid determines a process's permissions. So for example when opening a file, the kernel compares the process's effective uid with a file's owner and permission bits to determine if the process is allowed to open the file. Among its other uses, the kernel lets a process send a signal to another process whose real uid equals its own real or effective uid.
-          </p>
-          <p>
-            A process inherits both uids from the process that invoked it, unless the program file it runs has its <RT·code>setuid</RT·code> permission bit set. In which case, the kernel then takes the effective uid from the file's owner instead, while the real uid remains inherited as before. A process therefore gets its effective uid in one of two ways: from the process that invoked it, or from the owner of a setuid program file. (Groups work the same way, with a real gid, an effective gid and a <RT·code>setgid</RT·code> bit, beside the supplementary groups, which are inherited unchanged.)
-          </p>
-          <p>
-            By convention, the gate is the only program of Man_In_Grey that can optionally be given the setuid bit. When the gate is not setuid, it inherits its effective and real uids from the program that invoked it. When it is setuid, it inherits its real uid from the program that invoked it, and it inherits its effective uid from its file owner. Thus, the gate process has reliable information directly from the kernel on who invoked it, as that is its real uid. It also has reliable information directly from the kernel on who owned its executable file, as that becomes its effective uid.
-          </p>
+        <p>
+          Due to this mechanism the effective uid for a setuid gate program can be different than the effective uid of the program that invoked it. In the chain of events of program A running and then invoking the gate, the effective uid in that thread of execution will start as the effective uid for program A, and then the effective uid will change to match the uid of the gate executable file owner. We can say that the effective uid change from A to B, where A is the invoking programs effective uid, an B is the owner of the gate executable file.
+        </p>
+      </RT·section>
 
-          <p>
-            Due to this mechanism the effective uid for a setuid gate program can be different than the effective uid of the program that invoked it. In the chain of events of program A running and then invoking the gate, the effective uid in that thread of execution will start as the effective uid for program A, and then the effective uid will change to match the uid of the gate executable file owner. We can say that the effective uid change from A to B, where A is the invoking programs effective uid, an B is the owner of the gate executable file.
-          </p>
-        </RT·section>
+      <RT·section>
+        <RT·name>Orchestrator</RT·name>
+        <p>
+          The orchestrator is a utility program provided with Man_In_Grey. The orchestrator calls one or more composer programs, then sends the resulting journal to a gate program. Like all processes, when the orchestrator program runs, it has a real and effective uid. When the orchestrator is run from a shell, these are both inherited from the shell, and are typically pointing to the login user. In any case, the composers that it invokes will then run with the same effective and real uids as the orchestrator. When the gate executable file has its setuid bit set, when the gate is invoke by the orchestrator, the gate will inherit its real uid from the orchestrator, and will take its effective uid from the gate's executable file owner.
+        </p>
 
-        <RT·section>
-          <RT·name>Orchestrator</RT·name>
-          <p>
-            The orchestrator is a utility program provided with Man_In_Grey. The orchestrator calls one or more composer programs, then sends the resulting journal to a gate program. Like all processes, when the orchestrator program runs, it has a real and effective uid. When the orchestrator is run from a shell, these are both inherited from the shell, and are typically pointing to the login user. In any case, the composers that it invokes will then run with the same effective and real uids as the orchestrator. When the gate executable file has its setuid bit set, when the gate is invoke by the orchestrator, the gate will inherit its real uid from the orchestrator, and will take its effective uid from the gate's executable file owner.
-          </p>
+        <p>
+          The orchestrator finds the composers by file. Given a composer file, or a composer directory, it runs each file, and in each it calls one function, <RT·code>compose(prov ,journal_iface)</RT·code>. To the orchestrator a composer is therefore a file: each composer is to be given a file of its own, and the file is to define exactly one function of that form. The file can define other functions as helpers of it, but the orchestrator calls none of them, and a second function meant as a composer is never run. Several composers are several files, and the order of the files in the composer directory, as <a href="#sec-composer"><RT·Counter·read snapshot="sec-composer" key="counter count"></RT·Counter·read></a> describes, is the order they run in.
+        </p>
 
-          <p>
-            An application making use of Man_In_Grey can bypass the orchestrator and call the composers and gate on its own. When this happens the gate's real ID will be that of the application. For a setuid gate, its effective uid still comes from its file owner.
-          </p>
+        <p>
+          An application making use of Man_In_Grey can bypass the orchestrator and call the composers and gate on its own. When this happens the gate's real ID will be that of the application. For a setuid gate, its effective uid still comes from its file owner. Such an application calls its composer functions however it likes, as many to a module as it likes, since it does no search for them.
+        </p>
 
-          <p>
-            It is possible that the application is design such that the gate executable file does not have its setuid bit set, or that it does have its setuid set but the gate owner is the same as that of the orchestrator or that of the direct calling application. In such a case, the execution thread will keep the same real and effective uids the entire time it runs. In this mode the Man_In_Grey can not achieve anything the application could not have achieved on its own, but it still might be a convenient expression of the desired functionality.
-          </p>
-        </RT·section>
+        <p>
+          It is possible that the application is design such that the gate executable file does not have its setuid bit set, or that it does have its setuid set but the gate owner is the same as that of the orchestrator or that of the direct calling application. In such a case, the execution thread will keep the same real and effective uids the entire time it runs. In this mode the Man_In_Grey can not achieve anything the application could not have achieved on its own, but it still might be a convenient expression of the desired functionality.
+        </p>
       </RT·section>
 
       <RT·section id="sec-gate">
@@ -361,7 +361,7 @@
           </RT·entry>
         </RT·dictionary>
         <p>
-          Each instruction is a map of three entries: <RT·code>name</RT·code>, which instruction it is; <RT·code>argument</RT·code>, a map holding all of the instruction's arguments, each keyed by argument name; and <RT·code>composer</RT·code>, the name of the composer function that placed it. The first four instructions of the journal in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>, decoded, and written in JSON notation:
+          Each instruction is a map of three entries: <RT·code>name</RT·code>, which instruction it is; <RT·code>argument</RT·code>, a map holding all of the instruction's arguments, each keyed by argument name; and <RT·code>composer</RT·code>, the composer that placed it. Man_In_Grey's orchestrator records there the path of the composer's file, relative to the composer directory; an application that places instructions itself records what it chooses. The first four instructions of the journal in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>, decoded, and written in JSON notation:
         </p>
         <RT·code>
           {"name": "display_name", "argument": {"text": "Thomas"}, "composer": "bio.py"}
@@ -380,7 +380,7 @@
           {"name": "add_to_group", "argument": {"account": {"symbol": 0}, "group": "http"}, "composer": "www.py"}
         </RT·code>
         <p>
-          The orchestrator runs the composers one after another into a single journal. Before it calls each composer's <RT·code>compose</RT·code>, it records that composer's path, relative to the composer directory, and every instruction placed during the call carries it. A journal composed from a directory of composers therefore shows which composer placed each instruction, and <RT·code>print</RT·code> shows it at the end of each line, which helps in finding the composer that placed a wrong one. The <RT·code>composer</RT·code> entry, like <RT·code>meta</RT·code>, is a note, not evidence: account A writes the whole journal, and could write anything there, so the guard and the interpreter never base a decision on either.
+          Man_In_Grey's orchestrator runs the composers one after another into a single journal. Before it calls each composer's <RT·code>compose</RT·code>, it records that composer's path, relative to the composer directory, and every instruction placed during the call carries it. A journal composed from a directory of composers therefore shows which composer placed each instruction, and <RT·code>print</RT·code> shows it at the end of each line, which helps in finding the composer that placed a wrong one. The <RT·code>composer</RT·code> entry, like <RT·code>meta</RT·code>, is a note, not evidence: account A writes the whole journal, and could write anything there, so the guard and the interpreter never base a decision on either.
         </p>
       </RT·section>
 
