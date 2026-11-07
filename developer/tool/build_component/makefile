@@ -4,6 +4,12 @@
 
 RT_MAKEFILE_DP := $(REPO_HOME)/shared/tool/makefile
 
+# the setuid gate is built hardened
+ifeq ($(NAMESPACE),Man_In_Grey_gate)
+  CFLAGS_PROJECT_LOCAL  := -O2 -fstack-protector-strong -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
+  LN_FLAGS_PROJECT_LOCAL := -Wl,-z,relro -Wl,-z,now
+endif
+
 .PHONY: usage 
 usage:
 	@printf "Usage: make [usage|version|information|all|lib|CLI|kmod|clean]\n"

@@ -112,13 +112,10 @@
             There are problems with the method of filling in templates, for one it mixes data and control together: the content to be written, and the marks that say where to substitute. Thus templating is a form of <RT·term>in-band signaling</RT·term>. With in-band signaling, a content string can be identical to a control string, so data and control can alias, and there is no tight way to design the aliasing out. The typical workaround is to disallow control strings in the data, and to write each disallowed character as an <RT·term>escape sequence</RT·term>, where the escape is then itself control. Each level of nesting multiplies the escapes: an f-string that explains how to write f-strings escapes its braces has twice the number of escapes as the base f-string, and a document about this f-string escapes them again, to have 4 times the number, etc.
           </p>
           <p>
-            Man_In_Grey signals out of band. A composer is a program, so the logic that forms the output is code, with loops, conditions and lookups, rather than marks embedded in the output. An instruction in the journal is a structure, and file content is carried in it as a byte string with its length. The journal interpreter never scans content for meaning, so content can hold anything, including text that looks like a journal, with no escaping. (A developer is free to create a composer that fills in templates if that is what he really wants; but there is no inherent need to use this approach.)
+            Man_In_Grey signals out of band. A composer is a program, so the logic that forms the output is code, with loops, conditions and lookups, rather than marks embedded in the output. Each instruction in the journal is then length delineated, so a scanner never has to examine content to find structure. A journal could even carry another journal as data, and no escaping would be required.
           </p>
           <p>
-            The journal is encoded in CBOR, whose strings are length-prefixed. Decoding CBOR makes maps, lists, strings and bytes, and cannot run code, so a journal reaches account B as data and nothing else. 
-          </p>
-          <p>
-            Man_In_Grey replaces the template, not the syntax of the file being written. Content is still to be well formed for the program that reads the file, so a composer writing HTML escapes a <RT·code>&lt;</RT·code> in its text as HTML requires. An instruction language can take that work over too, as the example in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a> does.
+            Note that Man_In_Grey replaces the template, but not the payload. Whatever limitations the payload has, it continues to have. For example if the payload is HTML, HTML requires escapes on a <RT·code>&lt;</RT·code> in its text, Man In Grey has no say about this, rather the HTML interpreter does. However, no additional escapes will be required beyond what the HTML interpreter demands.
           </p>
         </RT·section>
 
@@ -153,14 +150,11 @@
           <p>
             A language can be made as narrow as its application. The narrower it is, the less a journal can say, and the less the guard has to rule out. The example language, <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>, can name no file at all: what it writes, and where, is partially compiled in, and partially derived from the name of the invoking user account.
           </p>
-          <p>
-            Narrowness matters most for content. Constraints on where a file goes, and with what owner and permission, do not make the file safe when account A writes every byte of it. A configuration file is read by a program, often one started by root, and what the file says is what that program does; <RT·code>unbound.conf</RT·code>, for one, can name a Python script for the daemon to load. A language that lets account A write such a file freely gives account A much of the power of the program that reads it, however tightly its constraints fix the destination. The safe design is a language narrow enough that every journal it can express is safe: its interpreter writes the file, and account A supplies only values the language has a place for, as in the example.
-          </p>
         </RT·section>
       </RT·section>
 
       <RT·section id="sec-data">
-        <RT·name>Data instance</RT·name>
+        <RT·name>Data form</RT·name>
 
         <RT·section id="sec-journal">
           <RT·name>Journal</RT·name>
@@ -197,7 +191,7 @@
             An argument that is a symbol is the map <RT·code>{"symbol": &lt;index&gt;}</RT·code>, where the index locates the instruction that produces the value. In the account language of <a href="#sec-symbol"><RT·Counter·read snapshot="sec-symbol" key="counter count"></RT·Counter·read></a>, the second instruction names the result of the first:
           </p>
           <RT·code>
-            {"name": "make_account", "argument": {"name": "Thomas·www"}, "composer": "www.py"}
+            {"name": "make_account", "argument": {"user_name": "Thomas·www"}, "composer": "www.py"}
             {"name": "add_to_group", "argument": {"account": {"symbol": 0}, "group": "http"}, "composer": "www.py"}
           </RT·code>
           <p>
@@ -237,7 +231,7 @@
           </p>
 
           <p>
-            It is possible that the application is design such that the gate executable file does not have its setuid bit set, or that it does have its setuid set but the gate owner is the same as that of the orchestrator or that of the direct calling application. In such a case, the execution thread will keep the same real and effective uids the entire time it runs. In this mode the Man_In_Grey can not achieve anything the application could not have achieved on its own, but it still might be a convenient expression of the desired functionality.
+            It is possible that the application is designed such that the executable file for the gate does not have its setuid bit set; or that it does have its setuid set, but the gate owner is the same as that of the orchestrator or that of the direct calling application. In such a case, the execution thread will keep the same real and effective uids the entire time it runs. In this mode the Man_In_Grey can not achieve anything the application could not have achieved on its own, but it still might be a convenient expression of the desired functionality. For example, as an alternative to template filling without effective uid changes.
           </p>
         </RT·section>
 
@@ -267,7 +261,7 @@
           </p>
 
           <p>
-            Th <RT·code>admit</RT·code> command takes the journal on standard input, with the option <RT·code>check_only</RT·code>. When the gate is asked to <RT·code>admit</RT·code> a journal, it:
+            Th <RT·code>admit</RT·code> command takes the journal on standard input. There is an option <RT·code>check_only</RT·code> that will print check messages without doing anything.  Without this option, when the gate is asked to <RT·code>admit</RT·code> a journal, it:
           </p>
 
           <ol>
@@ -285,13 +279,7 @@
             The guard and the interpreter, before they import anything, each check that every module they load, the guard program among them, is owned by root or by account B, and writable by no other account. A module runs code when it is imported, so the check comes first.
           </p>
           <p>
-            These checks are made on every run, whether or not the gate is setuid, and whoever account A is. A check that can be got around by other means still catches mistakes, such as a group-writable directory or an interpreter run from the wrong tree. When accounts A and B are the same, account B is the person's own account, so his own files pass.
-          </p>
-          <p>
             The constraints, not the gate, decide which accounts can give a journal. The gate decides only whether the guard and the interpreter it would start can be trusted, and whether the guard approved the journal.
-          </p>
-          <p>
-            A gate that is not setuid keeps the uids of the program that invoked it, so accounts A and B are normally the same, and the guard still applies. A gate that is not setuid is the convenient way to use Man_In_Grey on files the person owns, and the way to prototype an instruction language before making a gate setuid for it.
           </p>
           <RT·section>
             <RT·name>One gate per instruction language</RT·name>
