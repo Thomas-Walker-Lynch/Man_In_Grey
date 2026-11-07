@@ -6,9 +6,16 @@ interpreter_emplace_bio - the interpreter of the emplace_bio instruction languag
 Started by the gate Man_In_Grey_emplace_bio_gate, with the gate's real and
 effective ids, and with the journal on standard input, once the guard has
 passed the journal. It executes the journal's instructions, and writes to
-standard output, as <tag>: <message>, a line for each lasting change it
+standard error, as <tag>: <message>, a line for each lasting change it
 makes, such as a file put in place, and none for an instruction as such.
 The gate logs the journal's course itself.
+
+When it has played the whole journal, it writes one line to standard output,
+
+  interpreter emplace_bio journal played
+
+and exits 0. The gate takes the journal as played on that line and that
+status together, and on nothing else.
 
 It checks again that the journal is well formed before executing it. It
 does not check the constraints; that is the guard's work, and the gate
@@ -70,7 +77,7 @@ except ImportError as error:
 
 
 def log(tag ,message):
-  print(f"{tag}: {Journal.clean(message)}" ,flush=True)
+  print(f"{tag}: {Journal.clean(message)}" ,file=sys.stderr ,flush=True)
 
 def execute():
   try:
@@ -78,7 +85,10 @@ def execute():
   except RuntimeError as error:
     log("cannot_execute" ,str(error))
     return 2
-  return Interpreter.interpret(sys.stdin.buffer.read() ,Language ,log ,Guard_program ,gate_invoking_account)
+  status = Interpreter.interpret(sys.stdin.buffer.read() ,Language ,log ,Guard_program ,gate_invoking_account)
+  if status == 0:
+    sys.stdout.write("interpreter emplace_bio journal played\n")
+  return status
 
 
 # --------------------------------------------------------------------------------

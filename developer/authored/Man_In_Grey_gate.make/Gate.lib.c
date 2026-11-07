@@ -34,7 +34,9 @@
     5. starts the guard with the journal on its standard input, and admits
        the journal only when the guard exits 0 having written exactly one
        line to standard output: guard <language> check passed;
-    6. starts the interpreter with the same journal.
+    6. starts the interpreter with the same journal, and takes the journal
+       as played only when the interpreter exits 0 having written exactly one
+       line to standard output: interpreter <language> journal played.
 
   The guard and the interpreter inherit the gate's uids and its ignored
   signals, and learn account A from MIG_REAL_UID and MIG_REAL_USER_NAME.
@@ -313,7 +315,7 @@ int Man_In_Grey_gate·Gate·run(
 
   typedef struct{
     const char *source;      // "guard" or "interpreter"
-    bool stdout_is_verdict;  // the guard's standard output is kept, not shown
+    bool stdout_is_verdict;  // standard output is kept as the verdict, not shown
     char verdict[VERDICT_MAX];
     size_t verdict_length;
     size_t line_count;
@@ -631,7 +633,7 @@ int Man_In_Grey_gate·Gate·run(
     char *interpreter_argument[] = {
       (char *)PYTHON ,(char *)"-E" ,(char *)"-s" ,(char *)"-B" ,interpreter_path ,(char *)"execute" ,NULL
     };
-    Child interpreter = {.source = "interpreter" ,.stdout_is_verdict = false};
+    Child interpreter = {.source = "interpreter" ,.stdout_is_verdict = true};
     say("interpreting" ,"%s" ,interpreter_path);
     status = run_child(&interpreter ,interpreter_argument ,journal ,journal_length);
     if( interpreter.broken ){
@@ -642,11 +644,21 @@ int Man_In_Grey_gate·Gate·run(
       say("failed" ,"the interpreter was stopped by signal %d" ,WIFSIGNALED(status) ? WTERMSIG(status) : 0);
       return 2;
     }
-    switch( WEXITSTATUS(status) ){
-      case 0: say("interpreted" ,"the interpreter finished the journal"); return 0;
-      case 1: say("failed" ,"the interpreter stopped partway; what it had done stays done"); return 1;
-      default: say("failed" ,"the interpreter could not run (exit status %d)" ,WEXITSTATUS(status)); return 2;
+    if( WEXITSTATUS(status) == 1 ){
+      say("failed" ,"the interpreter stopped partway; what it had done stays done");
+      return 1;
     }
+    if( WEXITSTATUS(status) != 0 ){
+      say("failed" ,"the interpreter could not run (exit status %d)" ,WEXITSTATUS(status));
+      return 2;
+    }
+    snprintf(expected ,sizeof expected ,"interpreter %s journal played\n" ,language);
+    if( strcmp(interpreter.verdict ,expected) ){
+      say("failed" ,"the interpreter exited 0 without writing the one line 'interpreter %s journal played'; what it did stays done" ,language);
+      return 2;
+    }
+    say("interpreted" ,"interpreter %s journal played" ,language);
+    return 0;
   }
 
 #endif // Man_In_Grey_gate·Gate

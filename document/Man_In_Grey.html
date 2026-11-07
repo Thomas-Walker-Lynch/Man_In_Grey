@@ -278,7 +278,7 @@
             <li>reads the journal from its standard input, up to 16 MiB;</li>
             <li>when accounts A and B differ, makes its real uid account B's, so the kernel refuses account A's signals, and ignores the signals a terminal sends; see <a href="#sec-isolation"><RT·Counter·read snapshot="sec-isolation" key="counter count"></RT·Counter·read></a>;</li>
             <li>starts <RT·code>/usr/bin/python3 -E -s -B</RT·code> on the guard, with the journal on its standard input, and goes on only when the guard approves the journal;</li>
-            <li>starts the interpreter the same way, with the same journal.</li>
+            <li>starts the interpreter the same way, with the same journal, and takes the journal as played only when the interpreter writes its verdict line and exits 0.</li>
           </ol>
           <p>
             The guard and the interpreter, before they import anything, each check that every module they load, the guard program among them, is owned by root or by account B, and writable by no other account. A module runs code when it is imported, so the check comes first.
@@ -374,7 +374,10 @@
             The gate starts the interpreter only after the guard has approved the journal, with the effective uid of account B and the same journal on its standard input. Generally the interpreter does not check the constraints as that is the guard's work, but some checks will naturally occur as part of interpretation.  Where useful the guard program module can be included so as to pull in the helper functions.
           </p>
           <p>
-            The gate logs when a journal is received, approved, and interpreted. The interpreter's exit status is 0 when it finished the journal, 1 when it stopped partway, and 2 when the journal could not be read or is not well formed. The interpreter writes to standard output, as <RT·code>&lt;tag&gt;: &lt;message&gt;</RT·code>, the highlights of what it does, as its developer chooses them.
+            The gate logs when a journal is received, approved, and interpreted. The interpreter writes to standard error, as <RT·code>&lt;tag&gt;: &lt;message&gt;</RT·code>, the highlights of what it does, as its developer chooses them. Its standard output is for its verdict alone, as the guard's is: when it has played the whole journal, it writes exactly one line there, <RT·code>interpreter &lt;language&gt; journal played</RT·code>, and exits 0. The gate takes the journal as played on that line and that status together; an interpreter that exits 0 without it, having returned early or not being the program it should be, is logged as failed. Otherwise its exit status is 1 when it stopped partway, and 2 when the journal could not be read or is not well formed.
+          </p>
+          <p>
+            The verdict line says only that the interpreter reached its end. It cannot undo what an interpreter did before failing, and it is the interpreter's own claim, not evidence that what it did was right.
           </p>
           <p>
             Execution stops at the first error. What the interpreter did before then stays done, except what its instruction language undoes; for the example language, see <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>. Playing a journal as a transaction is a possible future feature; see <a href="#sec-transaction"><RT·Counter·read snapshot="sec-transaction" key="counter count"></RT·Counter·read></a>.
@@ -840,7 +843,7 @@
             gate: interpreting: /usr/local/lib/Man_In_Grey/Man_In_Grey/interpreter_emplace_bio.py
             interpreter: emplaced: /srv/http/bio/Thomas.jpg
             interpreter: emplaced: /srv/http/bio/Thomas.html
-            gate: interpreted: the interpreter finished the journal
+            gate: interpreted: interpreter emplace_bio journal played
           </RT·code>
           <p>
             An account the constraints do not list is refused before anything is written:
@@ -875,13 +878,16 @@
       </RT·section>
 
       <RT·section id="sec-problem">
-        <RT·name>Known problem</RT·name>
-        <RT·dictionary key="Problem" definition="What happens">
+        <RT·name>Known issue</RT·name>
+        <RT·dictionary key="Issue" definition="What happens">
           <RT·entry key="A guard can pass without reading">
             The gate checks the guard's verdict, not the guard's work: a guard that writes its approval line without reading the journal approves everything. The guard is installed code the application developer writes, and is to be tested as such.
           </RT·entry>
-          <RT·entry key="An interpreter that breaks the rules has already acted">
-            The gate stops an interpreter whose output breaks its rules, but what the interpreter did before then stays done.
+          <RT·entry key="An interpreter that fails partway leaves its work partly done">
+            When an interpreter crashes, fails, or breaks the gate's output rules partway through a journal, what it did before then stays done, and the gate can only log the failure. Playing a journal as a transaction is on the road map.
+          </RT·entry>
+          <RT·entry key="Man_In_Grey cannot tell whether the interpreter did the right thing">
+            The gate learns only how the interpreter ended, and what it wrote. Its verdict line says it reached its end; whether the files it made are what the journal meant is the interpreter's own claim, so the interpreter, like the guard, is installed code the application developer writes, and is to be tested as such.
           </RT·entry>
         </RT·dictionary>
       </RT·section>
@@ -891,6 +897,7 @@
         <ol>
           <li>Gates holding only the capabilities their instruction language needs, in place of setuid root.</li>
           <li>A language for installing programs, so that installing a gate, guard and interpreter is itself done through Man_In_Grey.</li>
+          <li>Transactional play: a journal takes effect wholly or not at all; see <a href="#sec-transaction"><RT·Counter·read snapshot="sec-transaction" key="counter count"></RT·Counter·read></a>.</li>
           <li>Later, interpreters in a compiled language in place of Python.</li>
         </ol>
       </RT·section>

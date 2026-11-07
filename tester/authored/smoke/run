@@ -29,6 +29,8 @@ interpreter. It checks:
              interpreter is not run
   limit      orchestrate composer/ with a file size limit the gate cannot raise: the gate
              refuses before starting the guard
+  silent     orchestrate composer/ through an interpreter that exits 0 without
+             writing its verdict line: the gate reports the run failed
 
 A refused run is to leave every file as it was. Backup names carry the time
 of the run, so names are compared with the time replaced by the letters
@@ -298,6 +300,19 @@ def test(repo_home):
   status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer" ,work_dpath ,preexec=limit_file_size)
   check_status(log ,"limit is refused by the gate" ,status ,2 ,output ,"the file size (bytes) limit is 1048576")
   log.check(snapshot(out) == before ,"limit changes nothing")
+
+  # an interpreter that exits 0 without its verdict line
+  interpreter = tree / "Man_In_Grey" / "interpreter_smoke.py"
+  text = interpreter.read_text(encoding="utf-8")
+  verdict_line = '    sys.stdout.write("interpreter smoke journal played\\n")\n'
+  interpreter.unlink()
+  interpreter.write_text(text.replace(verdict_line ,"    pass\n") ,encoding="utf-8")
+  os.chmod(interpreter ,0o644)
+  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer" ,work_dpath)
+  check_status(log ,"silent is reported failed by the gate" ,status ,2 ,output ,"without writing the one line 'interpreter smoke journal played'")
+  interpreter.unlink()
+  interpreter.write_text(text ,encoding="utf-8")
+  os.chmod(interpreter ,0o644)
 
   return log.summary()
 
