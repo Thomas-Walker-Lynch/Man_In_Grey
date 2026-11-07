@@ -9,8 +9,8 @@ owns the directory, so a person cannot write there. He gives his page's
 display name, text and picture as instructions, and the emplace_bio gate,
 owned by the web server's account, places the page.
 
-A journal names no file. The file names come from the user name of the
-real uid, which the kernel gives the interpreter, and the directory comes
+A journal names no file. The file names come from the user name of
+account A, which the gate gives the interpreter, and the directory comes
 from page_directory() at the top of the guard. The interpreter writes the
 HTML itself, from a fixed form, and escapes every text it is given, so
 nothing a person gives becomes markup. Decoration travels out of band, as a
@@ -36,7 +36,7 @@ guard_emplace_bio.py: is_allowed_account, is_allowed_text_size and
 is_allowed_picture_size, and page_directory(), where the pages go.
 """
 
-import html ,os ,pwd ,stat ,urllib.parse
+import html ,os ,stat ,urllib.parse
 
 from Journal import JournalError ,has_control ,clean
 
@@ -301,14 +301,14 @@ def _write_temporary(dirfd ,target ,content):
     os.close(fd)
   return tmp
 
-def execute(data ,log ,constraint):
+def execute(data ,log ,constraint ,gate_invoking_account):
   """
   Write the picture and the page to temporary files in the directory, then
   rename each into place, and remove a picture the page no longer shows.
   log is given a tag and a message for each thing done. Returns 0, or 1 on
   an error, removing every temporary file not yet put in place.
   """
-  user_name = pwd.getpwuid(os.getuid()).pw_name
+  user_name = gate_invoking_account
   directory = constraint.page_directory()
   display_name ,paragraph_list ,picture = None ,[] ,None
   for instruction in data["instruction_list"]:

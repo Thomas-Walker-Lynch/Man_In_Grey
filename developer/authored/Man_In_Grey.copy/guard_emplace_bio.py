@@ -66,7 +66,7 @@ def page_directory():
 import sys ,os
 sys.dont_write_bytecode = True
 
-import pwd ,stat
+import stat
 from pathlib import Path
 
 LANGUAGE = "emplace_bio"
@@ -116,7 +116,11 @@ def report(tag ,message):
 
 def check():
   report("constraints" ,str(Path(__file__).resolve()))
-  gate_invoking_account = pwd.getpwuid(os.getuid()).pw_name
+  try:
+    gate_invoking_account = Guard.gate_invoking_account()
+  except RuntimeError as error:
+    report("cannot_check" ,str(error))
+    return 2
   status = Guard.check(sys.stdin.buffer.read() ,Language ,sys.modules[__name__] ,gate_invoking_account ,report)
   if status == 0:
     sys.stdout.write(f"guard {LANGUAGE} check passed\n")

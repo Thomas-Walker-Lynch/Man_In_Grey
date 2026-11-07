@@ -14,11 +14,11 @@ interpret(); see interpreter_emplace_bio.py.
 import Journal
 
 
-def interpret(journal_bytes ,language ,log ,constraint):
+def interpret(journal_bytes ,language ,log ,constraint ,gate_invoking_account):
   """
   Given the encoded journal, the instruction language module, log(tag
-  ,message), and the constraint module, which the language reads for what
-  execution needs. Returns 0 when the journal was executed, 1 when
+  ,message), the guard program, whose constraints the language reads for
+  what execution needs, and the user name of account A. Returns 0 when the journal was executed, 1 when
   execution failed, 2 when the journal could not be read or is not well
   formed.
   """
@@ -35,4 +35,4 @@ def interpret(journal_bytes ,language ,log ,constraint):
     log("wellformed_broken" ,problem)
   if problem_list:
     return 2
-  return language.execute(data ,log ,constraint)
+  return language.execute(data ,log ,constraint ,gate_invoking_account)

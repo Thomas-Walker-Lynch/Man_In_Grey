@@ -97,6 +97,9 @@
           <RT·entry key="real uid, effective uid">
             The two user ids a process carries. The effective uid determines what the process is permitted to do, and the real uid identifies the ultimate invoking process's real uid. See <a href="#sec-uid"><RT·Counter·read snapshot="sec-uid" key="counter count"></RT·Counter·read></a>.
           </RT·entry>
+          <RT·entry key="saved uid">
+            A third uid a process carries, which a setuid program starts with set to its file's owner, so that it can give up that uid for a while and take it back. See <a href="#sec-saved-uid"><RT·Counter·read snapshot="sec-saved-uid" key="counter count"></RT·Counter·read></a>.
+          </RT·entry>
         </RT·dictionary>
       </RT·section>
 
@@ -125,7 +128,7 @@
             Each account has a number called its user id, or <RT·code>uid</RT·code>. Each file has an owner, noted with a uid. Each process is associated with two uids, its <RT·term>real uid</RT·term> and its <RT·term>effective uid</RT·term>. When a person logs in, the login program starts his shell with both uids set to that of his account, and every process started from the shell inherits them. In colloquial speech such processes are said to be owned by the person, or to run under his account. However, the two uids associated with a process can differ, so these colloquialisms are imprecise.
           </p>
           <p>
-            The effective uid determines a process's permissions. So for example when opening a file, the kernel compares the process's effective uid with a file's owner and permission bits to determine if the process is allowed to open the file. Among its other uses, the kernel lets a process send a signal to another process whose real uid equals its own real or effective uid.
+            The effective uid determines a process's permissions. So for example when opening a file, the kernel compares the process's effective uid with a file's owner and permission bits to determine if the process is allowed to open the file. Among its other uses, the kernel lets a process send a signal to another process whose real uid, or saved uid, equals its own real or effective uid; <a href="#sec-isolation"><RT·Counter·read snapshot="sec-isolation" key="counter count"></RT·Counter·read></a> explains signals and the saved uid, and how the gate stops account A signaling it.
           </p>
           <p>
             A process inherits both uids from the process that invoked it, unless the program file it runs has its <RT·code>setuid</RT·code> permission bit set. In which case, the kernel then takes the effective uid from the file's owner instead, while the real uid remains inherited as before. A process therefore gets its effective uid in one of two ways: from the process that invoked it, or from the owner of a setuid program file. (Groups work the same way, with a real gid, an effective gid and a <RT·code>setgid</RT·code> bit, beside the supplementary groups, which are inherited unchanged.)
@@ -265,13 +268,15 @@
           </p>
 
           <ol>
+            <li>puts every signal's disposition back to its default, turns off the interval timers, and clears the blocked mask, so no signal state the invoking program left can act later;</li>
             <li>opens <RT·code>/dev/null</RT·code> on any of descriptors 0, 1 and 2 the invoking program left closed, and closes every descriptor above 2, so nothing the invoking program opened reaches the guard or the interpreter;</li>
             <li>raises each resource limit that could stop the guard or the interpreter partway, file size and CPU time to unlimited, address space and data size to 1 GiB, stack size to 8 MiB, and open files to 64, as far as the hard limit allows, or past it when account B is root; and refuses when one stays too low;</li>
             <li>finds the guard and the interpreter at paths fixed when the gate is compiled, relative to the gate itself, so account A cannot name others;</li>
             <li>refuses unless the guard and the interpreter, and every directory above them, are owned by root or by account B, and writable by no other account;</li>
             <li>clears the environment, setting only <RT·code>PATH</RT·code> and <RT·code>LANG</RT·code>, sets the file mode mask to <RT·code>077</RT·code>, marks the process not dumpable, and changes directory to <RT·code>/</RT·code>;</li>
-            <li>records its real ids, account A's, in <RT·code>MIG_REAL_UID</RT·code>, <RT·code>MIG_REAL_GID</RT·code> and <RT·code>MIG_REAL_USER_NAME</RT·code>;</li>
+            <li>records its real ids, account A's, in <RT·code>MIG_REAL_UID</RT·code>, <RT·code>MIG_REAL_GID</RT·code> and <RT·code>MIG_REAL_USER_NAME</RT·code>, for the guard and the interpreter;</li>
             <li>reads the journal from its standard input, up to 16 MiB;</li>
+            <li>when accounts A and B differ, makes its real uid account B's, so the kernel refuses account A's signals, and ignores the signals a terminal sends; see <a href="#sec-isolation"><RT·Counter·read snapshot="sec-isolation" key="counter count"></RT·Counter·read></a>;</li>
             <li>starts <RT·code>/usr/bin/python3 -E -s -B</RT·code> on the guard, with the journal on its standard input, and goes on only when the guard approves the journal;</li>
             <li>starts the interpreter the same way, with the same journal.</li>
           </ol>
@@ -301,7 +306,7 @@
           <RT·section>
             <RT·name>Output rule</RT·name>
             <p>
-              Every line the guard and the interpreter write is copied to the person, marked <RT·code>guard:</RT·code> or <RT·code>interpreter:</RT·code>, and to the system log under the name <RT·code>Man_In_Grey_gate</RT·code>, beside the gate's own lines, marked <RT·code>gate:</RT·code>. The gate logs each journal's course itself, whatever the guard and the interpreter write: <RT·code>received</RT·code>, with account A, account B and the journal's size; then <RT·code>approved</RT·code> or <RT·code>refused</RT·code>; then <RT·code>interpreting</RT·code>; then <RT·code>interpreted</RT·code> or <RT·code>failed</RT·code>. A line breaks the gate's rules when it is not UTF-8, or holds a control character (C0, DEL or C1), or is longer than 4096 bytes, or is one line more than 2000; the gate then stops the program and refuses the journal. Unicode is otherwise welcome. The guard writes any control character it quotes as <RT·code>\u{XXXX}</RT·code>, and the example language's wellformed check refuses any text that holds one.
+              Every line the guard and the interpreter write is copied to the person, marked <RT·code>guard:</RT·code> or <RT·code>interpreter:</RT·code>, and to the system log under the name <RT·code>Man_In_Grey_gate</RT·code>, beside the gate's own lines, marked <RT·code>gate:</RT·code>. The gate logs each journal's course itself, whatever the guard and the interpreter write: <RT·code>received</RT·code>, with account A, account B and the journal's size; <RT·code>isolated</RT·code>, when the gate gives up account A; then <RT·code>approved</RT·code> or <RT·code>refused</RT·code>; then <RT·code>interpreting</RT·code>; then <RT·code>interpreted</RT·code> or <RT·code>failed</RT·code>. A line breaks the gate's rules when it is not UTF-8, or holds a control character (C0, DEL or C1), or is longer than 4096 bytes, or is one line more than 2000; the gate then stops the program and refuses the journal. Unicode is otherwise welcome. The guard writes any control character it quotes as <RT·code>\u{XXXX}</RT·code>, and the example language's wellformed check refuses any text that holds one.
             </p>
           </RT·section>
           <RT·section id="sec-transport">
@@ -321,7 +326,7 @@
             The kernel tells the gate which account invoked it, as the real uid, and the gate passes it on, so the guard knows it also. The kernel does not say which program invoked the gate. As the guard invocation is compiled into the gate, the guard can know the provenance of the journal from the point it was given to the gate, but not before that.
           </p>
           <p>
-            Two checks are needed by nearly every guard, whatever its instruction language. The first is that the journal is well formed: that it decodes, names only instructions of its language, and gives each instruction the arguments it takes, of the right kinds. This check carries knowledge of the instruction syntax, so it belongs to the instruction language. The second is who account A is. The gate's real uid is account A's, and its real gid and supplementary groups are those it inherited from the invoking program, since the setuid and setgid bits change only the effective ids. All three pass to the guard, which reads them from the kernel, so account A cannot misstate them. A guard can therefore allow a journal from the accounts it names, or from the members of a group, as its constraints decide.
+            Two checks are needed by nearly every guard, whatever its instruction language. The first is that the journal is well formed: that it decodes, names only instructions of its language, and gives each instruction the arguments it takes, of the right kinds. This check carries knowledge of the instruction syntax, so it belongs to the instruction language. The second is who account A is. The gate had account A's uid from the kernel, as its real uid, and records it for the guard before giving it up, <a href="#sec-isolation-account"><RT·Counter·read snapshot="sec-isolation-account" key="counter count"></RT·Counter·read></a>; the real gid and supplementary groups the gate inherited from the invoking program stay account A's, and the guard reads them from the kernel. Account A cannot misstate any of them. A guard can therefore allow a journal from the accounts it names, or from the members of a group, as its constraints decide.
           </p>
           <p>
             The other checks a guard makes belong to its instruction language. The example language's four checks are in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>.
@@ -374,6 +379,123 @@
           <p>
             Execution stops at the first error. What the interpreter did before then stays done, except what its instruction language undoes; for the example language, see <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>. Playing a journal as a transaction is a possible future feature; see <a href="#sec-transaction"><RT·Counter·read snapshot="sec-transaction" key="counter count"></RT·Counter·read></a>.
           </p>
+        </RT·section>
+      </RT·section>
+
+      <RT·section id="sec-isolation">
+        <RT·name>Isolation from account A</RT·name>
+        <p>
+          The aim is that a journal be played as a transaction: either all of it takes effect, or none of it does, with nothing in between. Man_In_Grey is not there yet, since an interpreter can still fail partway, as <a href="#sec-transaction"><RT·Counter·read snapshot="sec-transaction" key="counter count"></RT·Counter·read></a> discusses. But no interpreter can be transactional while account A can stop it partway, and until this design, account A could: by sending a signal to the gate, the guard or the interpreter, or by having arranged before the gate started for a signal to arrive later. This chapter explains signals, the uid that lets a setuid program give up account A, and what the gate does so that once it has the journal, account A can no longer interrupt it.
+        </p>
+
+        <RT·section id="sec-signal">
+          <RT·name>Signal</RT·name>
+          <p>
+            A signal is a small message the kernel delivers to a process: a number, such as <RT·code>SIGTERM</RT·code>, asking it to end, <RT·code>SIGINT</RT·code>, sent by Ctrl-C, or <RT·code>SIGKILL</RT·code>. One process sends a signal to another with the system call <RT·code>kill</RT·code>; the kernel also sends signals of its own, as when a timer expires or a process writes to a pipe nobody reads.
+          </p>
+          <p>
+            Sending a signal is two steps. First the kernel decides whether the sender may signal the target at all: a process may signal another when the sender's real or effective uid equals the target's real uid or its saved uid, described below, or when the sender is root. If neither holds, <RT·code>kill</RT·code> fails with <RT·code>EPERM</RT·code>, "Operation not permitted", and no signal exists. Only then, second, is the signal delivered, and the target's <RT·term>disposition</RT·term> for that signal decides what happens: the default action, which for most signals ends the process; ignoring it; or running a handler the program installed. Two signals, <RT·code>SIGKILL</RT·code> and <RT·code>SIGSTOP</RT·code>, can be neither handled nor ignored, so a handler can never protect a process from them. Only the first step can.
+          </p>
+          <p>
+            A setuid gate starts with account A as its real uid, so it passes the first step for account A. Account A could therefore end the gate, the guard or the interpreter with <RT·code>SIGKILL</RT·code> at any moment, the interpreter halfway through a journal included.
+          </p>
+        </RT·section>
+
+        <RT·section id="sec-saved-uid">
+          <RT·name>Saved uid</RT·name>
+          <p>
+            A process holds three uids, not two: real, effective, and <RT·term>saved</RT·term>. When a setuid program is executed, the kernel sets the effective uid to the file's owner and copies it into the saved uid; the real uid stays as inherited. A setuid gate owned by account B therefore starts holding account A as its real uid, and account B as its effective and saved uids.
+          </p>
+          <p>
+            A process may rearrange its uids among the ones it already holds, without privilege, but it cannot take a uid it does not hold. The call <RT·code>setreuid(real ,effective)</RT·code> may set the real uid to the current real or effective uid, and when it changes the real uid it sets the saved uid to the new effective uid. So a setuid gate may call <RT·code>setreuid(B ,B)</RT·code>, making all three of its uids account B's. It gains nothing by this, since it already acts with account B's rights; it only gives up its connection to account A, and once given up, account A cannot be taken back. Only a process with <RT·code>CAP_SETUID</RT·code>, in practice root, may set a uid it does not hold, which is how <RT·code>login</RT·code> starts a shell under the account a person signed in to.
+          </p>
+          <p>
+            The saved uid exists so that a setuid program can drop its rights for a while and take them back: it sets its effective uid to its real uid, does some work on the person's behalf, and returns to the saved uid. Man_In_Grey uses the same rules the other way, to drop account A for good.
+          </p>
+        </RT·section>
+
+        <RT·section id="sec-isolate">
+          <RT·name>Isolating the gate</RT·name>
+          <p>
+            Once the gate has read the whole journal, and before it starts the guard, it makes its real uid account B's, as above. From then on account A matches neither the gate's real uid nor its saved uid, and the kernel refuses account A's signals at the first step, <RT·code>SIGKILL</RT·code> and <RT·code>SIGSTOP</RT·code> included. The guard and the interpreter are started after this, and inherit all three uids. The gate logs the moment:
+          </p>
+          <RT·code>
+            gate: received: real uid 2006 (Thomas), effective uid 996 (http), journal of 1857 bytes
+            gate: isolated: real uid now 996 (http); account A can no longer signal the gate
+          </RT·code>
+          <p>
+            Here is account A trying, after that line, to stop the example language's gate, installed setuid to <RT·code>http</RT·code>. The guard was slowed for the demonstration so there was time to try:
+          </p>
+          <RT·code>
+            gate pid 693
+            Uid:    996    996    996    996
+            kill: (693) - Operation not permitted
+            kill: (693) - Operation not permitted
+            kill: (693) - Operation not permitted
+          </RT·code>
+          <p>
+            The <RT·code>Uid</RT·code> line from <RT·code>/proc/693/status</RT·code> gives the real, effective, saved and file-system uids, all <RT·code>http</RT·code>'s; the three refusals are <RT·code>SIGKILL</RT·code>, <RT·code>SIGSTOP</RT·code> and <RT·code>SIGTERM</RT·code>. The run went on to place the page.
+          </p>
+          <p>
+            Waiting until the journal is read costs nothing. Until then the gate has done nothing that would need undoing, so account A interrupting it earlier only stops a run that has not begun.
+          </p>
+        </RT·section>
+
+        <RT·section id="sec-latent-signal">
+          <RT·name>Signal state that outlives exec</RT·name>
+          <p>
+            Refusing account A's signals is not enough by itself, since account A could arrange beforehand for a signal to arrive after the switch. Three pieces of a process's signal state survive <RT·code>exec</RT·code>, so the program that invokes the gate can leave them behind:
+          </p>
+          <RT·dictionary key="State" definition="What it could do">
+            <RT·entry key="interval timer">
+              A timer set with <RT·code>alarm</RT·code> or <RT·code>setitimer</RT·code> keeps running in the gate. When it expires, the kernel sends <RT·code>SIGALRM</RT·code>, <RT·code>SIGVTALRM</RT·code> or <RT·code>SIGPROF</RT·code> to the gate itself, with no question of who set the timer, so the switch does not stop it. Each ends the process by default: a timer set to expire partway through would end the interpreter there.
+            </RT·entry>
+            <RT·entry key="blocked mask and pending signal">
+              The invoking program can block a signal and send it, so it waits, pending. Both survive <RT·code>exec</RT·code>, and the signal would be delivered whenever it came to be unblocked.
+            </RT·entry>
+            <RT·entry key="ignored disposition">
+              A signal set to be ignored stays ignored. Ignoring <RT·code>SIGCHLD</RT·code>, for one, makes the kernel discard a child's exit status, so the gate could not learn how the guard ended.
+            </RT·entry>
+          </RT·dictionary>
+          <p>
+            The gate therefore settles its signal state first, before anything else, as it settles its descriptors and resource limits: it puts every signal's disposition back to its default, turns off the three interval timers, and clears the blocked mask. Clearing the mask delivers any signal already pending, then and there, while the gate has done nothing. A process that goes past its limit of CPU time or of file size is sent <RT·code>SIGXCPU</RT·code> or <RT·code>SIGXFSZ</RT·code>; the gate raises those limits at its start, and refuses to run when it cannot.
+          </p>
+          <p>
+            The test <RT·code>tester/authored/emplace_bio</RT·code> starts the gate from a process that leaves each kind behind: a timer set to send <RT·code>SIGALRM</RT·code> fifty milliseconds in, an ignored <RT·code>SIGCHLD</RT·code>, and a blocked, pending <RT·code>SIGTERM</RT·code>. With the gate settling its signals, the first two runs place the page, and the third ends at once, having changed nothing. With the settling step taken out, the timer ends the gate partway, the ignored <RT·code>SIGCHLD</RT·code> makes it refuse, and the pending <RT·code>SIGTERM</RT·code> stays blocked, unnoticed.
+          </p>
+        </RT·section>
+
+        <RT·section id="sec-terminal-signal">
+          <RT·name>The terminal</RT·name>
+          <p>
+            A terminal sends signals of its own to the programs running in its foreground: <RT·code>SIGINT</RT·code> for Ctrl-C, <RT·code>SIGQUIT</RT·code> for Ctrl-\, <RT·code>SIGTSTP</RT·code> for Ctrl-Z, <RT·code>SIGTTIN</RT·code> and <RT·code>SIGTTOU</RT·code> when a program in the background reads it or, if the terminal is so set, writes it, and <RT·code>SIGHUP</RT·code> when it is closed. These come from the terminal driver, not from a process, and are not checked against uids. So when it isolates itself, the gate also ignores all six; the guard and the interpreter inherit that. No key on a terminal sends <RT·code>SIGKILL</RT·code> or <RT·code>SIGSTOP</RT·code>.
+          </p>
+          <p>
+            Pressing Ctrl-C, Ctrl-\ and Ctrl-Z during a run of the example ended the orchestrator, account A's own program, by <RT·code>SIGQUIT</RT·code>; the gate, the guard and the interpreter went on, and the page was placed. The gate also ignores <RT·code>SIGPIPE</RT·code>, so a reader of its output that has gone away does not end it; its lines still reach the system log.
+          </p>
+          <p>
+            One signal still reaches the gate from account A: the kernel lets any process in the same session send <RT·code>SIGCONT</RT·code>, whatever its uid. <RT·code>SIGCONT</RT·code> only resumes a stopped process, and account A can no longer stop the gate, so it does nothing.
+          </p>
+        </RT·section>
+
+        <RT·section id="sec-isolation-account">
+          <RT·name>Who account A is, afterwards</RT·name>
+          <p>
+            Once the gate has given up account A, the kernel no longer says who account A is: the guard and the interpreter find account B as their real uid. The gate records account A before giving it up, in <RT·code>MIG_REAL_UID</RT·code>, <RT·code>MIG_REAL_GID</RT·code> and <RT·code>MIG_REAL_USER_NAME</RT·code>, having first cleared the environment, so the variables say what the gate says and nothing account A put there. The guard and the interpreter read account A from them, and refuse to work when the uid and the user name do not name the same account. Knowledge of account A therefore rests on the gate, which had it from the kernel.
+          </p>
+          <p>
+            The gate gives up only the uid. Its real gid and supplementary groups stay account A's, so <RT·code>Constraint.has_real_group</RT·code> still answers for account A's groups.
+          </p>
+        </RT·section>
+
+        <RT·section id="sec-isolation-limit">
+          <RT·name>What isolation does not give</RT·name>
+          <ul>
+            <li>Before the journal is read, account A can still stop the gate. Nothing has been done, so nothing is lost.</li>
+            <li>When accounts A and B are the same, there is nothing to isolate, and the gate does not; the person can interrupt his own run, which has no more than his own rights.</li>
+            <li>Root can signal any process. Root is trusted.</li>
+            <li>The interpreter can still fail partway on its own. Isolation removes account A as a cause, which a transactional play needs, but does not make the play transactional; see <a href="#sec-transaction"><RT·Counter·read snapshot="sec-transaction" key="counter count"></RT·Counter·read></a>.</li>
+          </ul>
         </RT·section>
       </RT·section>
 
@@ -479,19 +601,22 @@
         <RT·section id="sec-install">
           <RT·name>Installing a setuid gate</RT·name>
           <p>
-            A setuid gate and everything its guard and interpreter load are to be owned by root or by account B, in directories no other account can write, and the gate, the guard and the interpreter check this on every run. A Harmony <RT·code>consumer/</RT·code> directory is owned by the person who promoted into it, so a setuid gate there refuses to run, and so does root running the gate there. Installing an instruction language's gate, guard and interpreter is therefore a step of its own, done by root.
+            A setuid gate and everything its guard and interpreter load are to be owned by root or by account B, in directories no other account can write, and the gate, the guard and the interpreter check this on every run. A Harmony <RT·code>consumer/</RT·code> directory is owned by the person who promoted into it, so a setuid gate there refuses to run, and so does root running the gate there. Installing an instruction language's gate, guard and interpreter is therefore a step of its own, done with root's rights by the Man_In_Grey administrator, the person who installs Man_In_Grey and the applications that use it.
           </p>
           <p>
-            The installation is done with <RT·code>install_gate</RT·code>, which is promoted beside <RT·code>Man_In_Grey</RT·code>:
+            The installation is done by <RT·code>install_gate</RT·code>, which is promoted beside <RT·code>Man_In_Grey</RT·code> and is run by root. The administrator runs it through <RT·code>Man_In_Grey</RT·code>:
           </p>
           <RT·code>
-            sudo consumer/Man_In_Grey/install_gate install &lt;gate&gt; owner &lt;account&gt; into &lt;directory&gt; [constraints &lt;file&gt;]
+            consumer/Man_In_Grey/Man_In_Grey install &lt;gate&gt; owner &lt;account&gt; [group &lt;group&gt;] into &lt;directory&gt; [constraints &lt;file&gt;]
           </RT·code>
           <p>
-            It copies <RT·code>Man_In_Grey/</RT·code> and the one gate named from <RT·code>Man_In_Grey_gate/</RT·code> into the directory, side by side, as the gate's compiled paths expect. Every file and directory it installs is owned by root and writable by no other account, except the gate, which it gives to account B, the owner account named, and then makes setuid. The order matters, since changing a file's owner clears its setuid bit. For root as account B the gate's mode is <RT·code>4755</RT·code>, the mode <RT·code>755</RT·code> with the setuid bit, <RT·code>4000</RT·code>, added. For any other account B it is <RT·code>6755</RT·code>, with the setgid bit, <RT·code>2000</RT·code>, too, and account B's group as the gate's group. Only root can give a file away, so an interpreter whose effective uid is that of an account B other than root makes files account B owns, with the effective gid's group; setgid makes that account B's group.
+            Run by root, <RT·code>Man_In_Grey install</RT·code> runs <RT·code>install_gate</RT·code> directly. Run by any other account, such as a developer account without <RT·code>sudo</RT·code>, it runs it through <RT·code>su</RT·code>, which asks for root's password; it first makes a constraints file's path absolute, as root's shell starts in another directory. Root can also run <RT·code>install_gate install</RT·code> itself, with the same arguments. Either way the administrator runs, with root's rights, the <RT·code>install_gate</RT·code> and the files of the tree he names, so he is to install only a tree he has reviewed.
           </p>
           <p>
-            With <RT·code>constraints &lt;file&gt;</RT·code>, a Python file of predicates, <RT·code>install_gate</RT·code> puts them between the constraint marks of the gate's guard. Without it, the constraints of a guard already installed are kept, so installing again brings a new guard and keeps the administrator's constraints; a first installation gets the guard's as promoted, which refuse every account. The constraints of every other installed guard are kept too. <RT·code>install_gate</RT·code> refuses a directory that is not absolute, that an account other than root owns or can write, or that is on a file system mounted <RT·code>nosuid</RT·code>, where the kernel ignores the setuid and setgid bits, as it does on removable drives and some separately mounted <RT·code>/home</RT·code> directories. It ends by printing the installed gate's flags, as root sees them: real uid root's, effective uid account B's. Promotion replaces files and sets neither the owner nor the setuid bit, so the installation is redone after each promotion that changes the gate, the guard or the interpreter. The installation is a candidate for Man_In_Grey itself, once there is a language for installing programs.
+            It copies <RT·code>Man_In_Grey/</RT·code> and the one gate named from <RT·code>Man_In_Grey_gate/</RT·code> into the directory, side by side, as the gate's compiled paths expect. Every file and directory it installs is owned by root and writable by no other account, except the gate, which it gives to account B, the owner account named, and to a group, and then makes setuid and setgid. The order matters, since changing a file's owner clears its setuid and setgid bits. The gate's mode is <RT·code>6755</RT·code>: the mode <RT·code>755</RT·code> with the setuid bit, <RT·code>4000</RT·code>, and the setgid bit, <RT·code>2000</RT·code>, added. The setgid bit gives the gate the group as its effective gid, and an interpreter makes its files with the effective gid's group: only root can give a file away, so an interpreter whose effective uid is that of an account B other than root makes files that account B owns, in that group. The group is account B's own unless <RT·code>group &lt;group&gt;</RT·code> names another, such as a group the web server reads through. When account B and the group are both root's, the setgid bit changes nothing, and the mode is <RT·code>4755</RT·code>.
+          </p>
+          <p>
+            With <RT·code>constraints &lt;file&gt;</RT·code>, a Python file of predicates, <RT·code>install_gate</RT·code> puts them between the constraint marks of the gate's guard. Without it, the constraints of a guard already installed are kept, so installing again brings a new guard and keeps the administrator's constraints; a first installation gets the guard's as promoted, which refuse every account. The constraints of every other installed guard are kept too. <RT·code>install_gate</RT·code> refuses a directory that is not absolute, that an account other than root owns or can write, or that is on a file system mounted <RT·code>nosuid</RT·code>, where the kernel ignores the setuid and setgid bits, as it does on removable drives and some separately mounted <RT·code>/home</RT·code> directories. It ends by printing the installed gate's flags, as root sees them: real uid and gid root's, effective uid account B's, effective gid the group's. Promotion replaces files and sets neither the owner nor the setuid bit, so the installation is redone after each promotion that changes the gate, the guard or the interpreter. The installation is a candidate for Man_In_Grey itself, once there is a language for installing programs.
           </p>
         </RT·section>
 
@@ -501,7 +626,7 @@
             The tester's test <RT·code>tester/authored/emplace_bio</RT·code> copies the promoted Man_In_Grey into its scratchpad directory, puts constraints of its own at the top of the copy's guard, and runs the copy through the example language's gate, not setuid, so accounts A and B are the same. The gate checks ownership on every run, so the test makes its copy writable by its owner alone, and every directory from <RT·code>/</RT·code> down to the scratchpad directory is to be writable by no account but its owner too.
           </p>
           <p>
-            It checks twenty-six things. A page with every style and with text that looks like markup is compared with <RT·code>expected/page.html</RT·code>, and its picture with the one given. A later run with a JPEG places it and removes the PNG, and a run with no picture removes the JPEG. A <RT·code>check_only</RT·code> run changes nothing. Seven journals are then made without the journal interface and given to the gate directly, as a program other than the orchestrator could: one whose text instruction carries a file name, one with a style the language does not have, one with text before any paragraph, one with an SVG picture, one with more text than its constraints allow, one from an account they do not allow, and one for a page that has been made a symbolic link. Each is refused by the check that is to refuse it, and changes nothing:
+            It checks thirty-two things. A page with every style and with text that looks like markup is compared with <RT·code>expected/page.html</RT·code>, and its picture with the one given. A later run with a JPEG places it and removes the PNG, and a run with no picture removes the JPEG. A <RT·code>check_only</RT·code> run changes nothing. Seven journals are then made without the journal interface and given to the gate directly, as a program other than the orchestrator could: one whose text instruction carries a file name, one with a style the language does not have, one with text before any paragraph, one with an SVG picture, one with more text than its constraints allow, one from an account they do not allow, and one for a page that has been made a symbolic link. Each is refused by the check that is to refuse it, and changes nothing. Last, the gate is started three times from a process that leaves signal state behind, as <a href="#sec-latent-signal"><RT·Counter·read snapshot="sec-latent-signal" key="counter count"></RT·Counter·read></a> describes:
           </p>
           <RT·code>
             authored/emplace_bio/run test
@@ -654,15 +779,22 @@
         <RT·section>
           <RT·name>Installing</RT·name>
           <p>
-            The administrator makes the directory, owned by the web server's account, and installs the gate, as root, with the constraints above:
+            The administrator makes the directory, as root, owned by the web server's account:
           </p>
           <RT·code>
-            sudo install -d -o http -g http -m 755 /srv/http/bio
-            sudo consumer/Man_In_Grey/install_gate install Man_In_Grey_emplace_bio_gate owner http into /usr/local/lib/Man_In_Grey constraints bio_constraint.py
+            install -d -o http -g http -m 755 /srv/http/bio
+          </RT·code>
+          <p>
+            and installs the gate with the constraints above, from his own account, here <RT·code>ubuntu</RT·code>; <RT·code>su</RT·code> asks for root's password:
+          </p>
+          <RT·code>
+            consumer/Man_In_Grey/Man_In_Grey install Man_In_Grey_emplace_bio_gate owner http into /usr/local/lib/Man_In_Grey constraints bio_constraint.py
           </RT·code>
           <RT·code>
+            install_gate is run by root; su asks for root's password
+            Password:
             install_gate: installed /usr/local/lib/Man_In_Grey/Man_In_Grey/
-            install_gate: put the constraints of /root/bio_constraint.py in /usr/local/lib/Man_In_Grey/Man_In_Grey/guard_emplace_bio.py
+            install_gate: put the constraints of /home/ubuntu/bio_constraint.py in /usr/local/lib/Man_In_Grey/Man_In_Grey/guard_emplace_bio.py
             install_gate: installed /usr/local/lib/Man_In_Grey/Man_In_Grey_gate/Man_In_Grey_emplace_bio_gate, owner http:http, mode 6755
             install_gate: its flags, as seen by root:
             real.uid=0
@@ -695,6 +827,7 @@
           </RT·code>
           <RT·code>
             gate: received: real uid 2006 (Thomas), effective uid 996 (http), journal of 1857 bytes
+            gate: isolated: real uid now 996 (http); account A can no longer signal the gate
             guard: name: emplace_bio
             guard: version: 3
             guard: constraints: /usr/local/lib/Man_In_Grey/Man_In_Grey/guard_emplace_bio.py
@@ -714,6 +847,7 @@
           </p>
           <RT·code>
             gate: received: real uid 2007 (alice), effective uid 996 (http), journal of 1855 bytes
+            gate: isolated: real uid now 996 (http); account A can no longer signal the gate
             guard: name: emplace_bio
             guard: version: 3
             guard: constraints: /usr/local/lib/Man_In_Grey/Man_In_Grey/guard_emplace_bio.py
@@ -730,7 +864,8 @@
         <RT·section>
           <RT·name>Why it is safe</RT·name>
           <ul>
-            <li>A journal names no file, and the guard refuses an instruction with any argument the language does not have, so a journal cannot point the interpreter anywhere. The page's name comes from the kernel's real uid, and its directory from the administrator's constraints.</li>
+            <li>A journal names no file, and the guard refuses an instruction with any argument the language does not have, so a journal cannot point the interpreter anywhere. The page's name comes from account A's user name, which the gate had from the kernel as its real uid, and its directory from the administrator's constraints.</li>
+            <li>Once it has the journal, the gate gives up account A, so Thomas cannot stop the guard or the interpreter partway, and a page is never left half placed by him.</li>
             <li>The interpreter runs with the effective uid of <RT·code>http</RT·code>, not root, so even a fault in it reaches only what the web server's account can write.</li>
             <li>The page's text cannot become markup, since the interpreter escapes it and writes every tag itself. The page cannot become server code either: its name always ends in <RT·code>.html</RT·code>, never <RT·code>.php</RT·code> or <RT·code>.htaccess</RT·code>.</li>
             <li>The guard refuses a page or picture that has been made a symbolic link, and a directory reached through one, so a link cannot redirect the write to another file of <RT·code>http</RT·code>'s.</li>
@@ -742,15 +877,6 @@
       <RT·section id="sec-problem">
         <RT·name>Known problem</RT·name>
         <RT·dictionary key="Problem" definition="What happens">
-          <RT·entry key="The gate is built without hardening">
-            The old compile script built the gate with <RT·code>-z relro</RT·code>, <RT·code>-z now</RT·code> and <RT·code>-fstack-protector-strong</RT·code>. Harmony's build has no flags for one namespace, so the gate is built without them.
-          </RT·entry>
-          <RT·entry key="Checks and execution are separate moments">
-            The guard's filesystem check and the interpreter's execution are separate moments, so a file can appear or change between them. An interpreter is to be written so that it fails on such a change rather than acting on it: the example language's interpreter opens its directory without following a symbolic link, and a rename into place replaces a symbolic link put there since rather than following it.
-          </RT·entry>
-          <RT·entry key="Account A can signal the gate">
-            A process whose real or effective uid is account A's can send signals to the gate, the guard and the interpreter, whose real uid is account A's, and so can kill the interpreter partway through a journal. The example language writes its files to temporary names and renames each into place, so a page is never half written, but a file already put in place stays as it is.
-          </RT·entry>
           <RT·entry key="A guard can pass without reading">
             The gate checks the guard's verdict, not the guard's work: a guard that writes its approval line without reading the journal approves everything. The guard is installed code the application developer writes, and is to be tested as such.
           </RT·entry>
@@ -801,6 +927,28 @@
           </p>
           <p>
             A smaller step gives the first advantage alone: a symbol that names a field of its instruction's value, as <RT·code>{"symbol": 3 ,"field": "uid"}</RT·code>, keeps index symbols and lets one instruction produce several values.
+          </p>
+        </RT·section>
+
+        <RT·section id="sec-group">
+          <RT·name>Group and setgid</RT·name>
+          <p>
+            The gate gives up account A's uid when it isolates itself, <a href="#sec-isolate"><RT·Counter·read snapshot="sec-isolate" key="counter count"></RT·Counter·read></a>, but not account A's real gid or supplementary groups. Signals are permitted by uid alone, so the groups do not let account A interrupt it, and keeping them lets a constraint ask about account A's groups with <RT·code>Constraint.has_real_group</RT·code>. Three pieces of work remain:
+          </p>
+          <ul>
+            <li><em>Recording account A's groups.</em> If the gate gave up account A's gids too, with <RT·code>setregid</RT·code> and <RT·code>setgroups</RT·code>, so that nothing of account A's identity remained in the process, it would record the groups first, as it records the uid, and <RT·code>has_real_group</RT·code> would read them from the record.</li>
+            <li><em>A constraint by group.</em> <RT·code>Constraint.is_group_member</RT·code> and <RT·code>has_real_group</RT·code> let a guard admit the members of a group, but the example's guard admits accounts by name; a group, such as <RT·code>bio</RT·code>, is the more natural grant on a real host, and the example could show it.</li>
+            <li><em>Which group the interpreter's files take.</em> A setgid gate makes its files in the group <RT·code>install_gate</RT·code> gives it. A language that places files for several groups would need the interpreter to set each file's group, which an account B other than root can do only to the groups account B belongs to.</li>
+          </ul>
+        </RT·section>
+
+        <RT·section id="sec-check-moment">
+          <RT·name>Checking at the moment of acting</RT·name>
+          <p>
+            The guard checks the files a journal will touch before the interpreter runs, so they can change in between. Changing them takes write access to their directory, and an account with that access could change them without the gate, so the gap gives no account anything it did not already have. It would still be better closed, so that what was checked is what is acted on.
+          </p>
+          <p>
+            File locks are the obvious tool, but on Linux they bind only programs that take them: <RT·code>flock</RT·code> and <RT·code>fcntl</RT·code> locks are advisory, and the kernel dropped mandatory locking in version 5.15. The way to close the gap is for the interpreter to make the filesystem checks itself, on the very directory descriptors it then writes through, as the example language's interpreter already does in part by opening its directory without following a symbolic link and renaming into place within it.
           </p>
         </RT·section>
 

@@ -4,30 +4,40 @@
   A gate is a program of its own, made from this module by a three-line
   *.CLI.c whose main calls Man_In_Grey_gate·Gate·run with three things fixed
   at compile time: the name of the instruction language, the guard's path and
-  the interpreter's path, the two paths relative to the gate itself. The gate invoking account can
-  name neither program; who invokes a gate cannot choose what it runs.
+  the interpreter's path, the two paths relative to the gate itself. The
+  gate invoking account can name neither program; who invokes a gate cannot
+  choose what it runs.
 
-  Setuid and owned by account B, a gate runs with the effective uid of
+  Setuid and owned by account B, a gate starts with the effective uid of
   account B and the real uid of account A, the gate invoking account. Not
-  setuid, it keeps both uids of the program that invoked it. The guard and
-  the interpreter keep the gate's two uids.
+  setuid, it keeps both uids of the program that invoked it.
 
-  admit reads the journal on standard input, then:
+  admit:
 
-    0. settles what the invoking program handed it: opens /dev/null on any
-       of descriptors 0, 1 and 2 left closed, closes every descriptor above
-       2, and raises each resource limit that could stop the guard or the
-       interpreter partway, refusing when one stays too low;
+    0. settles what the invoking program handed it: puts every signal's
+       disposition back to its default, cancels the interval timers and
+       clears the blocked mask, so a signal already pending is delivered now;
+       opens /dev/null on any of descriptors 0, 1 and 2 left closed, and
+       closes every descriptor above 2; and raises each resource limit that
+       could stop the guard or the interpreter partway, refusing when one
+       stays too low;
     1. refuses unless the guard and the interpreter, and every directory
        above them, are owned by root or by the effective uid's account and
        writable by no other account;
     2. clears the environment, sets the file mode mask to 077, marks the
-       process not dumpable, changes directory to /, and records its real
-       ids in MIG_REAL_UID, MIG_REAL_GID and MIG_REAL_USER_NAME;
-    3. starts the guard with the journal on its standard input, and admits
+       process not dumpable, changes directory to /, and records account A
+       in MIG_REAL_UID, MIG_REAL_GID and MIG_REAL_USER_NAME;
+    3. reads the journal from standard input;
+    4. isolates itself from account A, when the two accounts differ: makes
+       its real uid account B's, so the kernel refuses account A's signals,
+       and ignores the signals a terminal sends;
+    5. starts the guard with the journal on its standard input, and admits
        the journal only when the guard exits 0 having written exactly one
        line to standard output: guard <language> check passed;
-    4. starts the interpreter with the same journal.
+    6. starts the interpreter with the same journal.
+
+  The guard and the interpreter inherit the gate's uids and its ignored
+  signals, and learn account A from MIG_REAL_UID and MIG_REAL_USER_NAME.
 
   The constraints are code installed with the guard, so nothing about them is
   given to the gate.
@@ -35,9 +45,10 @@
   The gate logs each journal's course itself, whatever the guard and the
   interpreter write: received, then approved or refused, then interpreting,
   then interpreted or failed. Every line the guard and the interpreter
-  write is copied to the person and to the system log as well. A line that is not UTF-8, or holds a control character,
-  or is too long, or one line too many, breaks the gate's rules: the gate
-  stops the program and refuses.
+  write is copied to the person and to the system log as well. A line that
+  is not UTF-8, or holds a control character, or is too long, or one line
+  too many, breaks the gate's rules: the gate stops the program and
+  refuses.
 
   Exit status: 0 when the journal was admitted and executed, or admitted
   with check_only; 1 when the guard refused it or execution failed; 2 when
@@ -73,6 +84,7 @@ int Man_In_Grey_gate·Gate·run(
   #include <sys/prctl.h>
   #include <sys/resource.h>
   #include <sys/stat.h>
+  #include <sys/time.h>
   #include <sys/types.h>
   #include <sys/wait.h>
   #include <syslog.h>
@@ -133,6 +145,31 @@ int Man_In_Grey_gate·Gate·run(
 
   // ------------------------------------------------------------------------------
   // what the invoking program hands the gate
+
+  /* Signal state survives exec. The invoking program can leave a signal
+     ignored, leave signals blocked with some already pending, and leave an
+     interval timer running that will send SIGALRM, SIGVTALRM or SIGPROF
+     later. The kernel sends a timer's signal to the gate itself, with no
+     check of who set the timer, so any of these could act after the gate has
+     isolated itself from account A. The gate puts it all back to the state a
+     fresh process has: each disposition to its default, the timers off, the
+     mask empty. Clearing the mask delivers any signal already pending, now,
+     while the gate has done nothing that would need undoing. */
+  Local void settle_signals(void){
+    struct sigaction initial = {.sa_handler = SIG_DFL};
+    sigemptyset(&initial.sa_mask);
+    for(int signal_number = 1; signal_number < NSIG; ++signal_number){
+      if( signal_number == SIGKILL || signal_number == SIGSTOP ) continue;   // never caught, never ignored
+      sigaction(signal_number ,&initial ,NULL);   // refused, harmlessly, for numbers the C library keeps
+    }
+    struct itimerval off = {0};
+    setitimer(ITIMER_REAL ,&off ,NULL);
+    setitimer(ITIMER_VIRTUAL ,&off ,NULL);
+    setitimer(ITIMER_PROF ,&off ,NULL);
+    sigset_t empty;
+    sigemptyset(&empty);
+    sigprocmask(SIG_SETMASK ,&empty ,NULL);
+  }
 
   /* Descriptors 0, 1 and 2 open, on /dev/null when the invoking program left
      one closed, so a pipe the gate makes cannot land on one of them; every
@@ -433,6 +470,37 @@ int Man_In_Grey_gate·Gate·run(
     printf("interpreter.path=%s\n" ,resolve(interpreter_relative ,resolved) ? resolved : "(missing)");
   }
 
+  // ------------------------------------------------------------------------------
+  // isolation from account A
+
+  /* The kernel lets a process signal another when the sender's real or
+     effective uid matches the target's real or saved uid. A setuid gate
+     starts with account A as its real uid, so account A can signal it,
+     SIGKILL and SIGSTOP included, which no handler can catch.
+
+     A process may set its real uid to its effective uid. Once the journal
+     is read, the gate does, and setreuid then sets the saved uid to account
+     B as well. With all three uids account B's, the kernel refuses account
+     A's signals before delivering anything. A terminal sends its signals to
+     the foreground process group without that check, so the gate ignores
+     them; the guard and the interpreter inherit both the uids and the
+     ignored signals.
+
+     When accounts A and B are the same there is nothing to isolate, and the
+     person can still interrupt his own run. Returns whether the gate
+     isolated itself. */
+  Local bool isolate_from_invoker(void){
+    uid_t account_B = geteuid();
+    if( getuid() == account_B ) return false;
+    if( setreuid(account_B ,account_B) != 0 ) die("cannot set the real uid to account B's: %s" ,strerror(errno));
+    if( getuid() != account_B || geteuid() != account_B ) die("the real uid did not become account B's");
+    int terminal_signal[] = {SIGINT ,SIGQUIT ,SIGTSTP ,SIGTTIN ,SIGTTOU ,SIGHUP};
+    for(size_t i = 0; i < sizeof terminal_signal / sizeof terminal_signal[0]; ++i){
+      signal(terminal_signal[i] ,SIG_IGN);
+    }
+    return true;
+  }
+
   Local unsigned char *read_journal(size_t *length){
     size_t size = 1 << 16;
     unsigned char *journal = malloc(size);
@@ -486,6 +554,7 @@ int Man_In_Grey_gate·Gate·run(
       return 2;
     }
 
+    settle_signals();
     settle_descriptors();
     settle_limits();
 
@@ -520,6 +589,9 @@ int Man_In_Grey_gate·Gate·run(
     unsigned char *journal = read_journal(&journal_length);
     say("received" ,"real uid %ld (%s), effective uid %ld (%s), journal of %zu bytes%s"
         ,(long)real_uid ,real_user_name ,(long)geteuid() ,user_name(geteuid()) ,journal_length ,check_only ? ", check only" : "");
+    if( isolate_from_invoker() ){
+      say("isolated" ,"real uid now %ld (%s); account A can no longer signal the gate" ,(long)getuid() ,user_name(getuid()));
+    }
 
     // the guard
     char *guard_argument[] = {

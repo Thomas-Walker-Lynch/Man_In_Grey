@@ -34,7 +34,7 @@ import stat
 from pathlib import Path
 
 HERE_DPATH = Path(__file__).resolve().parent
-MODULE = ("Journal.py" ,"Interpreter.py" ,"Constraint.py" ,"EmplaceBioLanguage.py" ,"guard_emplace_bio.py" ,"interpreter_emplace_bio.py")
+MODULE = ("Journal.py" ,"Guard.py" ,"Interpreter.py" ,"Constraint.py" ,"EmplaceBioLanguage.py" ,"guard_emplace_bio.py" ,"interpreter_emplace_bio.py")
 
 
 def trusted_owner_problem(path):
@@ -60,6 +60,7 @@ for each in [HERE_DPATH] + [HERE_DPATH / m for m in MODULE]:
 
 try:
   import Journal
+  import Guard
   import Interpreter
   import EmplaceBioLanguage as Language
   import guard_emplace_bio as Guard_program
@@ -72,7 +73,12 @@ def log(tag ,message):
   print(f"{tag}: {Journal.clean(message)}" ,flush=True)
 
 def execute():
-  return Interpreter.interpret(sys.stdin.buffer.read() ,Language ,log ,Guard_program)
+  try:
+    gate_invoking_account = Guard.gate_invoking_account()
+  except RuntimeError as error:
+    log("cannot_execute" ,str(error))
+    return 2
+  return Interpreter.interpret(sys.stdin.buffer.read() ,Language ,log ,Guard_program ,gate_invoking_account)
 
 
 # --------------------------------------------------------------------------------

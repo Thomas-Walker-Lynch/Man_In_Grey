@@ -14,15 +14,20 @@ gate's instruction language. The orchestrator learns the language from the
 gate's flags, and loads the module named for it: emplace_bio from
 EmplaceBioLanguage.py.
 
-Usage: Man_In_Grey <command> <path> gate <file> [option ...]
+Usage: Man_In_Grey <command> ...
   help | -h                  print this message (also printed when given no arguments)
-  orchestrate <path>         <path> is a composer file, or a composer directory; every
+  orchestrate <path> gate <file> [option ...]
+                             <path> is a composer file, or a composer directory; every
                              file in a composer directory is a composer, and they run
-                             depth first, in order of name at each level
-  gate <file>                the gate to invoke, which also sets the instruction
-                             language the composers write in; required
+                             depth first, in order of name at each level; <file> is the
+                             gate to invoke, which also sets the instruction language
+                             the composers write in
+  install <gate> owner <account> [group <group>] into <directory> [constraints <file>]
+                             install a gate setuid and setgid, by running install_gate
+                             as root; when not run by root, su asks for root's password;
+                             see install_gate for the rest
 
-Options:
+Options of orchestrate:
   print                      print the journal after composing
   compose_only               stop after composing; nothing reaches the gate
   check_only                 have the gate run the guard and not the interpreter
@@ -39,7 +44,7 @@ a composer failed, or the gate, guard or interpreter could not run.
 import sys ,os
 sys.dont_write_bytecode = True
 
-import datetime ,importlib ,pwd ,re ,runpy ,stat ,subprocess ,traceback
+import datetime ,importlib ,pwd ,re ,runpy ,shlex ,stat ,subprocess ,traceback
 from pathlib import Path
 
 import Journal
@@ -233,10 +238,33 @@ def print_help():
   print(__doc__.strip())
   return 0
 
+# --------------------------------------------------------------------------------
+# installing a gate
+
+def install(argument_list):
+  """
+  Run install_gate install with the arguments given, as root. Run by root, it
+  runs install_gate itself; run by anyone else, it runs it through su, which
+  asks for root's password. A constraints file is made absolute first, as
+  root's shell starts elsewhere. Returns install_gate's exit status.
+  """
+  argument_list = list(argument_list)
+  for i ,word in enumerate(argument_list[:-1]):
+    if word == "constraints":
+      argument_list[i + 1] = str(Path(argument_list[i + 1]).absolute())
+  command = [str(HERE_DPATH / "install_gate") ,"install" ,*argument_list]
+  if os.geteuid() != 0:
+    print("install_gate is run by root; su asks for root's password" ,file=sys.stderr)
+    command = ["su" ,"root" ,"-c" ,shlex.join(command)]
+  return subprocess.run(command).returncode
+
+
 def CLI(argv=None):
   argv = sys.argv[1:] if argv is None else argv
   if not argv or argv[0] in ("help" ,"-h" ,"--help"): return print_help()
   command ,rest = argv[0] ,argv[1:]
+  if command == "install":
+    return install(rest)
   if command not in COMMAND:
     print(f"Error: unknown command '{command}'." ,file=sys.stderr)
     print_help()

@@ -3,14 +3,19 @@
 """
 install_gate - install a Man_In_Grey gate, setuid to the account that is to own it.
 
-Run by root, by the administrator who installs an application. It copies
-Man_In_Grey/, the directory beside this program, and the one gate named
-from Man_In_Grey_gate/ into a directory of root's, side by side, as the
-gate's compiled paths expect. Every file and directory it installs is
+Run by root, by the Man_In_Grey administrator, who installs an application.
+A person without root's rights runs it through Man_In_Grey install, which
+asks su for root's password.
+
+It copies Man_In_Grey/, the directory beside this program, and the one gate
+named from Man_In_Grey_gate/ into a directory of root's, side by side, as
+the gate's compiled paths expect. Every file and directory it installs is
 owned by root and writable by no other account, except the gate, which is
-given to the owner account and made setuid: mode 4755 when the owner is
-root, and 6755, setuid and setgid, with the owner's group, for any other
-account. It then prints the gate's flags.
+given to the owner account and the group, and made setuid and setgid: mode
+6755. The group is the owner's own group unless group <group> names
+another; the interpreter makes files with that group. When both are root's,
+the setgid bit changes nothing and the mode is 4755. It then prints the
+gate's flags.
 
 A guard's constraints are the predicates written at its top, between the
 lines '# constraints begin' and '# constraints end'. With constraints
@@ -26,13 +31,13 @@ the kernel ignores the setuid and setgid bits.
 
 Usage: install_gate <command> ...
   help | -h      print this message (also printed when given no arguments)
-  install <gate> owner <account> into <directory> [constraints <file>]
+  install <gate> owner <account> [group <group>] into <directory> [constraints <file>]
                  <gate> is a gate's file name in Man_In_Grey_gate/, such as
                  Man_In_Grey_emplace_bio_gate; <file> is a Python file holding
                  the guard's predicates
 
-Example, run from consumer/Man_In_Grey/:
-  sudo ./install_gate install Man_In_Grey_emplace_bio_gate owner http into /usr/local/lib/Man_In_Grey constraints bio_constraint.py
+Example, run by root from consumer/Man_In_Grey/:
+  ./install_gate install Man_In_Grey_emplace_bio_gate owner http into /usr/local/lib/Man_In_Grey constraints bio_constraint.py
 
 Exit status: 0 when the gate was installed, 1 when the installation was
 refused, 2 when it was given wrong arguments.
@@ -134,13 +139,14 @@ def gate_flag(gate_fpath):
 # --------------------------------------------------------------------------------
 # installing
 
-def install(gate ,owner ,directory ,constraints=None):
+def install(gate ,owner ,directory ,constraints=None ,group=None):
   """
-  Install the gate named gate, setuid to the account owner, into directory.
-  Raises Refused.
+  Install the gate named gate into directory, owned by the account owner
+  and by group, or by owner's own group when group is None, and setuid and
+  setgid. Raises Refused.
   """
   if os.geteuid() != 0:
-    raise Refused("install_gate is run by root, as: sudo install_gate ...")
+    raise Refused("install_gate is run by root; a person without root's rights runs Man_In_Grey install, which asks for root's password")
   if "/" in gate or gate in ("" ,"." ,".."):
     raise Refused(f"{gate!r} is to be the file name of a gate in {SOURCE_DPATH / GATE_DNAME}")
   source_gate = SOURCE_DPATH / GATE_DNAME / gate
@@ -150,6 +156,10 @@ def install(gate ,owner ,directory ,constraints=None):
     account = pwd.getpwnam(owner)
   except KeyError:
     raise Refused(f"there is no account {owner!r}")
+  try:
+    gid = grp.getgrnam(group).gr_gid if group is not None else account.pw_gid
+  except KeyError:
+    raise Refused(f"there is no group {group!r}")
   given_constraints = None
   if constraints is not None:
     given_constraints = Path(constraints).resolve()
@@ -216,11 +226,10 @@ def install(gate ,owner ,directory ,constraints=None):
     say(f"put the constraints of {given_constraints} in {guard_path}")
 
   # chown clears the setuid and setgid bits, so the mode is set after it
-  os.chown(installed_gate ,account.pw_uid ,account.pw_gid)
-  mode = 0o4755 if account.pw_uid == 0 else 0o6755
+  os.chown(installed_gate ,account.pw_uid ,gid)
+  mode = 0o4755 if account.pw_uid == 0 and gid == 0 else 0o6755
   os.chmod(installed_gate ,mode)
-  group = grp.getgrgid(account.pw_gid).gr_name
-  say(f"installed {installed_gate}, owner {owner}:{group}, mode {mode:o}")
+  say(f"installed {installed_gate}, owner {owner}:{grp.getgrgid(gid).gr_name}, mode {mode:o}")
 
   problem = root_chain_problem(program_dpath)
   if problem:
@@ -243,14 +252,22 @@ def CLI(argv=None):
   argv = sys.argv[1:] if argv is None else argv
   if not argv or argv[0] in ("help" ,"-h" ,"--help"): return print_help()
   command ,rest = argv[0] ,argv[1:]
-  if command != "install":
-    print(f"Error: unknown command '{command}'." ,file=sys.stderr)
+  usage = "install <gate> owner <account> [group <group>] into <directory> [constraints <file>]"
+  if command != "install" or not rest:
+    print(f"Error: {usage}" ,file=sys.stderr)
     return 2
-  if len(rest) not in (5 ,7) or rest[1] != "owner" or rest[3] != "into" or (len(rest) == 7 and rest[5] != "constraints"):
-    print("Error: install <gate> owner <account> into <directory> [constraints <file>]" ,file=sys.stderr)
+  gate ,rest = rest[0] ,rest[1:]
+  value = {}
+  while rest:
+    if len(rest) < 2 or rest[0] not in ("owner" ,"group" ,"into" ,"constraints") or rest[0] in value:
+      print(f"Error: {usage}" ,file=sys.stderr)
+      return 2
+    value[rest[0]] ,rest = rest[1] ,rest[2:]
+  if "owner" not in value or "into" not in value:
+    print(f"Error: {usage}" ,file=sys.stderr)
     return 2
   try:
-    return install(rest[0] ,rest[2] ,rest[4] ,rest[6] if len(rest) == 7 else None)
+    return install(gate ,value["owner"] ,value["into"] ,value.get("constraints") ,value.get("group"))
   except Refused as error:
     print(f"install_gate: refused: {error}" ,file=sys.stderr)
     return 1

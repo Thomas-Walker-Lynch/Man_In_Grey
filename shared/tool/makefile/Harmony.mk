@@ -18,6 +18,7 @@ CFLAGS           ?= -std=gnu11 -Wall -Wextra -Wpedantic -finput-charset=UTF-8
 CFLAGS           += -MMD -MP
 CFLAGS           += -include "$(REPO_HOME)/shared/tool/makefile/RT_global.h"
 CFLAGS           += -I $(C_SOURCE_DIR)
+CFLAGS           += $(CFLAGS_PROJECT_LOCAL)
 
 # Project administrators can override this in their local makefile
 LIBRARY_NAME     ?= $(PROJECT)
@@ -33,6 +34,7 @@ LIBRARY_FILE     ?= $(LIBRARY_DIR)/lib$(LIBRARY_NAME).a
 # the project library is linked only when the namespace makes one
 LN_FLAGS         ?= -L$(LIBRARY_DIR) -L/lib64 -L/lib $(if $(object_lib),-l$(LIBRARY_NAME))
 # LN_FLAGS         ?= -L$(LIBRARY_DIR) -L/lib64 -L/lib -l$(LIBRARY_NAME)
+LN_FLAGS         += $(LN_FLAGS_PROJECT_LOCAL)
 
 KMOD_SOURCE_DIR  ?= authored
 KMOD_CCFLAGS     ?= -I $(KMOD_SOURCE_DIR)

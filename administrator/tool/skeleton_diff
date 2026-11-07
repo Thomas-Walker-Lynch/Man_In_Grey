@@ -18,6 +18,23 @@ def get_git_branch(repo_path: Path) -> str:
   except (subprocess.CalledProcessError ,FileNotFoundError):
     return "unknown_branch"
 
+def git_listed_files(repo_path: Path):
+  """
+  The files git sees in repo_path, relative to it: those it tracks, and those
+  not yet tracked that no .gitignore excludes. None when repo_path is not a
+  git repository, or git is not available.
+  """
+  try:
+    result = subprocess.run(
+      ["git" ,"-C" ,str(repo_path) ,"ls-files" ,"-z" ,"--cached" ,"--others" ,"--exclude-standard"],
+      capture_output=True ,check=True
+    )
+  except (subprocess.CalledProcessError ,FileNotFoundError):
+    return None
+  TM_names = [TM_n for TM_n in result.stdout.decode("utf-8" ,"surrogateescape").split("\0") if TM_n]
+  # a file deleted from the work tree but still in the index is not a file here
+  return [TM_n for TM_n in TM_names if (repo_path / TM_n).is_file()]
+
 def format_perms(mode: int) -> str:
   # Extract the 9-character permission string (e.g., rwxr-xr-x), dropping the leading file type char
   return stat.filemode(mode)[1:]
@@ -26,8 +43,15 @@ def CLI(argv=None) -> int:
   if argv is None:
     argv = sys.argv[1:]
 
+  use_git = True
+  if argv[:1] == ["all_files"]:
+    use_git = False
+    argv = argv[1:]
+
   if len(argv) != 2:
-    print("Usage: skeleton_diff <path_to_Harmony> <path_to_project>")
+    print("Usage: skeleton_diff [all_files] <path_to_Harmony> <path_to_project>")
+    print("  Compares the files git sees in each repository: tracked files, and untracked")
+    print("  files no .gitignore excludes. all_files compares every file on disk instead.")
     return 1
 
   harmony_dir = Path(argv[0]).resolve()
@@ -78,23 +102,30 @@ def CLI(argv=None) -> int:
     if path_obj.name.endswith("~"): return True
     return False
 
-  harmony_files = set()
-  for TM_root ,TM_dirs ,TM_files in os.walk(harmony_dir):
-    TM_dirs[:] = [TM_d for TM_d in TM_dirs if not is_ignored(Path(TM_d))]
-    for TM_f in TM_files:
-      f_path = Path(TM_root) / TM_f
-      if not is_ignored(f_path):
-        rel_path = f_path.relative_to(harmony_dir)
-        harmony_files.add(str(rel_path))
+  def is_in_ignored_zone(rel: str) -> bool:
+    "true when any part of the relative path is ignored"
+    return any(is_ignored(Path(TM_part)) for TM_part in Path(rel).parts)
 
-  project_files = set()
-  for TM_root ,TM_dirs ,TM_files in os.walk(project_dir):
-    TM_dirs[:] = [TM_d for TM_d in TM_dirs if not is_ignored(Path(TM_d))]
-    for TM_f in TM_files:
-      f_path = Path(TM_root) / TM_f
-      if not is_ignored(f_path):
-        rel_path = f_path.relative_to(project_dir)
-        project_files.add(str(rel_path))
+  def walked_files(root: Path) -> set:
+    TM_found = set()
+    for TM_root ,TM_dirs ,TM_files in os.walk(root):
+      TM_dirs[:] = [TM_d for TM_d in TM_dirs if not is_ignored(Path(TM_d))]
+      for TM_f in TM_files:
+        f_path = Path(TM_root) / TM_f
+        if not is_ignored(f_path):
+          TM_found.add(str(f_path.relative_to(root)))
+    return TM_found
+
+  def listed_files(root: Path):
+    "the files to compare in root, and how they were found"
+    if use_git:
+      TM_listed = git_listed_files(root)
+      if TM_listed is not None:
+        return {TM_n for TM_n in TM_listed if not is_in_ignored_zone(TM_n)} ,"git"
+    return walked_files(root) ,"disk"
+
+  harmony_files ,harmony_source = listed_files(harmony_dir)
+  project_files ,project_source = listed_files(project_dir)
 
   # Align the Opus file names for comparison
   if project_opus in project_files:
@@ -150,6 +181,9 @@ def CLI(argv=None) -> int:
   print(f"    Harmony {harmony_branch}")
   print("    vs")
   print(f"    {project_name} {project_branch}")
+  source_note = {"git": "the files git sees (.gitignore honored)" ,"disk": "every file on disk"}
+  print(f"  Harmony files: {source_note[harmony_source]}")
+  print(f"  {project_name} files: {source_note[project_source]}")
   print("=" * 60)
 
   print("\n1. 0pus File Audit")

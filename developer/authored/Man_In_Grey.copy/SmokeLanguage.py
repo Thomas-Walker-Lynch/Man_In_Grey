@@ -254,7 +254,7 @@ def _backup_name(dirfd ,name):
       return candidate
     candidate ,n = f"{name}.{stamp}.{n}" ,n + 1
 
-def execute(data ,log ,constraint):
+def execute(data ,log ,constraint ,gate_invoking_account):
   """
   Execute the instructions in order, then put each opened file in place. Stops
   at the first error, removing every temporary file not yet put in place.

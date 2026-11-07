@@ -30,6 +30,16 @@ directly, as a program other than the orchestrator could:
   account    an account is_allowed_account does not allow: refused by the constraint check
   link       a page that has been made a symbolic link: refused by the filesystem check
 
+and, with the gate started from a process that left signal state behind,
+which survives exec:
+
+  timer      an interval timer set to send SIGALRM partway through: the gate
+             cancels it, and the page is placed
+  ignored    SIGCHLD ignored, which would keep the gate from learning how the
+             guard ended: the gate puts it back, and the page is placed
+  pending    SIGTERM blocked and pending: the gate clears the mask, the signal
+             ends the gate before it reads the journal, and nothing changes
+
 A refused run is to leave every file as it was.
 
 The test reads consumer/ and writes only in its scratchpad directory,
@@ -42,7 +52,7 @@ Usage: run <command>
   clean                delete the test's scratchpad directory
 """
 
-import sys ,os ,stat ,json ,shutil ,subprocess ,getpass ,urllib.parse
+import sys ,os ,stat ,json ,shutil ,subprocess ,getpass ,urllib.parse ,signal
 sys.dont_write_bytecode = True
 from pathlib import Path
 
@@ -146,10 +156,27 @@ def run_Man_In_Grey(program ,gate ,path ,work_dpath ,*option):
   result = subprocess.run(command ,cwd=work_dpath ,capture_output=True ,text=True)
   return result.returncode ,(result.stdout + result.stderr).strip()
 
-def run_gate(gate ,journal_bytes):
-  "a journal given to the gate directly, with no orchestrator"
-  result = subprocess.run([str(gate) ,"admit"] ,input=journal_bytes ,capture_output=True)
+def run_gate(gate ,journal_bytes ,preexec=None):
+  """
+  A journal given to the gate directly, with no orchestrator. preexec runs in
+  the gate's process before exec, to leave state behind as an invoking
+  program could.
+  """
+  result = subprocess.run([str(gate) ,"admit"] ,input=journal_bytes ,capture_output=True ,preexec_fn=preexec)
   return result.returncode ,(result.stdout + result.stderr).decode("utf-8" ,"replace").strip()
+
+# state an invoking program can leave behind, which survives exec
+
+def leave_timer():
+  "SIGALRM in 50 milliseconds, while the guard is still starting"
+  signal.setitimer(signal.ITIMER_REAL ,0.05)
+
+def leave_sigchld_ignored():
+  signal.signal(signal.SIGCHLD ,signal.SIG_IGN)
+
+def leave_sigterm_pending():
+  signal.pthread_sigmask(signal.SIG_BLOCK ,{signal.SIGTERM})
+  os.kill(os.getpid() ,signal.SIGTERM)
 
 def hand_made(Journal ,instruction_list):
   "a journal of the emplace_bio language holding the instructions given as (name ,argument)"
@@ -177,13 +204,14 @@ def test(repo_home):
   if not log.check(promoted ,"Man_In_Grey and the emplace_bio gate are promoted"
                    ,None if promoted else f"the developer promotes Man_In_Grey and {GATE_NAME} first"):
     return log.summary()
-  sys.path.insert(0 ,str(tree / "Man_In_Grey"))
-  import Journal
 
   if work_dpath.exists():
     shutil.rmtree(work_dpath)
   (work_dpath / "bio").mkdir(parents=True)
   make_tree(consumer ,tree)
+  # the journals the test makes by hand use the copy's Journal module, so it is imported once the copy exists
+  sys.path.insert(0 ,str(tree / "Man_In_Grey"))
+  import Journal
   person = getpass.getuser()
   write_constraint(tree ,work_dpath ,person)
   bio = work_dpath / "bio"
@@ -235,6 +263,21 @@ def test(repo_home):
     check_status(log ,f"{name} is refused by the {want[:-len('_broken:')]} check" ,status ,1 ,output ,want)
     log.check(snapshot(bio) == before ,f"{name} changes nothing")
   write_constraint(tree ,work_dpath ,person)
+
+  # signal state left behind by the invoking program
+  for name ,preexec ,content in (
+    ("timer" ,leave_timer ,"Placed under a timer.")
+    ,("ignored" ,leave_sigchld_ignored ,"Placed with SIGCHLD ignored.")
+  ):
+    journal = hand_made(Journal ,[("display_name" ,{"text": "A. Tester"}) ,("paragraph" ,{}) ,("text" ,{"content": content ,"style": []})])
+    status ,output = run_gate(gate ,journal ,preexec)
+    check_status(log ,f"{name} is interpreted" ,status ,0 ,output ,"interpreted:")
+    log.check(page_fpath.is_file() and content in page_fpath.read_text() ,f"{name} places the page")
+  before = snapshot(bio)
+  status ,output = run_gate(gate ,hand_made(Journal ,good_page()) ,leave_sigterm_pending)
+  log.check(status == -signal.SIGTERM and "received:" not in output ,"pending ends the gate before it reads the journal"
+            ,None if status == -signal.SIGTERM else f"exit status {status}")
+  log.check(snapshot(bio) == before ,"pending changes nothing")
 
   # a page made a symbolic link
   target = work_dpath / "elsewhere.html"
