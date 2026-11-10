@@ -1,12 +1,15 @@
 #!/usr/bin/env -S python3 -B
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-guard_emplace_bio - the guard of the emplace_bio instruction language.
+EmplaceBio·Guard - the guard of the emplace_bio instruction language.
 
-Started by the gate Man_In_Grey_emplace_bio_gate, with the gate's real and
+Started by the gate Man_In_Grey_gate·emplace_bio, with the gate's real and
 effective ids, and with the journal on standard input. It checks the
-journal, and says what it found on standard error, one line per finding,
-as <tag>: <message>; the first two lines are name: and version:.
+journal: first with the well-formed guard, against the language definition
+in EmplaceBio·Language.py, then with the language's own checks in
+EmplaceBio·GuardCheck.py, the constraints among them. It says what it found on
+standard error, one line per finding, as <tag>: <message>; the first two
+lines are name: and version:.
 
 When every check passes, it writes one line to standard output,
 
@@ -22,7 +25,7 @@ Before it imports anything, it checks that its modules and their directory
 are owned by root or by the effective uid's account, and writable by no
 other account. A module runs code when it is imported.
 
-Usage: guard_emplace_bio <command>
+Usage: EmplaceBio·Guard <command>
   help | -h   print this message (also printed when given no arguments)
   check       check the journal on standard input
 
@@ -38,8 +41,8 @@ Exit status: 0 when every check passed, 1 when a check refused the journal,
 # with Man_In_Grey, is_allowed_account refuses every account.
 #
 # They are called only after the modules below are checked and imported, so
-# they can call Constraint, the library of predicates that recur, as
-# Constraint.is_group_member(user_name ,"bio").
+# they can call Guard·LibraryConstraint, the library of predicates that recur,
+# as Guard·LibraryConstraint.is_group_member(user_name ,"bio").
 
 # constraints begin
 
@@ -70,10 +73,10 @@ import stat
 from pathlib import Path
 
 LANGUAGE = "emplace_bio"
-VERSION = "3"
+VERSION = "4"
 
 HERE_DPATH = Path(__file__).resolve().parent
-MODULE = ("Journal.py" ,"Guard.py" ,"Constraint.py" ,"EmplaceBioLanguage.py" ,"guard_emplace_bio.py")
+MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Guard·LibraryConstraint.py" ,"EmplaceBio·Language.py" ,"EmplaceBio·GuardCheck.py" ,"EmplaceBio·Guard.py")
 
 
 def trusted_owner_problem(path):
@@ -102,10 +105,12 @@ for each in [HERE_DPATH] + [HERE_DPATH / m for m in MODULE]:
     sys.exit(2)
 
 try:
+  import Language
   import Journal
   import Guard
-  import Constraint
-  import EmplaceBioLanguage as Language
+  import Guard·LibraryConstraint   # for the constraints at the top, which call it by name
+  import EmplaceBio·Language as language_module
+  import EmplaceBio·GuardCheck as guard_check
 except ImportError as error:
   say("cannot_start" ,str(error))
   sys.exit(2)
@@ -121,7 +126,12 @@ def check():
   except RuntimeError as error:
     report("cannot_check" ,str(error))
     return 2
-  status = Guard.check(sys.stdin.buffer.read() ,Language ,sys.modules[__name__] ,gate_invoking_account ,report)
+  try:
+    language_definition = Language.Definition(language_module.NAME ,language_module.DEFINITION)
+  except Language.DefinitionError as error:
+    report("cannot_check" ,str(error))
+    return 2
+  status = Guard.check(sys.stdin.buffer.read() ,language_definition ,guard_check ,sys.modules[__name__] ,gate_invoking_account ,report)
   if status == 0:
     sys.stdout.write(f"guard {LANGUAGE} check passed\n")
   return status
@@ -138,7 +148,7 @@ def CLI(argv=None):
   argv = sys.argv[1:] if argv is None else argv
   if not argv or argv[0] in ("help" ,"-h" ,"--help"): return print_help()
   if argv != ["check"]:
-    say("usage" ,f"unknown command {Journal.clean(repr(' '.join(argv)))}; run guard_emplace_bio with no arguments for its usage")
+    say("usage" ,f"unknown command {Journal.clean(repr(' '.join(argv)))}; run EmplaceBio·Guard with no arguments for its usage")
     return 2
   return check()
 

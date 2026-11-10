@@ -33,11 +33,11 @@ Usage: install_gate <command> ...
   help | -h      print this message (also printed when given no arguments)
   install <gate> owner <account> [group <group>] into <directory> [constraints <file>]
                  <gate> is a gate's file name in Man_In_Grey_gate/, such as
-                 Man_In_Grey_emplace_bio_gate; <file> is a Python file holding
+                 Man_In_Grey_gate·emplace_bio; <file> is a Python file holding
                  the guard's predicates
 
 Example, run by root from consumer/Man_In_Grey/:
-  ./install_gate install Man_In_Grey_emplace_bio_gate owner http into /usr/local/lib/Man_In_Grey constraints bio_constraint.py
+  ./install_gate install Man_In_Grey_gate·emplace_bio owner http into /usr/local/lib/Man_In_Grey constraints bio_constraint.py
 
 Exit status: 0 when the gate was installed, 1 when the installation was
 refused, 2 when it was given wrong arguments.
@@ -106,20 +106,20 @@ BEGIN ,END = "# constraints begin" ,"# constraints end"
 
 def section_bound(text ,path):
   "the line numbers of the two constraint marks in a guard's text; raises Refused"
-  line_list = text.splitlines()
-  if line_list.count(BEGIN) != 1 or line_list.count(END) != 1 or line_list.index(BEGIN) > line_list.index(END):
+  list_line = text.splitlines()
+  if list_line.count(BEGIN) != 1 or list_line.count(END) != 1 or list_line.index(BEGIN) > list_line.index(END):
     raise Refused(f"{path} does not hold the marks '{BEGIN}' and '{END}', once each and in that order")
-  return line_list ,line_list.index(BEGIN) ,line_list.index(END)
+  return list_line ,list_line.index(BEGIN) ,list_line.index(END)
 
 def constraint_of(text ,path):
   "the constraints between the marks"
-  line_list ,begin ,end = section_bound(text ,path)
-  return "\n".join(line_list[begin + 1:end]).strip("\n") + "\n"
+  list_line ,begin ,end = section_bound(text ,path)
+  return "\n".join(list_line[begin + 1:end]).strip("\n") + "\n"
 
 def with_constraint(text ,path ,constraint):
   "the guard's text with constraint between the marks"
-  line_list ,begin ,end = section_bound(text ,path)
-  return "\n".join(line_list[:begin + 1] + ["" ,constraint.strip("\n") ,""] + line_list[end:]) + "\n"
+  list_line ,begin ,end = section_bound(text ,path)
+  return "\n".join(list_line[:begin + 1] + ["" ,constraint.strip("\n") ,""] + list_line[end:]) + "\n"
 
 def install_text(text ,target ,mode):
   "write text to target through a temporary file in target's directory, owned by root"
@@ -191,7 +191,7 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
 
   # the constraints of the guards installed already, to keep
   kept = {}
-  for installed in sorted(program_dpath.glob("guard_*.py")):
+  for installed in sorted(program_dpath.glob("*·Guard.py")):
     if installed.is_file() and not installed.is_symlink():
       try:
         kept[installed.name] = constraint_of(installed.read_text(encoding="utf-8") ,installed)

@@ -6,31 +6,54 @@ run
 The smoke test of Man_In_Grey, run through the smoke language. It copies
 the promoted Man_In_Grey, from $REPO_HOME/consumer, into its scratchpad
 directory, puts constraints of its own at the top of the copy's
-guard_smoke.py, allowing the files it expects, and runs that copy through
+Smoke·Guard.py, allowing the files it expects, and runs that copy through
 the smoke language's gate, not setuid. The smoke language is not for use
 on a system; it is here to exercise the gate, the guard and the
 interpreter. It checks:
 
-  run_1      orchestrate composer/: each composer's file written, and
+  run_1      orchestrate composer/config.py: each file written, and
              out/obsolete.conf, made by the test beforehand, unlinked; the
-             files are compared with expected/run_1
-  run_2      orchestrate composer/ again: replace_keep files kept as backups named
+             files are compared with expected/run_1, and the result the gate
+             hands back on descriptor 3 is the summary of three files opened
+             and one removed
+  run_2      orchestrate composer/config.py again: replace_keep files kept as backups named
              <file>.YYYYMMDDTHHMMSSZ, the replace file overwritten with no
              backup; compared with expected/run_2
   create     orchestrate composer_create/new.py: a file opened in create mode is written
              once, and a second run is refused by the guard's filesystem check
-  refused    orchestrate composer_refused/: a journal opening one allowed file and one the
-             constraints do not allow is refused whole by the guard's constraint check
-  argument   orchestrate composer_argument/: a composer giving a wrong mode fails when it
-             places the instruction, and no journal reaches the gate
-  writable   orchestrate a composer directory holding a composer other accounts can write:
-             the orchestrator refuses to run it
-  check_only orchestrate composer/ with check_only: the guard approves the journal, and the
-             interpreter is not run
-  limit      orchestrate composer/ with a file size limit the gate cannot raise: the gate
-             refuses before starting the guard
-  silent     orchestrate composer/ through an interpreter that exits 0 without
+  refused    orchestrate composer_refused/allowed_and_not.py: a journal opening one allowed
+             file and one the constraints do not allow is refused whole by the guard's
+             constraint check
+  type       orchestrate composer_type/wrong_type.py: a literal of the wrong type fails when
+             the composer places the instruction, and no journal reaches the gate
+  mode       orchestrate composer_mode/wrong_mode.py: a mode the language does not have is
+             refused by the guard's language check
+  directory  orchestrate composer/, a directory: refused, as this version runs one
+             composer, given as a file
+  writable   orchestrate a composer other accounts can write: the orchestrator refuses
+             to run it
+  check_only orchestrate composer/config.py with check_only: the guard approves the journal,
+             and the interpreter is not run
+  limit      orchestrate composer/config.py with a file size limit the gate cannot raise: the
+             gate refuses before starting the guard
+  silent     orchestrate composer/config.py through an interpreter that exits 0 without
              writing its verdict line: the gate reports the run failed
+
+and, with journals made without the journal interface and given to the gate
+directly, as a program other than the orchestrator could:
+
+  unwritten  a write of a file variable no open wrote: refused by the well-formed
+             guard, as the variable is read before it is written
+  literal    a write given a literal where the format reads and writes its file:
+             refused by the well-formed guard, as a literal cannot be written
+  surplus    an unlink with a third argument: refused by the well-formed guard
+  undeclared a write of a variable the journal does not declare: refused by the
+             well-formed guard
+  hash       a journal composed against another definition: refused by the
+             well-formed guard
+  version    a journal of version 3: the guard cannot read it
+  discarded  a journal whose result the gate cannot hand back, since the program
+             invoking it left descriptor 3 closed: played, and the result discarded
 
 A refused run is to leave every file as it was. Backup names carry the time
 of the run, so names are compared with the time replaced by the letters
@@ -47,10 +70,13 @@ Usage: run <command>
 """
 
 import sys ,os ,re ,stat ,json ,shutil ,subprocess ,getpass ,resource
+sys.dont_write_bytecode = True
 from pathlib import Path
 
+import cbor2
+
 TEST_NAME = "smoke"
-GATE_NAME = "Man_In_Grey_smoke_gate"
+GATE_NAME = "Man_In_Grey_gate·smoke"
 TEST_DPATH = Path(__file__).resolve().parent
 
 OUTPUT_DIR = ("out" ,"out/net" ,"out/web")
@@ -167,6 +193,23 @@ def run_Man_In_Grey(program ,path ,work_dpath ,*option ,preexec=None):
   result = subprocess.run(command ,cwd=work_dpath ,capture_output=True ,text=True ,preexec_fn=preexec)
   return result.returncode ,(result.stdout + result.stderr).strip()
 
+def run_gate(gate ,journal_bytes):
+  "a journal given to the gate directly, with no orchestrator and descriptor 3 closed"
+  result = subprocess.run([str(gate) ,"admit"] ,input=journal_bytes ,capture_output=True)
+  return result.returncode ,(result.stdout + result.stderr).decode("utf-8" ,"replace").strip()
+
+def hand_made(definition_hash ,variable ,instruction_list ,result=None ,version=4):
+  "a journal of the smoke language, made as data and encoded, with no journal interface to check it"
+  return cbor2.dumps({
+    "version": version
+    ,"instruction_language": "smoke"
+    ,"definition_hash": definition_hash
+    ,"meta": {}
+    ,"list_variable": variable
+    ,"result": result
+    ,"list_instruction": [{"operation": o ,"list_argument": a} for o ,a in instruction_list]
+  } ,canonical=True)
+
 def check_status(log ,what ,status ,want ,output ,want_text=None):
   passed = status == want and (want_text is None or want_text in output)
   detail = None
@@ -197,15 +240,15 @@ def make_tree(consumer ,tree):
 
 def put_constraint(guard_fpath ,constraint):
   "replace the predicates between the guard's constraint marks with constraint"
-  line_list = guard_fpath.read_text(encoding="utf-8").splitlines()
-  begin ,end = line_list.index("# constraints begin") ,line_list.index("# constraints end")
-  text = "\n".join(line_list[:begin + 1] + ["" ,constraint.strip("\n") ,""] + line_list[end:]) + "\n"
+  list_line = guard_fpath.read_text(encoding="utf-8").splitlines()
+  begin ,end = list_line.index("# constraints begin") ,list_line.index("# constraints end")
+  text = "\n".join(list_line[:begin + 1] + ["" ,constraint.strip("\n") ,""] + list_line[end:]) + "\n"
   guard_fpath.unlink()
   guard_fpath.write_text(text ,encoding="utf-8")
   os.chmod(guard_fpath ,0o644)
 
 def write_constraint(tree ,work_dpath):
-  "the test's constraints in its copy of guard_smoke.py, allowing the files in ALLOWED to the person running the test"
+  "the test's constraints in its copy of Smoke·Guard.py, allowing the files in ALLOWED to the person running the test"
   person = getpass.getuser()
   allowed = {(str(work_dpath / d) ,n): (m ,int(p ,8)) for d ,n ,m ,p in ALLOWED}
   text = (
@@ -221,13 +264,15 @@ def write_constraint(tree ,work_dpath):
     "  entry = ALLOWED.get((directory ,name))\n"
     "  return entry is not None and \"unlink\" in entry[0]\n"
   )
-  put_constraint(tree / "Man_In_Grey" / "guard_smoke.py" ,text)
+  put_constraint(tree / "Man_In_Grey" / "Smoke·Guard.py" ,text)
 
 def test(repo_home):
   consumer = repo_home / "consumer"
   work_dpath = (repo_home / "tester" / "scratchpad" / TEST_NAME).resolve()
   tree = work_dpath / "tree"
   program = tree / "Man_In_Grey" / "Man_In_Grey"
+  gate = tree / "Man_In_Grey_gate" / GATE_NAME
+  config = TEST_DPATH / "composer" / "config.py"
   print(f"run test   in {TEST_DPATH}")
   print(f"  program  {program}")
   print(f"  writes   {work_dpath}")
@@ -247,11 +292,20 @@ def test(repo_home):
   (work_dpath / "out" / "obsolete.conf").write_text("to be unlinked\n")
   out = work_dpath / "out"
 
+  # the hand-made journals use the copy's definition, so it is imported once the copy exists
+  sys.path.insert(0 ,str(tree / "Man_In_Grey"))
+  import importlib ,Language
+  language_module = importlib.import_module("Smoke·Language")
+  definition_hash = Language.Definition(language_module.NAME ,language_module.DEFINITION).hash
+
   # run_1 and run_2
   for run_name in ("run_1" ,"run_2"):
-    status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer" ,work_dpath)
+    status ,output = run_Man_In_Grey(program ,config ,work_dpath)
     if check_status(log ,f"{run_name} Man_In_Grey exits 0" ,status ,0 ,output):
       compare(log ,run_name ,work_dpath)
+      if run_name == "run_1":
+        want = "result: summary {'open_count': 3, 'unlink_count': 1}"
+        log.check(want in output ,"run_1 result is the summary" ,None if want in output else f"the output does not say {want!r}")
     else:
       log.note(f"{run_name}: the files were not compared, since Man_In_Grey failed")
       return log.summary()
@@ -269,50 +323,88 @@ def test(repo_home):
 
   # a journal the constraints refuse
   before = snapshot(out)
-  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer_refused" ,work_dpath)
+  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer_refused" / "allowed_and_not.py" ,work_dpath)
   check_status(log ,"refused is refused by the constraint check" ,status ,1 ,output ,"constraint_broken:")
   log.check(snapshot(out) == before ,"refused changes nothing, the allowed file included")
 
-  # a composer with a wrong argument
+  # a literal of the wrong type, refused in the composer
   before = snapshot(out)
-  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer_argument" ,work_dpath)
-  check_status(log ,"argument fails in the composer" ,status ,2 ,output ,"wrong_mode.py: open: mode 'overwrite'")
-  log.check(snapshot(out) == before ,"argument changes nothing")
+  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer_type" / "wrong_type.py" ,work_dpath)
+  check_status(log ,"type fails in the composer" ,status ,2 ,output ,"wrong_type.py: @0 open argument 4: the literal is str, not integer")
+  log.check(snapshot(out) == before ,"type changes nothing")
+
+  # a mode the language does not have, refused by the guard
+  before = snapshot(out)
+  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer_mode" / "wrong_mode.py" ,work_dpath)
+  check_status(log ,"mode is refused by the language check" ,status ,1 ,output ,"language_broken: @0 open: mode 'overwrite'")
+  log.check(snapshot(out) == before ,"mode changes nothing")
+
+  # a composer directory
+  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer" ,work_dpath)
+  check_status(log ,"directory is refused by the orchestrator" ,status ,2 ,output ,"runs one composer, given as a file")
 
   # a composer other accounts can write
   writable = work_dpath / "composer_writable"
   writable.mkdir()
-  shutil.copy(TEST_DPATH / "composer" / "unbound_conf.py" ,writable / "unbound_conf.py")
-  os.chmod(writable / "unbound_conf.py" ,0o664)
+  shutil.copy(config ,writable / "config.py")
+  os.chmod(writable / "config.py" ,0o664)
   before = snapshot(out)
-  status ,output = run_Man_In_Grey(program ,writable ,work_dpath)
+  status ,output = run_Man_In_Grey(program ,writable / "config.py" ,work_dpath)
   check_status(log ,"writable composer is refused by the orchestrator" ,status ,2 ,output ,"writable by group or other accounts")
   log.check(snapshot(out) == before ,"writable changes nothing")
 
   # check_only
   before = snapshot(out)
-  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer" ,work_dpath ,"check_only")
+  status ,output = run_Man_In_Grey(program ,config ,work_dpath ,"check_only")
   check_status(log ,"check_only is approved by the guard" ,status ,0 ,output ,"approved: guard smoke check passed")
   log.check(snapshot(out) == before ,"check_only changes nothing")
 
   # a resource limit the gate cannot raise
   before = snapshot(out)
-  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer" ,work_dpath ,preexec=limit_file_size)
+  status ,output = run_Man_In_Grey(program ,config ,work_dpath ,preexec=limit_file_size)
   check_status(log ,"limit is refused by the gate" ,status ,2 ,output ,"the file size (bytes) limit is 1048576")
   log.check(snapshot(out) == before ,"limit changes nothing")
 
   # an interpreter that exits 0 without its verdict line
-  interpreter = tree / "Man_In_Grey" / "interpreter_smoke.py"
+  interpreter = tree / "Man_In_Grey" / "Smoke·Interpreter.py"
   text = interpreter.read_text(encoding="utf-8")
-  verdict_line = '    sys.stdout.write("interpreter smoke journal played\\n")\n'
+  verdict_line = '  sys.stdout.write("interpreter smoke journal played\\n")\n'
+  if verdict_line not in text:
+    log.check(False ,"silent finds the verdict line to remove" ,"Smoke·Interpreter.py has changed")
   interpreter.unlink()
-  interpreter.write_text(text.replace(verdict_line ,"    pass\n") ,encoding="utf-8")
+  interpreter.write_text(text.replace(verdict_line ,"  pass\n") ,encoding="utf-8")
   os.chmod(interpreter ,0o644)
-  status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer" ,work_dpath)
+  status ,output = run_Man_In_Grey(program ,config ,work_dpath)
   check_status(log ,"silent is reported failed by the gate" ,status ,2 ,output ,"without writing the one line 'interpreter smoke journal played'")
   interpreter.unlink()
   interpreter.write_text(text ,encoding="utf-8")
   os.chmod(interpreter ,0o644)
+
+  # journals given to the gate directly
+  out_text = str(out)
+  person = getpass.getuser()
+  open_web = ("open" ,[["literal" ,out_text + "/web"] ,["literal" ,"nginx.conf"] ,["literal" ,"replace_keep"]
+                     ,["literal" ,person] ,["literal" ,0o644] ,["variable" ,"f"]])
+  list_case = (
+    ("unwritten" ,hand_made(definition_hash ,[["f" ,"file"]] ,[("write" ,[["variable" ,"f"] ,["literal" ,b"x"]])])
+     ,1 ,"read before any instruction writes it")
+    ,("literal" ,hand_made(definition_hash ,[] ,[("write" ,[["literal" ,0] ,["literal" ,b"x"]])])
+      ,1 ,"a literal is given where the format writes (in-out)")
+    ,("surplus" ,hand_made(definition_hash ,[] ,[("unlink" ,[["literal" ,out_text] ,["literal" ,"obsolete.conf"] ,["literal" ,"x"]])])
+      ,1 ,"3 arguments; the format takes 2")
+    ,("undeclared" ,hand_made(definition_hash ,[["f" ,"file"]] ,[open_web ,("write" ,[["variable" ,"g"] ,["literal" ,b"x"]])])
+      ,1 ,"the variable 'g' is not declared")
+    ,("hash" ,hand_made("0" * 64 ,[] ,[("unlink" ,[["literal" ,out_text] ,["literal" ,"obsolete.conf"]])])
+      ,1 ,"composed against another definition")
+    ,("version" ,hand_made(definition_hash ,[] ,[] ,version=3) ,2 ,"journal_unreadable: journal version 3")
+  )
+  for name ,journal_bytes ,want_status ,want_text in list_case:
+    before = snapshot(out)
+    status ,output = run_gate(gate ,journal_bytes)
+    check_status(log ,f"{name} is refused" ,status ,want_status ,output ,want_text)
+    log.check(snapshot(out) == before ,f"{name} changes nothing")
+  status ,output = run_gate(gate ,hand_made(definition_hash ,[["s" ,"summary"]] ,[("summary" ,[["variable" ,"s"]])] ,result="s"))
+  check_status(log ,"discarded is played, its result discarded" ,status ,0 ,output ,"result_discarded:")
 
   return log.summary()
 

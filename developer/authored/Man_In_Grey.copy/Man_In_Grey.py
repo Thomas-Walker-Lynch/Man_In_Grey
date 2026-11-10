@@ -3,25 +3,26 @@
 """
 Man_In_Grey
 
-The orchestrator. It runs composers, which place instructions into one journal,
-and invokes a gate with the journal on its standard input. The gate starts
-the guard, which checks the journal against its constraints, and, when the
-guard passes the journal, the interpreter, which executes it.
+The orchestrator. It runs a composer, which declares variables and places
+instructions into a journal, and invokes a gate with the journal on its
+standard input. The gate starts the guard, which checks the journal against
+the language definition and the constraints, and, when the guard passes the
+journal, the interpreter, which plays it. When the journal declares a
+result, the gate hands it back on descriptor 3, and the orchestrator prints
+it.
 
 A composer is a Python file defining compose(prov ,journal_iface). prov
-describes where the composer is; journal_iface places instructions of the
-gate's instruction language. The orchestrator learns the language from the
-gate's flags, and loads the module named for it: emplace_bio from
-EmplaceBioLanguage.py.
+describes where the composer is; journal_iface has a function for each
+instruction of the gate's instruction language, and declare and result. The
+orchestrator learns the language from the gate's flags, and loads the
+definition named for it: emplace_bio from EmplaceBio·Language.py.
 
 Usage: Man_In_Grey <command> ...
   help | -h                  print this message (also printed when given no arguments)
-  orchestrate <path> gate <file> [option ...]
-                             <path> is a composer file, or a composer directory; every
-                             file in a composer directory is a composer, and they run
-                             depth first, in order of name at each level; <file> is the
-                             gate to invoke, which also sets the instruction language
-                             the composers write in
+  orchestrate <composer> gate <file> [option ...]
+                             <composer> is a composer file; <file> is the gate to
+                             invoke, which also sets the instruction language the
+                             composer writes in
   install <gate> owner <account> [group <group>] into <directory> [constraints <file>]
                              install a gate setuid and setgid, by running install_gate
                              as root; when not run by root, su asks for root's password;
@@ -32,13 +33,15 @@ Options of orchestrate:
   compose_only               stop after composing; nothing reaches the gate
   check_only                 have the gate run the guard and not the interpreter
 
-Every composer, and every directory from / down to it, is to be owned by the
-gate invoking account or by root, and writable by no other account. Symbolic
-links in a composer directory are refused.
+The composer, and every directory from / down to it, is to be owned by the
+gate invoking account or by root, and writable by no other account. A
+composer that is a symbolic link is refused.
+
+A result is printed as one line, result: <type name> <value>.
 
 Exit status: 0 when the run did what it was asked; 1 when the guard refused
 the journal or an instruction failed to execute; 2 when the run could not start,
-a composer failed, or the gate, guard or interpreter could not run.
+the composer failed, or the gate, guard or interpreter could not run.
 """
 
 import sys ,os
@@ -47,7 +50,9 @@ sys.dont_write_bytecode = True
 import datetime ,importlib ,pwd ,re ,runpy ,shlex ,stat ,subprocess ,traceback
 from pathlib import Path
 
+import Language
 import Journal
+import Journal·Interface
 
 # The promoted layout: this file in Man_In_Grey/, beside Man_In_Grey_gate/.
 # The same layout is staged in developer/scratchpad/made/ and promoted to consumer/.
@@ -70,19 +75,15 @@ class Provenance:
   Where a composer is. Given to compose().
   """
   __slots__ = (
-    "composer_root_dpath"
-    ,"composer_abs_fpath"
-    ,"composer_rel_fpath"
+    "composer_abs_fpath"
     ,"composer_dir_dpath"
     ,"implied_fname"
     ,"process_user"
     ,"cwd_dpath"
   )
 
-  def __init__(self ,composer_root ,composer_path):
-    self.composer_root_dpath = composer_root
+  def __init__(self ,composer_path):
     self.composer_abs_fpath = composer_path
-    self.composer_rel_fpath = composer_path.relative_to(composer_root)
     self.composer_dir_dpath = composer_path.parent
     name = composer_path.name
     if name.endswith(".py"):
@@ -115,38 +116,22 @@ def chain_problem(path):
       return problem
   return None
 
-def composer_list(path):
+def composer_provenance(path):
   """
-  Given a composer file or a composer directory, absolute. Returns the
-  composers in the order they run, each as a Provenance. Raises RuntimeError
-  on a symbolic link, a file that is not regular, or a failed ownership check.
+  Given a composer file, absolute. Returns its Provenance. Raises
+  RuntimeError on a symbolic link, a file that is not regular, or a failed
+  ownership check.
   """
   problem = chain_problem(path)
   if problem:
-    raise RuntimeError(f"refusing to run composers: {problem}")
+    raise RuntimeError(f"refusing to run the composer: {problem}")
   if path.is_symlink():
     raise RuntimeError(f"{path} is a symbolic link")
-  if stat.S_ISREG(path.lstat().st_mode):
-    return [Provenance(path.parent ,path)]
-  if not path.is_dir():
-    raise RuntimeError(f"{path} is neither a composer file nor a composer directory")
-  found = []
-  def walk(directory):
-    for entry in sorted(os.scandir(directory) ,key=lambda e: e.name):
-      each = Path(entry.path)
-      if entry.is_symlink():
-        raise RuntimeError(f"{each} is a symbolic link; a composer directory holds composers and directories")
-      problem = trusted_owner_problem(each)
-      if problem:
-        raise RuntimeError(f"refusing to run composers: {problem}")
-      if entry.is_dir(follow_symlinks=False):
-        walk(each)
-      elif entry.is_file(follow_symlinks=False):
-        found.append(Provenance(path ,each))
-      else:
-        raise RuntimeError(f"{each} is neither a file nor a directory")
-  walk(path)
-  return found
+  if path.is_dir():
+    raise RuntimeError(f"{path} is a directory; this version of Man_In_Grey runs one composer, given as a file")
+  if not stat.S_ISREG(path.lstat().st_mode):
+    raise RuntimeError(f"{path} is not a composer file")
+  return Provenance(path)
 
 
 # --------------------------------------------------------------------------------
@@ -161,50 +146,102 @@ def gate_flag(gate_path):
     raise RuntimeError(f"the gate {gate_path} did not report its flags")
   return dict(line.split("=" ,1) for line in result.stdout.splitlines() if "=" in line)
 
-def language_module(name):
-  """The module of an instruction language: emplace_bio is EmplaceBioLanguage.py. Raises RuntimeError."""
+def language_definition(name):
+  """
+  The definition of an instruction language: emplace_bio's is in
+  EmplaceBio·Language.py, beside this file. Raises RuntimeError.
+  """
   if not re.fullmatch(r"[a-z][a-z0-9_]*" ,name or ""):
-    raise RuntimeError(f"the gate names the language {name!r}, which names no module")
-  module = "".join(part.capitalize() for part in name.split("_")) + "Language"
+    raise RuntimeError(f"the gate names the language {name!r}, which names no definition")
+  module = "".join(part.capitalize() for part in name.split("_")) + "·Language"
   if not (HERE_DPATH / f"{module}.py").is_file():
     raise RuntimeError(f"the gate's language is {name}, and {module}.py is not beside {Path(__file__).name}")
-  language = importlib.import_module(module)
-  if getattr(language ,"NAME" ,None) != name:
-    raise RuntimeError(f"{module}.py is not the module of the language {name}")
-  return language
+  definition_module = importlib.import_module(module)
+  if getattr(definition_module ,"NAME" ,None) != name:
+    raise RuntimeError(f"{module}.py is not the definition of the language {name}")
+  try:
+    return Language.Definition(name ,definition_module.DEFINITION)
+  except Language.DefinitionError as error:
+    raise RuntimeError(str(error))
 
 
 # --------------------------------------------------------------------------------
 # composing, and invoking the gate
 
-def compose_all(composer_root ,prov_list ,language):
-  """Run each composer into one journal. Raises RuntimeError naming the composer that failed."""
-  journal = Journal.Journal(language.NAME)
-  journal_iface = language.JournalInterface(journal ,Path.cwd())
-  for prov in prov_list:
-    rel = prov.composer_rel_fpath.as_posix()
-    journal.composer = rel
-    try:
-      env = runpy.run_path(str(prov.composer_abs_fpath))
-      compose = env.get("compose")
-      if not callable(compose):
-        raise RuntimeError("defines no compose(prov ,journal_iface)")
-      compose(prov ,journal_iface)
-    except Journal.JournalError as error:
-      raise RuntimeError(f"{rel}: {error}")
-    except RuntimeError as error:
-      raise RuntimeError(f"{rel}: {error}")
-    except Exception:
-      raise RuntimeError(f"{rel}: the composer raised an error\n{traceback.format_exc()}")
-  journal.composer = None
+def compose(prov ,language_definition):
+  """Run the composer into a journal. Raises RuntimeError naming the composer when it fails."""
+  journal = Journal·Interface.JournalComposed(language_definition)
+  journal_iface = Journal·Interface.JournalInterface(journal)
+  name = prov.composer_abs_fpath.name
+  try:
+    env = runpy.run_path(str(prov.composer_abs_fpath))
+    function = env.get("compose")
+    if not callable(function):
+      raise RuntimeError("defines no compose(prov ,journal_iface)")
+    function(prov ,journal_iface)
+    journal.as_data()   # a result declared and never written is refused here
+  except Journal.JournalError as error:
+    raise RuntimeError(f"{name}: {error}")
+  except RuntimeError as error:
+    raise RuntimeError(f"{name}: {error}")
+  except Exception:
+    raise RuntimeError(f"{name}: the composer raised an error\n{traceback.format_exc()}")
   journal.meta = {
     "composed_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%SZ")
     ,"process_user": gate_invoking_account_name()
     ,"host": os.uname().nodename
-    ,"composer_root": str(composer_root)
-    ,"composer_list": [p.composer_rel_fpath.as_posix() for p in prov_list]
+    ,"composer": str(prov.composer_abs_fpath)
   }
   return journal
+
+RESULT_FD = 3
+
+def admit(gate_path ,journal_bytes ,check_only=False):
+  """
+  Invoke the gate with the journal on its standard input, and descriptor 3
+  open to receive the result. The gate's standard output and standard error
+  are this process's. Returns (status ,result), where result is the bytes
+  the gate wrote on descriptor 3, empty when there was none.
+
+  An application that is its own orchestrator calls this function with the
+  journal it made.
+  """
+  command = [str(gate_path) ,"admit"] + (["check_only"] if check_only else [])
+  read_fd ,write_fd = os.pipe()
+  try:
+    gate = subprocess.Popen(command ,stdin=subprocess.PIPE ,close_fds=False
+                            ,preexec_fn=lambda: os.dup2(write_fd ,RESULT_FD))
+  except BaseException:
+    os.close(read_fd); os.close(write_fd)
+    raise
+  os.close(write_fd)
+  try:
+    gate.stdin.write(journal_bytes)
+  except BrokenPipeError:
+    pass
+  finally:
+    try:
+      gate.stdin.close()
+    except BrokenPipeError:
+      pass
+  list_part = []
+  with os.fdopen(read_fd ,"rb") as result:
+    while True:
+      part = result.read(1 << 16)
+      if not part: break
+      list_part.append(part)
+  return gate.wait() ,b"".join(list_part)
+
+def print_result(result_bytes ,file=None):
+  "one line, result: <type name> <value>, with bytes shown by their count"
+  try:
+    type_name ,value = Journal.decode_result(result_bytes)
+  except Journal.JournalError as error:
+    print(f"error: {error}" ,file=sys.stderr)
+    return False
+  shown = f"<{len(value)} bytes>" if type(value) is bytes else repr(value)
+  print(f"result: {type_name} {shown}" ,file=file or sys.stdout)
+  return True
 
 def orchestrate(path ,gate ,flag):
   path = Path(path).absolute()
@@ -213,10 +250,7 @@ def orchestrate(path ,gate ,flag):
     return 2
   gate_path = Path(gate).absolute()
   try:
-    language = language_module(gate_flag(gate_path).get("language"))
-    prov_list = composer_list(path)
-    composer_root = path if path.is_dir() else path.parent
-    journal = compose_all(composer_root ,prov_list ,language)
+    journal = compose(composer_provenance(path) ,language_definition(gate_flag(gate_path).get("language")))
   except (OSError ,RuntimeError) as error:
     print(f"error: {error}" ,file=sys.stderr)
     return 2
@@ -224,11 +258,11 @@ def orchestrate(path ,gate ,flag):
     journal.print()
   if "compose_only" in flag:
     return 0
-
-  command = [str(gate_path) ,"admit"]
-  if "check_only" in flag:
-    command.append("check_only")
-  return subprocess.run(command ,input=journal.encode()).returncode
+  sys.stdout.flush()
+  status ,result = admit(gate_path ,journal.encode() ,"check_only" in flag)
+  if result and not print_result(result):
+    return 2
+  return status
 
 
 # --------------------------------------------------------------------------------
@@ -241,18 +275,18 @@ def print_help():
 # --------------------------------------------------------------------------------
 # installing a gate
 
-def install(argument_list):
+def install(list_argument):
   """
   Run install_gate install with the arguments given, as root. Run by root, it
   runs install_gate itself; run by anyone else, it runs it through su, which
   asks for root's password. A constraints file is made absolute first, as
   root's shell starts elsewhere. Returns install_gate's exit status.
   """
-  argument_list = list(argument_list)
-  for i ,word in enumerate(argument_list[:-1]):
+  list_argument = list(list_argument)
+  for i ,word in enumerate(list_argument[:-1]):
     if word == "constraints":
-      argument_list[i + 1] = str(Path(argument_list[i + 1]).absolute())
-  command = [str(HERE_DPATH / "install_gate") ,"install" ,*argument_list]
+      list_argument[i + 1] = str(Path(list_argument[i + 1]).absolute())
+  command = [str(HERE_DPATH / "install_gate") ,"install" ,*list_argument]
   if os.geteuid() != 0:
     print("install_gate is run by root; su asks for root's password" ,file=sys.stderr)
     command = ["su" ,"root" ,"-c" ,shlex.join(command)]
@@ -270,7 +304,7 @@ def CLI(argv=None):
     print_help()
     return 2
   if not rest:
-    print(f"Error: {command} is given a composer file or a composer directory." ,file=sys.stderr)
+    print(f"Error: {command} is given a composer file." ,file=sys.stderr)
     return 2
   path ,rest = rest[0] ,rest[1:]
   value ,flag = {} ,set()

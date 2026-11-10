@@ -6,25 +6,26 @@ run
 The emplace_bio test of Man_In_Grey's example language. It copies the
 promoted Man_In_Grey, from $REPO_HOME/consumer, into its scratchpad
 directory, puts constraints of its own at the top of the copy's
-guard_emplace_bio.py, placing pages in its scratchpad, and runs that copy
+EmplaceBio·Guard.py, placing pages in its scratchpad, and runs that copy
 through the emplace_bio gate, not setuid. It checks:
 
-  page       orchestrate composer/: <user_name>.html is compared with
+  page       orchestrate composer/bio.py: <user_name>.html is compared with
              expected/page.html, every text in it escaped, every style one tag,
              and <user_name>.png is the given picture
-  jpeg       orchestrate composer_jpeg/: the JPEG is placed as <user_name>.jpg, and
+  jpeg       orchestrate composer_jpeg/bio.py: the JPEG is placed as <user_name>.jpg, and
              the PNG an earlier run placed is removed
-  none       orchestrate composer_no_picture/: the page shows no picture, and the
+  none       orchestrate composer_no_picture/bio.py: the page shows no picture, and the
              JPEG is removed
-  check_only orchestrate composer/ with check_only: approved, and nothing changes
+  check_only orchestrate composer/bio.py with check_only: approved, and nothing changes
 
 and, with journals made without the journal interface and given to the gate
 directly, as a program other than the orchestrator could:
 
-  name       a text instruction with a file name among its arguments: refused by
-             the wellformed check, since the language has no way to name a file
-  style      a style the language does not have: refused by the wellformed check
-  order      text before any paragraph: refused by the wellformed check
+  name       a text instruction with a file name as a third argument: refused by
+             the well-formed guard, since its format takes two, and the
+             language has no way to name a file
+  style      a style the language does not have: refused by the language check
+  order      text before any paragraph: refused by the language check
   svg        an SVG picture: refused by the content check
   long       more text than is_allowed_text_size allows: refused by the constraint check
   account    an account is_allowed_account does not allow: refused by the constraint check
@@ -56,9 +57,11 @@ import sys ,os ,stat ,json ,shutil ,subprocess ,getpass ,urllib.parse ,signal
 sys.dont_write_bytecode = True
 from pathlib import Path
 
+import cbor2
+
 TEST_NAME = "emplace_bio"
 TEST_DPATH = Path(__file__).resolve().parent
-GATE_NAME = "Man_In_Grey_emplace_bio_gate"
+GATE_NAME = "Man_In_Grey_gate·emplace_bio"
 
 
 # --------------------------------------------------------------------------------
@@ -129,15 +132,15 @@ def make_tree(consumer ,tree):
 
 def put_constraint(guard_fpath ,constraint):
   "replace the predicates between the guard's constraint marks with constraint"
-  line_list = guard_fpath.read_text(encoding="utf-8").splitlines()
-  begin ,end = line_list.index("# constraints begin") ,line_list.index("# constraints end")
-  text = "\n".join(line_list[:begin + 1] + ["" ,constraint.strip("\n") ,""] + line_list[end:]) + "\n"
+  list_line = guard_fpath.read_text(encoding="utf-8").splitlines()
+  begin ,end = list_line.index("# constraints begin") ,list_line.index("# constraints end")
+  text = "\n".join(list_line[:begin + 1] + ["" ,constraint.strip("\n") ,""] + list_line[end:]) + "\n"
   guard_fpath.unlink()
   guard_fpath.write_text(text ,encoding="utf-8")
   os.chmod(guard_fpath ,0o644)
 
 def write_constraint(tree ,work_dpath ,account ,text_max_bytes=8192):
-  "the test's constraints in its copy of guard_emplace_bio.py, giving account a page in work_dpath/bio"
+  "the test's constraints in its copy of EmplaceBio·Guard.py, giving account a page in work_dpath/bio"
   text = (
     "# written by the emplace_bio test\n\n"
     "def is_allowed_account(user_name):\n"
@@ -149,7 +152,7 @@ def write_constraint(tree ,work_dpath ,account ,text_max_bytes=8192):
     "def page_directory():\n"
     f"  return {str(work_dpath / 'bio')!r}\n"
   )
-  put_constraint(tree / "Man_In_Grey" / "guard_emplace_bio.py" ,text)
+  put_constraint(tree / "Man_In_Grey" / "EmplaceBio·Guard.py" ,text)
 
 def run_Man_In_Grey(program ,gate ,path ,work_dpath ,*option):
   command = [str(program) ,"orchestrate" ,str(path) ,"gate" ,str(gate) ,*option]
@@ -178,15 +181,24 @@ def leave_sigterm_pending():
   signal.pthread_sigmask(signal.SIG_BLOCK ,{signal.SIGTERM})
   os.kill(os.getpid() ,signal.SIGTERM)
 
-def hand_made(Journal ,instruction_list):
-  "a journal of the emplace_bio language holding the instructions given as (name ,argument)"
-  journal = Journal.Journal("emplace_bio")
-  for name ,argument in instruction_list:
-    journal.place(name ,argument)
-  return journal.encode()
+def hand_made(definition_hash ,instruction_list):
+  """
+  A journal of the emplace_bio language holding the instructions given as
+  (operation ,[value ...]), every value a literal, made as data and encoded,
+  with no journal interface to check it.
+  """
+  return cbor2.dumps({
+    "version": 4
+    ,"instruction_language": "emplace_bio"
+    ,"definition_hash": definition_hash
+    ,"meta": {}
+    ,"list_variable": []
+    ,"result": None
+    ,"list_instruction": [{"operation": o ,"list_argument": [["literal" ,v] for v in value]} for o ,value in instruction_list]
+  } ,canonical=True)
 
 def good_page(*extra):
-  return [("display_name" ,{"text": "A. Tester"}) ,("paragraph" ,{}) ,("text" ,{"content": "Hello." ,"style": []}) ,*extra]
+  return [("display_name" ,["A. Tester"]) ,("paragraph" ,[]) ,("text" ,["Hello." ,[]]) ,*extra]
 
 def test(repo_home):
   consumer = repo_home / "consumer"
@@ -209,16 +221,18 @@ def test(repo_home):
     shutil.rmtree(work_dpath)
   (work_dpath / "bio").mkdir(parents=True)
   make_tree(consumer ,tree)
-  # the journals the test makes by hand use the copy's Journal module, so it is imported once the copy exists
+  # the journals the test makes by hand carry the hash of the copy's definition, so it is imported once the copy exists
   sys.path.insert(0 ,str(tree / "Man_In_Grey"))
-  import Journal
+  import importlib ,Language
+  language_module = importlib.import_module("EmplaceBio·Language")
+  definition_hash = Language.Definition(language_module.NAME ,language_module.DEFINITION).hash
   person = getpass.getuser()
   write_constraint(tree ,work_dpath ,person)
   bio = work_dpath / "bio"
   page_fpath ,png ,jpg = bio / f"{person}.html" ,bio / f"{person}.png" ,bio / f"{person}.jpg"
 
   # page
-  status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer" ,work_dpath)
+  status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer" / "bio.py" ,work_dpath)
   if not check_status(log ,"page Man_In_Grey exits 0" ,status ,0 ,output):
     return log.summary()
   expected = (TEST_DPATH / "expected" / "page.html").read_text(encoding="utf-8").replace("USER_NAME" ,urllib.parse.quote(person))
@@ -231,35 +245,35 @@ def test(repo_home):
   log.check(modes == [0o644 ,0o644] ,"page files have permission 0644" ,None if modes == [0o644 ,0o644] else f"{[oct(m) for m in modes]}")
 
   # jpeg, then no picture
-  status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer_jpeg" ,work_dpath)
+  status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer_jpeg" / "bio.py" ,work_dpath)
   check_status(log ,"jpeg Man_In_Grey exits 0" ,status ,0 ,output)
   log.check(jpg.is_file() and not png.exists() and f'src="{urllib.parse.quote(person)}.jpg"' in page_fpath.read_text()
             ,"jpeg places the JPEG and removes the PNG")
-  status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer_no_picture" ,work_dpath)
+  status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer_no_picture" / "bio.py" ,work_dpath)
   check_status(log ,"none Man_In_Grey exits 0" ,status ,0 ,output)
   log.check(not jpg.exists() and not png.exists() and "<img" not in page_fpath.read_text() ,"none removes the picture")
 
   # check_only
   before = snapshot(bio)
-  status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer" ,work_dpath ,"check_only")
+  status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer" / "bio.py" ,work_dpath ,"check_only")
   check_status(log ,"check_only is approved by the guard" ,status ,0 ,output ,"approved: guard emplace_bio check passed")
   log.check(snapshot(bio) == before ,"check_only changes nothing")
 
   # journals given to the gate directly
   svg = (TEST_DPATH / "picture.svg").read_bytes()
-  case_list = (
-    ("name" ,good_page(("text" ,{"content": "x" ,"style": [] ,"name": "/etc/passwd"})) ,{} ,"wellformed_broken:")
-    ,("style" ,good_page(("text" ,{"content": "x" ,"style": ["blink"]})) ,{} ,"wellformed_broken:")
-    ,("order" ,[("display_name" ,{"text": "A. Tester"}) ,("text" ,{"content": "x" ,"style": []}) ,("paragraph" ,{}) ,("text" ,{"content": "y" ,"style": []})]
-      ,{} ,"wellformed_broken:")
-    ,("svg" ,good_page(("picture" ,{"content": svg})) ,{} ,"content_broken:")
+  list_case = (
+    ("name" ,good_page(("text" ,["x" ,[] ,"/etc/passwd"])) ,{} ,"wellformed_broken:")
+    ,("style" ,good_page(("text" ,["x" ,["blink"]])) ,{} ,"language_broken:")
+    ,("order" ,[("display_name" ,["A. Tester"]) ,("text" ,["x" ,[]]) ,("paragraph" ,[]) ,("text" ,["y" ,[]])]
+      ,{} ,"language_broken:")
+    ,("svg" ,good_page(("picture" ,[svg])) ,{} ,"content_broken:")
     ,("long" ,good_page() ,{"text_max_bytes": 10} ,"constraint_broken:")
     ,("account" ,good_page() ,{"account": "nobody_at_all"} ,"constraint_broken:")
   )
-  for name ,instruction_list ,variation ,want in case_list:
+  for name ,instruction_list ,variation ,want in list_case:
     write_constraint(tree ,work_dpath ,variation.get("account" ,person) ,variation.get("text_max_bytes" ,8192))
     before = snapshot(bio)
-    status ,output = run_gate(gate ,hand_made(Journal ,instruction_list))
+    status ,output = run_gate(gate ,hand_made(definition_hash ,instruction_list))
     check_status(log ,f"{name} is refused by the {want[:-len('_broken:')]} check" ,status ,1 ,output ,want)
     log.check(snapshot(bio) == before ,f"{name} changes nothing")
   write_constraint(tree ,work_dpath ,person)
@@ -269,12 +283,12 @@ def test(repo_home):
     ("timer" ,leave_timer ,"Placed under a timer.")
     ,("ignored" ,leave_sigchld_ignored ,"Placed with SIGCHLD ignored.")
   ):
-    journal = hand_made(Journal ,[("display_name" ,{"text": "A. Tester"}) ,("paragraph" ,{}) ,("text" ,{"content": content ,"style": []})])
+    journal = hand_made(definition_hash ,[("display_name" ,["A. Tester"]) ,("paragraph" ,[]) ,("text" ,[content ,[]])])
     status ,output = run_gate(gate ,journal ,preexec)
     check_status(log ,f"{name} is interpreted" ,status ,0 ,output ,"interpreted:")
     log.check(page_fpath.is_file() and content in page_fpath.read_text() ,f"{name} places the page")
   before = snapshot(bio)
-  status ,output = run_gate(gate ,hand_made(Journal ,good_page()) ,leave_sigterm_pending)
+  status ,output = run_gate(gate ,hand_made(definition_hash ,good_page()) ,leave_sigterm_pending)
   log.check(status == -signal.SIGTERM and "received:" not in output ,"pending ends the gate before it reads the journal"
             ,None if status == -signal.SIGTERM else f"exit status {status}")
   log.check(snapshot(bio) == before ,"pending changes nothing")
@@ -285,7 +299,7 @@ def test(repo_home):
   page_fpath.unlink()
   page_fpath.symlink_to(target)
   before = snapshot(bio)
-  status ,output = run_gate(gate ,hand_made(Journal ,good_page()))
+  status ,output = run_gate(gate ,hand_made(definition_hash ,good_page()))
   check_status(log ,"link is refused by the filesystem check" ,status ,1 ,output ,"filesystem_broken:")
   log.check(snapshot(bio) == before and target.read_text() == "not to be overwritten\n" ,"link changes nothing")
 

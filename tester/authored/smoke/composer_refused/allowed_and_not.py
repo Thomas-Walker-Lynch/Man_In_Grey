@@ -1,7 +1,10 @@
 # One file the constraints allow, and one they do not. The whole journal is refused.
 
 def compose(prov ,journal_iface):
-  allowed = journal_iface.open("out" ,"unbound_conf" ,"replace_keep" ,prov.process_user ,0o444)
-  journal_iface.write(allowed ,"this is not to be written\n")
-  forbidden = journal_iface.open("out" ,"forbidden.conf" ,"replace" ,prov.process_user ,0o644)
-  journal_iface.write(forbidden ,"nor this\n")
+  out = str(prov.cwd_dpath / "out")
+  allowed = journal_iface.declare("allowed" ,"file")
+  journal_iface.open(out ,"unbound_conf" ,"replace_keep" ,prov.process_user ,0o444 ,allowed)
+  journal_iface.write(allowed ,b"this is not to be written\n")
+  forbidden = journal_iface.declare("forbidden" ,"file")
+  journal_iface.open(out ,"forbidden.conf" ,"replace" ,prov.process_user ,0o644 ,forbidden)
+  journal_iface.write(forbidden ,b"nor this\n")

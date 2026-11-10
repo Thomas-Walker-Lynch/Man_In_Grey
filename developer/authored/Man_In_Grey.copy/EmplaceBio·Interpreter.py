@@ -1,18 +1,21 @@
 #!/usr/bin/env -S python3 -B
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-interpreter_smoke - the interpreter of the smoke instruction language.
+EmplaceBio·Interpreter - the interpreter of the emplace_bio instruction language.
 
-Started by the gate Man_In_Grey_smoke_gate, with the gate's real and
+Started by the gate Man_In_Grey_gate·emplace_bio, with the gate's real and
 effective ids, and with the journal on standard input, once the guard has
 passed the journal. It executes the journal's instructions, and writes to
 standard error, as <tag>: <message>, a line for each lasting change it
 makes, such as a file put in place, and none for an instruction as such.
 The gate logs the journal's course itself.
 
-When it has played the whole journal, it writes one line to standard output,
+When it has played the whole journal, it writes the journal's result, when
+the journal declares one, to descriptor 3, which the gate gives it: a CBOR
+map of the result's type name and value. Then it writes one line to
+standard output,
 
-  interpreter smoke journal played
+  interpreter emplace_bio journal played
 
 and exits 0. The gate takes the journal as played on that line and that
 status together, and on nothing else.
@@ -20,13 +23,13 @@ status together, and on nothing else.
 It checks again that the journal is well formed before executing it. It
 does not check the constraints; that is the guard's work, and the gate
 starts the interpreter only on the guard's verdict. It imports the guard,
-guard_smoke.py, for what execution needs from the constraints at its top.
+EmplaceBio·Guard.py, for what execution needs from the constraints at its top.
 
 Before it imports anything, it checks that its modules and their directory
 are owned by root or by the effective uid's account, and writable by no
 other account.
 
-Usage: interpreter_smoke <command>
+Usage: EmplaceBio·Interpreter <command>
   help | -h   print this message (also printed when given no arguments)
   execute     execute the journal on standard input
 
@@ -41,7 +44,7 @@ import stat
 from pathlib import Path
 
 HERE_DPATH = Path(__file__).resolve().parent
-MODULE = ("Journal.py" ,"Guard.py" ,"Interpreter.py" ,"Constraint.py" ,"SmokeLanguage.py" ,"guard_smoke.py" ,"interpreter_smoke.py")
+MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Interpreter.py" ,"Guard·LibraryConstraint.py" ,"EmplaceBio·Language.py" ,"EmplaceBio·GuardCheck.py" ,"EmplaceBio·LibraryInstruction.py" ,"EmplaceBio·Guard.py" ,"EmplaceBio·Interpreter.py")
 
 
 def trusted_owner_problem(path):
@@ -66,15 +69,26 @@ for each in [HERE_DPATH] + [HERE_DPATH / m for m in MODULE]:
     sys.exit(2)
 
 try:
+  import Language
   import Journal
   import Guard
   import Interpreter
-  import SmokeLanguage as Language
-  import guard_smoke as Guard_program
+  import EmplaceBio·Language as language_module
+  import EmplaceBio·LibraryInstruction as library_instruction
+  import EmplaceBio·Guard as guard_program
 except ImportError as error:
   say("cannot_start" ,str(error))
   sys.exit(2)
 
+
+RESULT_FD = 3
+
+def write_result(result):
+  "the encoded result, all of it, on descriptor 3, which is then closed"
+  view = memoryview(result)
+  while view:
+    view = view[os.write(RESULT_FD ,view):]
+  os.close(RESULT_FD)
 
 def log(tag ,message):
   print(f"{tag}: {Journal.clean(message)}" ,file=sys.stderr ,flush=True)
@@ -85,10 +99,22 @@ def execute():
   except RuntimeError as error:
     log("cannot_execute" ,str(error))
     return 2
-  status = Interpreter.interpret(sys.stdin.buffer.read() ,Language ,log ,Guard_program ,gate_invoking_account)
-  if status == 0:
-    sys.stdout.write("interpreter smoke journal played\n")
-  return status
+  try:
+    language_definition = Language.Definition(language_module.NAME ,language_module.DEFINITION)
+  except Language.DefinitionError as error:
+    log("cannot_execute" ,str(error))
+    return 2
+  status ,result = Interpreter.interpret(sys.stdin.buffer.read() ,language_definition ,library_instruction ,log ,guard_program ,gate_invoking_account)
+  if status != 0:
+    return status
+  if result is not None:
+    try:
+      write_result(result)
+    except OSError as error:
+      log("cannot_return_result" ,f"descriptor {RESULT_FD}: {error.strerror}")
+      return 2
+  sys.stdout.write("interpreter emplace_bio journal played\n")
+  return 0
 
 
 # --------------------------------------------------------------------------------
@@ -102,7 +128,7 @@ def CLI(argv=None):
   argv = sys.argv[1:] if argv is None else argv
   if not argv or argv[0] in ("help" ,"-h" ,"--help"): return print_help()
   if argv != ["execute"]:
-    say("usage" ,f"unknown command {Journal.clean(repr(' '.join(argv)))}; run interpreter_smoke with no arguments for its usage")
+    say("usage" ,f"unknown command {Journal.clean(repr(' '.join(argv)))}; run EmplaceBio·Interpreter with no arguments for its usage")
     return 2
   return execute()
 

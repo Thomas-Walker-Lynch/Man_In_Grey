@@ -2,19 +2,28 @@
 """
 Guard - the general guard of Man_In_Grey.
 
-The guard decides whether a journal can be executed. An instruction language
-supplies its checks, in order, as CHECK; check() decodes the journal, runs
-the checks, and stops at the first that finds problems. Every finding is
-given to report as a tag and a message: <check>_broken for each problem,
-check_passed for each check that found none.
+The guard decides whether a journal can be executed. check() decodes the
+journal and makes the checks in order, stopping at the first that finds
+problems:
+
+  wellformed   the well-formed guard, Man_In_Grey's own: the journal against
+               the language definition, by Guard·WellFormed.is_well_formed_journal
+  ...          the language's own checks, in the order its LIST_CHECK gives them:
+               what a definition cannot say, such as an order the
+               instructions are to come in, the values a literal can take,
+               and the constraints
+
+Every finding is given to report as a tag and a message: <check>_broken for
+each problem, check_passed for each check that found none.
 
 This module is a library. An instruction language's guard program calls
-check() and writes the verdict; see guard_emplace_bio.py.
+check() and writes the verdict; see EmplaceBio·Guard.py.
 """
 
 import os ,pwd
 
 import Journal
+import Guard·WellFormed
 
 
 def gate_invoking_account():
@@ -42,27 +51,35 @@ def gate_invoking_account():
   return user_name
 
 
-def check(journal_bytes ,language ,constraint ,gate_invoking_account ,report):
+def check(journal_bytes ,language_definition ,guard_check ,constraint ,gate_invoking_account ,report):
   """
-  Given the encoded journal, the instruction language module, its constraint
-  module of predicates, the gate invoking account's name, and report(tag
-  ,message). Returns 0 when every check passed, 1 when a check found problems, 2 when the journal
-  could not be read.
+  Given the encoded journal, the language definition, the language's guard
+  check module, the constraint module of predicates, the gate invoking
+  account's name, and report(tag ,message). A language check is given the
+  instructions as a list of Guard·WellFormed.InstructionView, the decoded
+  journal, the constraint module and the gate invoking account, and returns
+  a list of problems. Returns 0 when every check passed, 1 when a check found
+  problems, 2 when the journal could not be read.
   """
   try:
     data = Journal.decode(journal_bytes)
   except Journal.JournalError as error:
     report("journal_unreadable" ,str(error))
     return 2
-  if data["instruction_language"] != language.NAME:
-    report("wrong_language" ,f"the journal is in {data['instruction_language']!r}; this guard checks {language.NAME!r}")
+  if data["instruction_language"] != language_definition.name:
+    report("wrong_language" ,f"the journal is in {data['instruction_language']!r}; this guard checks {language_definition.name!r}")
     return 1
-  report("journal" ,f"{len(data['instruction_list'])} instructions")
-  for name ,function in language.CHECK:
-    problem_list = function(data ,constraint ,gate_invoking_account)
-    for problem in problem_list:
+  report("journal" ,f"{len(data['list_variable'])} variables, {len(data['list_instruction'])} instructions"
+         + (f", result {data['result']}" if data["result"] is not None else ""))
+  if not Guard·WellFormed.is_well_formed_journal(data ,language_definition ,report):
+    return 1
+  report("check_passed" ,"wellformed")
+  list_instruction_view = Guard·WellFormed.make_list_instruction_view(data ,language_definition)
+  for name ,function in guard_check.LIST_CHECK:
+    list_problem = function(list_instruction_view ,data ,constraint ,gate_invoking_account)
+    for problem in list_problem:
       report(f"{name}_broken" ,problem)
-    if problem_list:
+    if list_problem:
       return 1
     report("check_passed" ,name)
   return 0

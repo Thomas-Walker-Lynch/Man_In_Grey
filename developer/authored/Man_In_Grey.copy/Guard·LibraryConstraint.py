@@ -1,13 +1,14 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-Constraint - predicates that recur among guards' constraints.
+Guard·LibraryConstraint - predicates that recur among guards' constraints.
 
 A guard's constraints are written at the top of the guard itself, as
 predicates such as is_allowed_account(user_name). This library holds the
 predicates many guards would otherwise each write: membership of a group,
 a path within a directory, a permission within a limit. A guard imports it
 after its ownership check, as it imports its other modules, and its
-constraints call it by name, as Constraint.is_group_member(user_name ,"bio").
+constraints call it by name, as
+Guard·LibraryConstraint.is_group_member(user_name ,"bio").
 """
 
 import grp ,os ,pwd

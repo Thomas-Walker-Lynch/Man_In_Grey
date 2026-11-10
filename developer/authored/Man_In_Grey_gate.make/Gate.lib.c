@@ -17,8 +17,10 @@
     0. settles what the invoking program handed it: puts every signal's
        disposition back to its default, cancels the interval timers and
        clears the blocked mask, so a signal already pending is delivered now;
-       opens /dev/null on any of descriptors 0, 1 and 2 left closed, and
-       closes every descriptor above 2; and raises each resource limit that
+       opens /dev/null on any of descriptors 0, 1 and 2 left closed, keeps
+       descriptor 3, the result descriptor, when the invoking program left it
+       open and opens /dev/null there when it did not, and closes every
+       descriptor above 3; and raises each resource limit that
        could stop the guard or the interpreter partway, refusing when one
        stays too low;
     1. refuses unless the guard and the interpreter, and every directory
@@ -36,7 +38,14 @@
        line to standard output: guard <language> check passed;
     6. starts the interpreter with the same journal, and takes the journal
        as played only when the interpreter exits 0 having written exactly one
-       line to standard output: interpreter <language> journal played.
+       line to standard output: interpreter <language> journal played;
+    7. forwards the interpreter's result, what it wrote on its descriptor 3,
+       to the gate's own descriptor 3, and only once the journal is taken as
+       played.
+
+  The guard is given no descriptor 3. The interpreter's descriptor 3 is a
+  pipe to the gate, which the gate reads as it reads the interpreter's other
+  output, up to RESULT_MAX bytes, and never examines.
 
   The guard and the interpreter inherit the gate's uids and its ignored
   signals, and learn account A from MIG_REAL_UID and MIG_REAL_USER_NAME.
@@ -97,9 +106,12 @@ int Man_In_Grey_gate·Gate·run(
   #define OUTPUT_LINE_MAX 4096
   #define OUTPUT_LINE_COUNT_MAX 2000
   #define VERDICT_MAX 512
+  #define RESULT_MAX ((size_t)16 << 20)
+  #define RESULT_FD 3
 
   Local const char *Language = "";
   Local bool Logging = false;
+  Local bool Result_discarded = false;   // descriptor 3 was not open, so a result goes to /dev/null
 
   // ------------------------------------------------------------------------------
   // saying things: to the person on standard error, and to the system log
@@ -174,13 +186,18 @@ int Man_In_Grey_gate·Gate·run(
   }
 
   /* Descriptors 0, 1 and 2 open, on /dev/null when the invoking program left
-     one closed, so a pipe the gate makes cannot land on one of them; every
-     other descriptor closed, so nothing the invoking program opened reaches
-     the guard or the interpreter. */
+     one closed, so a pipe the gate makes cannot land on one of them.
+     Descriptor 3 is the result descriptor: the invoking program opens it to
+     receive the interpreter's result. When it is open the gate keeps it,
+     marked close-on-exec so that neither the guard nor the interpreter
+     inherits it; when it is not, the gate opens /dev/null there, and a
+     result is discarded. Every other descriptor is closed, so nothing the
+     invoking program opened reaches the guard or the interpreter. */
   Local void settle_descriptors(void){
-    for(int fd = 0; fd <= 2; ++fd){
+    for(int fd = 0; fd <= RESULT_FD; ++fd){
       if( fcntl(fd ,F_GETFD) >= 0 ) continue;
-      int null = open("/dev/null" ,O_RDWR);
+      if( fd == RESULT_FD ) Result_discarded = true;
+      int null = open("/dev/null" ,fd == RESULT_FD ? O_WRONLY : O_RDWR);
       if( null < 0 ) die("cannot open /dev/null: %s" ,strerror(errno));
       if( null != fd ){
         if( dup2(null ,fd) < 0 ) die("cannot open descriptor %d: %s" ,fd ,strerror(errno));
@@ -197,7 +214,7 @@ int Man_In_Grey_gate·Gate·run(
     while( (entry = readdir(dir)) ){
       char *end;
       long fd = strtol(entry->d_name ,&end ,10);
-      if( *end || end == entry->d_name || fd <= 2 || fd == own ) continue;
+      if( *end || end == entry->d_name || fd <= RESULT_FD || fd == own ) continue;
       if( count == size ){
         size *= 2;
         int *larger = realloc(list ,size * sizeof *list);
@@ -209,6 +226,9 @@ int Man_In_Grey_gate·Gate·run(
     closedir(dir);
     for(size_t i = 0; i < count; ++i) close(list[i]);
     free(list);
+    int flags = fcntl(RESULT_FD ,F_GETFD);
+    if( flags < 0 || fcntl(RESULT_FD ,F_SETFD ,flags | FD_CLOEXEC) < 0 )
+      die("cannot set close-on-exec on descriptor %d: %s" ,RESULT_FD ,strerror(errno));
   }
 
   typedef struct{
@@ -316,8 +336,12 @@ int Man_In_Grey_gate·Gate·run(
   typedef struct{
     const char *source;      // "guard" or "interpreter"
     bool stdout_is_verdict;  // standard output is kept as the verdict, not shown
+    bool has_result;         // given a descriptor 3, whose bytes are kept as its result
     char verdict[VERDICT_MAX];
     size_t verdict_length;
+    unsigned char *result;
+    size_t result_length;
+    size_t result_size;
     size_t line_count;
     const char *broken;      // the rule broken, or NULL
   } Child;
@@ -354,6 +378,20 @@ int Man_In_Grey_gate·Gate·run(
     child->verdict[child->verdict_length] = '\0';
   }
 
+  Local void take_result(Child *child ,const char *bytes ,size_t n){
+    if( child->result_length + n > RESULT_MAX ){ child->broken = "a result larger than the gate accepts"; return; }
+    if( child->result_length + n > child->result_size ){
+      size_t size = child->result_size ? child->result_size : 1 << 12;
+      while( size < child->result_length + n ) size *= 2;
+      unsigned char *larger = realloc(child->result ,size);
+      if( !larger ) die("out of memory");
+      child->result = larger;
+      child->result_size = size;
+    }
+    memcpy(child->result + child->result_length ,bytes ,n);
+    child->result_length += n;
+  }
+
   Local void close_on_exec(int fd){
     int flags = fcntl(fd ,F_GETFD);
     if( flags < 0 || fcntl(fd ,F_SETFD ,flags | FD_CLOEXEC) < 0 ) die("cannot set close-on-exec: %s" ,strerror(errno));
@@ -363,31 +401,39 @@ int Man_In_Grey_gate·Gate·run(
      and read its standard output and standard error by the gate's rules.
      Returns the wait status. */
   Local int run_child(Child *child ,char *const argument[] ,const unsigned char *input ,size_t input_length){
-    int in[2] ,out[2] ,err[2];
+    int in[2] ,out[2] ,err[2] ,res[2] = {-1 ,-1};
     if( pipe(in) || pipe(out) || pipe(err) ) die("cannot make a pipe: %s" ,strerror(errno));
-    for(int k = 0; k < 2; ++k){ close_on_exec(in[k]); close_on_exec(out[k]); close_on_exec(err[k]); }
+    if( child->has_result && pipe(res) ) die("cannot make a pipe: %s" ,strerror(errno));
+    for(int k = 0; k < 2; ++k){
+      close_on_exec(in[k]); close_on_exec(out[k]); close_on_exec(err[k]);
+      if( child->has_result ) close_on_exec(res[k]);
+    }
 
     pid_t pid = fork();
     if( pid < 0 ) die("cannot start the %s: %s" ,child->source ,strerror(errno));
     if( pid == 0 ){
       if( dup2(in[0] ,0) < 0 || dup2(out[1] ,1) < 0 || dup2(err[1] ,2) < 0 ) _exit(127);
+      if( child->has_result && dup2(res[1] ,RESULT_FD) < 0 ) _exit(127);
       execv(PYTHON ,argument);
       dprintf(2 ,"cannot_start: %s: %s\n" ,PYTHON ,strerror(errno));
       _exit(127);
     }
     close(in[0]); close(out[1]); close(err[1]);
+    if( child->has_result ) close(res[1]);
     fcntl(in[1] ,F_SETFL ,fcntl(in[1] ,F_GETFL) | O_NONBLOCK);
 
     Stream out_stream = {.fd = out[0] ,.echo = stdout ,.stream = "stdout"};
     Stream err_stream = {.fd = err[0] ,.echo = stderr ,.stream = "stderr"};
     int in_fd = in[1];
+    int res_fd = child->has_result ? res[0] : -1;
     size_t written = 0;
     if( input_length == 0 ){ close(in_fd); in_fd = -1; }
 
-    while( (out_stream.fd >= 0 || err_stream.fd >= 0) && !child->broken ){
-      struct pollfd poll_list[3];
-      int count = 0 ,in_at = -1 ,out_at = -1 ,err_at = -1;
+    while( (out_stream.fd >= 0 || err_stream.fd >= 0 || res_fd >= 0) && !child->broken ){
+      struct pollfd poll_list[4];
+      int count = 0 ,in_at = -1 ,out_at = -1 ,err_at = -1 ,res_at = -1;
       if( in_fd >= 0 ){ poll_list[count] = (struct pollfd){.fd = in_fd ,.events = POLLOUT}; in_at = count++; }
+      if( res_fd >= 0 ){ poll_list[count] = (struct pollfd){.fd = res_fd ,.events = POLLIN}; res_at = count++; }
       if( out_stream.fd >= 0 ){ poll_list[count] = (struct pollfd){.fd = out_stream.fd ,.events = POLLIN}; out_at = count++; }
       if( err_stream.fd >= 0 ){ poll_list[count] = (struct pollfd){.fd = err_stream.fd ,.events = POLLIN}; err_at = count++; }
       if( poll(poll_list ,count ,-1) < 0 ){
@@ -398,6 +444,12 @@ int Man_In_Grey_gate·Gate·run(
         ssize_t n = write(in_fd ,input + written ,input_length - written);
         if( n > 0 ) written += (size_t)n;
         if( (n < 0 && errno != EAGAIN && errno != EINTR) || written == input_length ){ close(in_fd); in_fd = -1; }
+      }
+      if( res_at >= 0 && poll_list[res_at].revents ){
+        char buffer[4096];
+        ssize_t n = read(res_fd ,buffer ,sizeof buffer);
+        if( n > 0 ) take_result(child ,buffer ,(size_t)n);
+        else if( n == 0 || (errno != EAGAIN && errno != EINTR) ){ close(res_fd); res_fd = -1; }
       }
       Stream *stream_list[2] = {&out_stream ,&err_stream};
       int at_list[2] = {out_at ,err_at};
@@ -419,6 +471,7 @@ int Man_In_Grey_gate·Gate·run(
 
     if( child->broken ) kill(pid ,SIGKILL);
     if( in_fd >= 0 ) close(in_fd);
+    if( res_fd >= 0 ) close(res_fd);
     if( out_stream.fd >= 0 ) close(out_stream.fd);
     if( err_stream.fd >= 0 ) close(err_stream.fd);
     int status = 0;
@@ -441,6 +494,8 @@ int Man_In_Grey_gate·Gate·run(
       "                       guard passes the journal, run the interpreter\n"
       "Option of admit:\n"
       "  check_only           run the guard and not the interpreter\n"
+      "A journal that declares a result has it written to descriptor 3 once the\n"
+      "journal is played; when descriptor 3 is not open, the result is discarded.\n"
       ,program
     );
   }
@@ -499,6 +554,24 @@ int Man_In_Grey_gate·Gate·run(
     int terminal_signal[] = {SIGINT ,SIGQUIT ,SIGTSTP ,SIGTTIN ,SIGTTOU ,SIGHUP};
     for(size_t i = 0; i < sizeof terminal_signal / sizeof terminal_signal[0]; ++i){
       signal(terminal_signal[i] ,SIG_IGN);
+    }
+    return true;
+  }
+
+  /* Write the result to descriptor 3, all of it, waiting while the
+     invoking program's end of it is full. Returns false when it cannot. */
+  Local bool forward_result(const unsigned char *result ,size_t length){
+    size_t written = 0;
+    while( written < length ){
+      ssize_t n = write(RESULT_FD ,result + written ,length - written);
+      if( n > 0 ){ written += (size_t)n; continue; }
+      if( n < 0 && errno == EINTR ) continue;
+      if( n < 0 && errno == EAGAIN ){
+        struct pollfd p = {.fd = RESULT_FD ,.events = POLLOUT};
+        poll(&p ,1 ,-1);
+        continue;
+      }
+      return false;
     }
     return true;
   }
@@ -633,7 +706,7 @@ int Man_In_Grey_gate·Gate·run(
     char *interpreter_argument[] = {
       (char *)PYTHON ,(char *)"-E" ,(char *)"-s" ,(char *)"-B" ,interpreter_path ,(char *)"execute" ,NULL
     };
-    Child interpreter = {.source = "interpreter" ,.stdout_is_verdict = true};
+    Child interpreter = {.source = "interpreter" ,.stdout_is_verdict = true ,.has_result = true};
     say("interpreting" ,"%s" ,interpreter_path);
     status = run_child(&interpreter ,interpreter_argument ,journal ,journal_length);
     if( interpreter.broken ){
@@ -658,6 +731,14 @@ int Man_In_Grey_gate·Gate·run(
       return 2;
     }
     say("interpreted" ,"interpreter %s journal played" ,language);
+    if( interpreter.result_length > 0 ){
+      if( Result_discarded )
+        say("result_discarded" ,"%zu bytes; descriptor 3 was not open" ,interpreter.result_length);
+      else if( forward_result(interpreter.result ,interpreter.result_length) )
+        say("result_forwarded" ,"%zu bytes on descriptor 3" ,interpreter.result_length);
+      else
+        say("result_lost" ,"%zu bytes; descriptor 3 cannot be written: %s" ,interpreter.result_length ,strerror(errno));
+    }
     return 0;
   }
 
