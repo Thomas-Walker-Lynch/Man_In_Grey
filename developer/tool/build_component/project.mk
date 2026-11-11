@@ -1,4 +1,4 @@
-# developer/tool/build_component/makefile
+# developer/tool/build_component/project.mk
 #
 # The project's make settings, for every namespace the project builds with
 # make. Harmony.mk includes this file after its own defaults and before the

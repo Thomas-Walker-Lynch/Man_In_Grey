@@ -6,7 +6,7 @@
 # what the layers before it set:
 #
 #   1. Harmony's defaults, in this file
-#   2. the project's settings, tool/build_component/makefile
+#   2. the project's settings, tool/build_component/project.mk
 #   3. the namespace's settings, any *.mk beside its source
 #
 # A layer adds to a default with += and replaces one with :=. The flags the
@@ -55,7 +55,7 @@ KMOD_OUTPUT_DIR  ?= scratchpad/kmod
 #--------------------------------------------------------------------------------
 # 2. the project's settings
 
-include tool/build_component/makefile
+include tool/build_component/project.mk
 
 #--------------------------------------------------------------------------------
 # 3. the namespace's settings
