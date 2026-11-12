@@ -11,7 +11,7 @@ finish() puts every opened file in place, each in one step.
 
 import os ,pwd ,time
 
-from Smoke·GuardCheck import is_absent
+from Smoke·GuardCheck import is__absent
 
 
 # --------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ class LibraryInstruction:
     record = {"dirfd": dirfd ,"fd": None ,"tmp": None ,"directory": directory ,"name": file_name
               ,"mode": mode ,"owner": account_name ,"permission": permission}
     self._opened.append(record)
-    tmp = f".{file_name}.Man_In_Grey.{os.getpid()}.{handle}"
+    tmp = f".{file_name}.Man-In-Grey.{os.getpid()}.{handle}"
     record["fd"] = os.open(tmp ,os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW ,0o600 ,dir_fd=dirfd)
     record["tmp"] = tmp
     file.append(handle)
@@ -61,7 +61,7 @@ class LibraryInstruction:
   def unlink(self ,directory ,file_name):
     dirfd = os.open(directory ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
-      if not is_absent(dirfd ,file_name):
+      if not is__absent(dirfd ,file_name):
         os.unlink(file_name ,dir_fd=dirfd)
         os.fsync(dirfd)
         self._log("unlinked" ,f"{directory}/{file_name}")
@@ -95,7 +95,7 @@ class LibraryInstruction:
         self._log("created" ,where)
       else:
         kept = None
-        if record["mode"] == "replace_keep" and not is_absent(dirfd ,target):
+        if record["mode"] == "replace-keep" and not is__absent(dirfd ,target):
           kept = _backup_name(dirfd ,target)
           os.link(target ,kept ,src_dir_fd=dirfd ,dst_dir_fd=dirfd ,follow_symlinks=False)
         os.rename(tmp ,target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd)

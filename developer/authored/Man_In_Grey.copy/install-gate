@@ -1,7 +1,7 @@
 #!/usr/bin/python3 -I
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-install_gate - install a Man-In-Grey gate, setuid to the account that is to own it.
+install-gate - install a Man-In-Grey gate, setuid to the account that is to own it.
 
 Run by root, by the Man-In-Grey administrator, who installs an application.
 A person without root's rights runs it through Man-In-Grey install, which
@@ -29,7 +29,7 @@ It refuses a directory that is not absolute, that another account than
 root owns or can write, or that is on a file system mounted nosuid, where
 the kernel ignores the setuid and setgid bits.
 
-Usage: install_gate <command> ...
+Usage: install-gate <command> ...
   help | -h      print this message (also printed when given no arguments)
   install <gate> owner <account> [group <group>] into <directory> [constraints <file>]
                  <gate> is a gate's file name in Man_In_Grey__Gate/, such as
@@ -37,7 +37,7 @@ Usage: install_gate <command> ...
                  the guard's predicates
 
 Example, run by root from consumer/Man_In_Grey/:
-  ./install_gate install Man_In_Grey__Gate·Emplace_Bio owner http into /usr/local/lib/Man-In-Grey constraints bio_constraint.py
+  ./install-gate install Man_In_Grey__Gate·Emplace_Bio owner http into /usr/local/lib/Man-In-Grey constraints bio-constraint.py
 
 Exit status: 0 when the gate was installed, 1 when the installation was
 refused, 2 when it was given wrong arguments.
@@ -49,10 +49,10 @@ sys.dont_write_bytecode = True
 import grp ,pwd ,shutil ,stat ,subprocess
 from pathlib import Path
 
-HERE_DPATH = Path(__file__).resolve().parent          # .../Man_In_Grey
-SOURCE_DPATH = HERE_DPATH.parent                       # holds Man_In_Grey/ and Man_In_Grey__Gate/
-PROGRAM_DNAME = "Man_In_Grey"
-GATE_DNAME = "Man_In_Grey__Gate"
+HERE__DPATH = Path(__file__).resolve().parent          # .../Man_In_Grey
+SOURCE__DPATH = HERE__DPATH.parent                       # holds Man_In_Grey/ and Man_In_Grey__Gate/
+PROGRAM__DNAME = "Man_In_Grey"
+GATE__DNAME = "Man_In_Grey__Gate"
 
 
 class Refused(Exception):
@@ -60,13 +60,13 @@ class Refused(Exception):
 
 
 def say(message):
-  print(f"install_gate: {message}")
+  print(f"install-gate: {message}")
 
 
 # --------------------------------------------------------------------------------
 # checks
 
-def root_chain_problem(path):
+def root_chain__problem(path):
   "None when path and every directory above it are owned by root and writable by no other account"
   for each in [path] + list(path.parents):
     st = os.lstat(each)
@@ -87,7 +87,7 @@ def nosuid(path):
 
 def install_file(source ,target ,mode):
   "copy source to target through a temporary file in target's directory, owned by root"
-  tmp = target.with_name(f".{target.name}.install_gate.{os.getpid()}")
+  tmp = target.with_name(f".{target.name}.install-gate.{os.getpid()}")
   shutil.copyfile(source ,tmp ,follow_symlinks=False)
   os.chown(tmp ,0 ,0)
   os.chmod(tmp ,mode)
@@ -106,33 +106,33 @@ BEGIN ,END = "# constraints begin" ,"# constraints end"
 
 def section_bound(text ,path):
   "the line numbers of the two constraint marks in a guard's text; raises Refused"
-  list_line = text.splitlines()
-  if list_line.count(BEGIN) != 1 or list_line.count(END) != 1 or list_line.index(BEGIN) > list_line.index(END):
+  list__line = text.splitlines()
+  if list__line.count(BEGIN) != 1 or list__line.count(END) != 1 or list__line.index(BEGIN) > list__line.index(END):
     raise Refused(f"{path} does not hold the marks '{BEGIN}' and '{END}', once each and in that order")
-  return list_line ,list_line.index(BEGIN) ,list_line.index(END)
+  return list__line ,list__line.index(BEGIN) ,list__line.index(END)
 
 def constraint_of(text ,path):
   "the constraints between the marks"
-  list_line ,begin ,end = section_bound(text ,path)
-  return "\n".join(list_line[begin + 1:end]).strip("\n") + "\n"
+  list__line ,begin ,end = section_bound(text ,path)
+  return "\n".join(list__line[begin + 1:end]).strip("\n") + "\n"
 
 def with_constraint(text ,path ,constraint):
   "the guard's text with constraint between the marks"
-  list_line ,begin ,end = section_bound(text ,path)
-  return "\n".join(list_line[:begin + 1] + ["" ,constraint.strip("\n") ,""] + list_line[end:]) + "\n"
+  list__line ,begin ,end = section_bound(text ,path)
+  return "\n".join(list__line[:begin + 1] + ["" ,constraint.strip("\n") ,""] + list__line[end:]) + "\n"
 
 def install_text(text ,target ,mode):
   "write text to target through a temporary file in target's directory, owned by root"
-  tmp = target.with_name(f".{target.name}.install_gate.{os.getpid()}")
+  tmp = target.with_name(f".{target.name}.install-gate.{os.getpid()}")
   tmp.write_text(text ,encoding="utf-8")
   os.chown(tmp ,0 ,0)
   os.chmod(tmp ,mode)
   os.rename(tmp ,target)
 
-def gate_flag(gate_fpath):
-  result = subprocess.run([str(gate_fpath) ,"flags"] ,capture_output=True ,text=True ,env={"PATH": "/usr/bin:/bin"})
+def gate_flag(gate__fpath):
+  result = subprocess.run([str(gate__fpath) ,"flags"] ,capture_output=True ,text=True ,env={"PATH": "/usr/bin:/bin"})
   if result.returncode != 0:
-    raise Refused(f"{gate_fpath} did not report its flags")
+    raise Refused(f"{gate__fpath} did not report its flags")
   return result.stdout ,dict(line.split("=" ,1) for line in result.stdout.splitlines() if "=" in line)
 
 
@@ -146,10 +146,10 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
   setgid. Raises Refused.
   """
   if os.geteuid() != 0:
-    raise Refused("install_gate is run by root; a person without root's rights runs Man-In-Grey install, which asks for root's password")
+    raise Refused("install-gate is run by root; a person without root's rights runs Man-In-Grey install, which asks for root's password")
   if "/" in gate or gate in ("" ,"." ,".."):
-    raise Refused(f"{gate!r} is to be the file name of a gate in {SOURCE_DPATH / GATE_DNAME}")
-  source_gate = SOURCE_DPATH / GATE_DNAME / gate
+    raise Refused(f"{gate!r} is to be the file name of a gate in {SOURCE__DPATH / GATE__DNAME}")
+  source_gate = SOURCE__DPATH / GATE__DNAME / gate
   if not source_gate.is_file() or source_gate.is_symlink():
     raise Refused(f"there is no gate {source_gate}")
   try:
@@ -178,20 +178,20 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
     raise Refused(f"{directory} is not an absolute path")
   if not target.parent.is_dir():
     raise Refused(f"{target.parent} is not a directory")
-  problem = root_chain_problem(target.parent)
+  problem = root_chain__problem(target.parent)
   if problem:
     raise Refused(problem)
   make_directory(target)
   if nosuid(target):
     raise Refused(f"{target} is on a file system mounted nosuid, where the kernel ignores the setuid bit")
 
-  program_dpath ,gate_dpath = target / PROGRAM_DNAME ,target / GATE_DNAME
-  make_directory(program_dpath)
-  make_directory(gate_dpath)
+  program__dpath ,gate__dpath = target / PROGRAM__DNAME ,target / GATE__DNAME
+  make_directory(program__dpath)
+  make_directory(gate__dpath)
 
   # the constraints of the guards installed already, to keep
   kept = {}
-  for installed in sorted(program_dpath.glob("*·Guard.py")):
+  for installed in sorted(program__dpath.glob("*·Guard.py")):
     if installed.is_file() and not installed.is_symlink():
       try:
         kept[installed.name] = constraint_of(installed.read_text(encoding="utf-8") ,installed)
@@ -199,27 +199,27 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
         say(f"{problem}; it holds no constraints to keep")
 
   # Man_In_Grey/: every regular file, a guard with its kept constraints
-  for source in sorted((SOURCE_DPATH / PROGRAM_DNAME).iterdir()):
+  for source in sorted((SOURCE__DPATH / PROGRAM__DNAME).iterdir()):
     st = os.lstat(source)
     if not stat.S_ISREG(st.st_mode):
       continue
-    destination = program_dpath / source.name
+    destination = program__dpath / source.name
     mode = 0o755 if st.st_mode & stat.S_IXUSR else 0o644
     if source.name in kept:
       install_text(with_constraint(source.read_text(encoding="utf-8") ,source ,kept[source.name]) ,destination ,mode)
       say(f"kept the constraints of {destination}")
     else:
       install_file(source ,destination ,mode)
-  say(f"installed {program_dpath}/")
+  say(f"installed {program__dpath}/")
 
   # the gate, owned by root until it is complete
-  installed_gate = gate_dpath / gate
+  installed_gate = gate__dpath / gate
   install_file(source_gate ,installed_gate ,0o755)
   _ ,flag = gate_flag(installed_gate)
   language = flag.get("language" ,"")
   guard_path = Path(flag.get("guard.path" ,""))
-  if not language or guard_path.parent != program_dpath:
-    raise Refused(f"{installed_gate} does not find its guard in {program_dpath}")
+  if not language or guard_path.parent != program__dpath:
+    raise Refused(f"{installed_gate} does not find its guard in {program__dpath}")
 
   if given_constraints is not None:
     install_text(with_constraint(guard_path.read_text(encoding="utf-8") ,guard_path ,given_text) ,guard_path ,0o644)
@@ -231,13 +231,13 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
   os.chmod(installed_gate ,mode)
   say(f"installed {installed_gate}, owner {owner}:{grp.getgrgid(gid).gr_name}, mode {mode:o}")
 
-  problem = root_chain_problem(program_dpath)
+  problem = root_chain__problem(program__dpath)
   if problem:
     raise Refused(problem)
   text ,_ = gate_flag(installed_gate)
   say("its flags, as seen by root:")
   sys.stdout.write(text)
-  say(f"run it as: {program_dpath / 'Man-In-Grey'} orchestrate <composer> gate {installed_gate}")
+  say(f"run it as: {program__dpath / 'Man-In-Grey'} orchestrate <composer> gate {installed_gate}")
   return 0
 
 
@@ -269,7 +269,7 @@ def CLI(argv=None):
   try:
     return install(gate ,value["owner"] ,value["into"] ,value.get("constraints") ,value.get("group"))
   except Refused as error:
-    print(f"install_gate: refused: {error}" ,file=sys.stderr)
+    print(f"install-gate: refused: {error}" ,file=sys.stderr)
     return 1
 
 

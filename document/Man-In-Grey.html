@@ -104,7 +104,7 @@
             Any semantic that participates in the <RT·term>guard</RT·term> code's approval process.
           </RT·entry>
           <RT·entry key="constraint predicate">
-            A function written at the top of a guard, between the lines <RT·code># constraints begin</RT·code> and <RT·code># constraints end</RT·code>, that answers whether a journal's request is allowed, such as <RT·code>is_allowed_account(user_name)</RT·code>. See <a href="#sec-guard"><RT·Counter·read snapshot="sec-guard" key="counter count"></RT·Counter·read></a>.
+            A function written at the top of a guard, between the lines <RT·code># constraints begin</RT·code> and <RT·code># constraints end</RT·code>, that answers whether a journal's request is allowed, such as <RT·code>is__allowed_account(user_name)</RT·code>. See <a href="#sec-guard"><RT·Counter·read snapshot="sec-guard" key="counter count"></RT·Counter·read></a>.
           </RT·entry>
           <RT·entry key="interpreter, journal interpreter">
             The interpreter is invoked by the gate after, and only if, the guard has approved the journal. The interpreter walks the journal while executing the instructions in order.
@@ -186,16 +186,16 @@
             A language definition is a map of four sections, written by the application developer as a literal value in a module of its own, such as <RT·code>Emplace_Bio·Language.py</RT·code>, beside the module's <RT·code>NAME</RT·code>. It is data, not code. The guard, the interpreter and the journal interface all read the same definition, and the guard's copy is installed with the guard, owned by root, so account A cannot change it.
           </p>
           <RT·dictionary key="Section" definition="Meaning">
-            <RT·entry key="list_type">
+            <RT·entry key="list__type">
               A list of type declarations, each <RT·code>[&lt;name&gt; ,&lt;type expression&gt;]</RT·code>. A type expression is a primitive, the name of a type declared earlier in the list, or a compound: <RT·code>["dictionary" ,[&lt;key&gt; ,&lt;type expression&gt;] ...]</RT·code> or <RT·code>["list" ,&lt;type expression&gt;]</RT·code>. A type can therefore not refer to itself.
             </RT·entry>
-            <RT·entry key="list_format">
+            <RT·entry key="list__format">
               A list of instruction formats, each <RT·code>[&lt;format name&gt; ,[&lt;direction&gt; ,&lt;type name&gt;] ...]</RT·code>. The direction is <RT·code>in</RT·code>, <RT·code>out</RT·code> or <RT·code>in-out</RT·code>; the type name is a primitive or a declared type. Arguments are given by position, so the format fixes how many an instruction takes.
             </RT·entry>
-            <RT·entry key="list_result">
+            <RT·entry key="list__result">
               The list of type names a journal's result can have.
             </RT·entry>
-            <RT·entry key="map_instruction">
+            <RT·entry key="map__instruction">
               A map from each operation specifier to its format name. Its keys are the explicit list of the operations a journal can use. The operation specifier is also the name of the Python function that carries the instruction out.
             </RT·entry>
           </RT·dictionary>
@@ -213,7 +213,7 @@
           </p>
           <RT·code>
             DEFINITION = {
-              "list_type": [
+              "list__type": [
                 ["directory" ,"text"]
                 ,["file_name" ,"text"]
                 ,["mode" ,"text"]
@@ -223,18 +223,18 @@
                 ,["content" ,"bytes"]
                 ,["summary" ,["dictionary" ,["open_count" ,"integer"] ,["unlink_count" ,"integer"]]]
               ]
-              ,"list_format": [
-                ["format_open" ,["in" ,"directory"] ,["in" ,"file_name"] ,["in" ,"mode"] ,["in" ,"account_name"] ,["in" ,"permission"] ,["out" ,"file"]]
-                ,["format_write" ,["in-out" ,"file"] ,["in" ,"content"]]
-                ,["format_unlink" ,["in" ,"directory"] ,["in" ,"file_name"]]
-                ,["format_summary" ,["out" ,"summary"]]
+              ,"list__format": [
+                ["format__open" ,["in" ,"directory"] ,["in" ,"file_name"] ,["in" ,"mode"] ,["in" ,"account_name"] ,["in" ,"permission"] ,["out" ,"file"]]
+                ,["format__write" ,["in-out" ,"file"] ,["in" ,"content"]]
+                ,["format__unlink" ,["in" ,"directory"] ,["in" ,"file_name"]]
+                ,["format__summary" ,["out" ,"summary"]]
               ]
-              ,"list_result": ["summary"]
-              ,"map_instruction": {
-                "open": "format_open"
-                ,"write": "format_write"
-                ,"unlink": "format_unlink"
-                ,"summary": "format_summary"
+              ,"list__result": ["summary"]
+              ,"map__instruction": {
+                "open": "format__open"
+                ,"write": "format__write"
+                ,"unlink": "format__unlink"
+                ,"summary": "format__summary"
               }
             }
           </RT·code>
@@ -242,7 +242,7 @@
             <RT·code>open</RT·code> writes the handle of the file it opens to its last argument; <RT·code>write</RT·code> reads and writes its file, as it changes the file; <RT·code>summary</RT·code> writes counts, which a journal can make its result.
           </p>
           <p>
-            A definition has a well-formed check of its own, <RT·code>is_well_formed_language</RT·code>, in <RT·code>Language.py</RT·code>, made when the guard and the interpreter start and when the journal interface is made: every head a known type, every name declared once, every type used declared before, every format named in the operation map declared, and every operation specifier a Python function name not beginning with <RT·code>_</RT·code>. The names <RT·code>declare</RT·code>, <RT·code>result</RT·code>, <RT·code>finish</RT·code> and <RT·code>release</RT·code> are kept by Man-In-Grey and refused as operation specifiers. The definition's hash is the SHA-256 of its canonical CBOR encoding.
+            A definition has a well-formed check of its own, <RT·code>is__well_formed_language</RT·code>, in <RT·code>Language.py</RT·code>, made when the guard and the interpreter start and when the journal interface is made: every head a known type, every name declared once, every type used declared before, every format named in the operation map declared, and every operation specifier a Python function name not beginning with <RT·code>_</RT·code>. The names <RT·code>declare</RT·code>, <RT·code>result</RT·code>, <RT·code>finish</RT·code> and <RT·code>release</RT·code> are kept by Man-In-Grey and refused as operation specifiers. The definition's hash is the SHA-256 of its canonical CBOR encoding.
           </p>
         </RT·section>
 
@@ -264,18 +264,18 @@
             <RT·entry key="meta">
               When, on which host and by which account the journal was composed, and the composer that ran.
             </RT·entry>
-            <RT·entry key="list_variable">
+            <RT·entry key="list__variable">
               The variables, each <RT·code>[&lt;name&gt; ,&lt;type name&gt;]</RT·code>, the type one the language definition declares.
             </RT·entry>
             <RT·entry key="result">
               The name of the variable whose value is the journal's result, or null for a journal with no result.
             </RT·entry>
-            <RT·entry key="list_instruction">
+            <RT·entry key="list__instruction">
               The instructions, in the order the composer placed them.
             </RT·entry>
           </RT·dictionary>
           <p>
-            Each instruction is a map of two entries: <RT·code>operation</RT·code>, its operation specifier, and <RT·code>list_argument</RT·code>, the list of its arguments, in the order of its format. Each argument is a pair whose first element says how to read the second:
+            Each instruction is a map of two entries: <RT·code>operation</RT·code>, its operation specifier, and <RT·code>list__argument</RT·code>, the list of its arguments, in the order of its format. Each argument is a pair whose first element says how to read the second:
           </p>
           <RT·dictionary key="Argument" definition="Meaning">
             <RT·entry key='["literal" ,&lt;value&gt;]'>
@@ -289,21 +289,21 @@
             The kind of an argument is carried beside it, never inferred from its value, so no literal can be taken for a variable. The first four instructions of the journal in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>, decoded, and written in JSON notation:
           </p>
           <RT·code>
-            {"operation": "display_name", "list_argument": [["literal", "Thomas"]]}
-            {"operation": "paragraph", "list_argument": []}
-            {"operation": "text", "list_argument": [["literal", "I write "], ["literal", []]]}
-            {"operation": "text", "list_argument": [["literal", "software"], ["literal", ["emphasis"]]]}
+            {"operation": "display_name", "list__argument": [["literal", "Thomas"]]}
+            {"operation": "paragraph", "list__argument": []}
+            {"operation": "text", "list__argument": [["literal", "I write "], ["literal", []]]}
+            {"operation": "text", "list__argument": [["literal", "software"], ["literal", ["emphasis"]]]}
           </RT·code>
           <p>
             Since arguments are given by position, the well-formed guard requires exactly the number an instruction's format takes: a <RT·code>text</RT·code> instruction carrying a third argument is refused, whatever that argument says. A journal of the Smoke language, in which one instruction writes a variable that later instructions read, with a byte string written as <RT·code>b"..."</RT·code>, as JSON has none:
           </p>
           <RT·code>
-            "list_variable": [["unbound_conf", "file"], ["summary", "summary"]]
+            "list__variable": [["unbound_conf", "file"], ["summary", "summary"]]
             "result": "summary"
-            {"operation": "open", "list_argument": [["literal", "/etc/unbound"], ["literal", "unbound.conf"], ["literal", "replace_keep"],
+            {"operation": "open", "list__argument": [["literal", "/etc/unbound"], ["literal", "unbound.conf"], ["literal", "replace-keep"],
                                              ["literal", "Thomas"], ["literal", 292], ["variable", "unbound_conf"]]}
-            {"operation": "write", "list_argument": [["variable", "unbound_conf"], ["literal", b"server:\n"]]}
-            {"operation": "summary", "list_argument": [["variable", "summary"]]}
+            {"operation": "write", "list__argument": [["variable", "unbound_conf"], ["literal", b"server:\n"]]}
+            {"operation": "summary", "list__argument": [["variable", "summary"]]}
           </RT·code>
           <p>
             The <RT·code>meta</RT·code> entry is a note, not evidence: account A writes the whole journal, and could write anything there, so the guard and the interpreter never base a decision on it.
@@ -328,7 +328,7 @@
         <RT·section id="sec-wellformed">
           <RT·name>Well-formed</RT·name>
           <p>
-            A journal is straight-line: no branch, no loop. So one pass from the first instruction to the last settles, for every argument, whether it is well formed, before anything runs. The well-formed guard makes that pass, <RT·code>is_well_formed_journal</RT·code> in <RT·code>Guard·WellFormed.py</RT·code>, and refuses the journal when:
+            A journal is straight-line: no branch, no loop. So one pass from the first instruction to the last settles, for every argument, whether it is well formed, before anything runs. The well-formed guard makes that pass, <RT·code>is__well_formed_journal</RT·code> in <RT·code>Guard·WellFormed.py</RT·code>, and refuses the journal when:
           </p>
           <ul>
             <li>a variable is declared twice, is not a name, or has a type the definition does not declare;</li>
@@ -385,15 +385,15 @@
           <RT·code>
             > /usr/local/lib/Man-In-Grey/Man_In_Grey__Gate/Man_In_Grey__Gate·Emplace_Bio flags
             real.uid=2006
-            real.user_name=Thomas
+            real.user-name=Thomas
             real.gid=2006
-            real.group_name=Thomas
+            real.group-name=Thomas
             effective.uid=996
-            effective.user_name=http
+            effective.user-name=http
             effective.gid=995
-            effective.group_name=http
-            uid_differ=1
-            gid_differ=1
+            effective.group-name=http
+            uid-differ=1
+            gid-differ=1
             language=Emplace_Bio
             guard.path=/usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Guard.py
             interpreter.path=/usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Interpreter.py
@@ -403,7 +403,7 @@
           </p>
 
           <p>
-            Th <RT·code>admit</RT·code> command takes the journal on standard input. There is an option <RT·code>check_only</RT·code> that will print check messages without doing anything.  Without this option, when the gate is asked to <RT·code>admit</RT·code> a journal, it:
+            Th <RT·code>admit</RT·code> command takes the journal on standard input. There is an option <RT·code>check-only</RT·code> that will print check messages without doing anything.  Without this option, when the gate is asked to <RT·code>admit</RT·code> a journal, it:
           </p>
 
           <ol>
@@ -413,7 +413,7 @@
             <li>finds the guard and the interpreter at paths fixed when the gate is compiled, relative to the gate itself, so account A cannot name others;</li>
             <li>refuses unless the guard and the interpreter, and every directory above them, are owned by root or by account B, and writable by no other account;</li>
             <li>clears the environment, setting only <RT·code>PATH</RT·code> and <RT·code>LANG</RT·code>, sets the file mode mask to <RT·code>077</RT·code>, marks the process not dumpable, and changes directory to <RT·code>/</RT·code>;</li>
-            <li>records its real ids, account A's, in <RT·code>MIG_REAL_UID</RT·code>, <RT·code>MIG_REAL_GID</RT·code> and <RT·code>MIG_REAL_USER_NAME</RT·code>, for the guard and the interpreter;</li>
+            <li>records its real ids, account A's, in <RT·code>MIG__REAL_UID</RT·code>, <RT·code>MIG__REAL_GID</RT·code> and <RT·code>MIG__REAL_USER_NAME</RT·code>, for the guard and the interpreter;</li>
             <li>reads the journal from its standard input, up to 16 MiB;</li>
             <li>when accounts A and B differ, makes its real uid account B's, so the kernel refuses account A's signals, and ignores the signals a terminal sends; see <a href="#sec-isolation"><RT·Counter·read snapshot="sec-isolation" key="counter count"></RT·Counter·read></a>;</li>
             <li>starts <RT·code>/usr/bin/python3 -E -s -B</RT·code> on the guard, with the journal on its standard input, and goes on only when the guard approves the journal;</li>
@@ -446,7 +446,7 @@
           <RT·section>
             <RT·name>Output rule</RT·name>
             <p>
-              Every line the guard and the interpreter write is copied to the person, marked <RT·code>guard:</RT·code> or <RT·code>interpreter:</RT·code>, and to the system log under the name <RT·code>Man_In_Grey__Gate</RT·code>, beside the gate's own lines, marked <RT·code>gate:</RT·code>. The gate logs each journal's course itself, whatever the guard and the interpreter write: <RT·code>received</RT·code>, with account A, account B and the journal's size; <RT·code>isolated</RT·code>, when the gate gives up account A; then <RT·code>approved</RT·code> or <RT·code>refused</RT·code>; then <RT·code>interpreting</RT·code>; then <RT·code>interpreted</RT·code> or <RT·code>failed</RT·code>; and, for a journal with a result, <RT·code>result_forwarded</RT·code>, <RT·code>result_discarded</RT·code> when descriptor 3 was not open, or <RT·code>result_lost</RT·code> when it could not be written. A line breaks the gate's rules when it is not UTF-8, or holds a control character (C0, DEL or C1), or is longer than 4096 bytes, or is one line more than 2000; the gate then stops the program and refuses the journal. Unicode is otherwise welcome. The guard writes any control character it quotes as <RT·code>\u{XXXX}</RT·code>, and the example language's language check refuses any text that holds one.
+              Every line the guard and the interpreter write is copied to the person, marked <RT·code>guard:</RT·code> or <RT·code>interpreter:</RT·code>, and to the system log under the name <RT·code>Man_In_Grey__Gate</RT·code>, beside the gate's own lines, marked <RT·code>gate:</RT·code>. The gate logs each journal's course itself, whatever the guard and the interpreter write: <RT·code>received</RT·code>, with account A, account B and the journal's size; <RT·code>isolated</RT·code>, when the gate gives up account A; then <RT·code>approved</RT·code> or <RT·code>refused</RT·code>; then <RT·code>interpreting</RT·code>; then <RT·code>interpreted</RT·code> or <RT·code>failed</RT·code>; and, for a journal with a result, <RT·code>result-forwarded</RT·code>, <RT·code>result-discarded</RT·code> when descriptor 3 was not open, or <RT·code>result-lost</RT·code> when it could not be written. A line breaks the gate's rules when it is not UTF-8, or holds a control character (C0, DEL or C1), or is longer than 4096 bytes, or is one line more than 2000; the gate then stops the program and refuses the journal. Unicode is otherwise welcome. The guard writes any control character it quotes as <RT·code>\u{XXXX}</RT·code>, and the example language's language check refuses any text that holds one.
             </p>
           </RT·section>
           <RT·section id="sec-transport">
@@ -469,38 +469,38 @@
             Two checks are needed by nearly every guard, whatever its instruction language. The first is that the journal is well formed: that it decodes, and agrees with the language definition in every declaration and argument. Man-In-Grey makes this check itself, the well-formed guard, <a href="#sec-wellformed"><RT·Counter·read snapshot="sec-wellformed" key="counter count"></RT·Counter·read></a>, from the definition, so a language writes no code for it. The second is who account A is. The gate had account A's uid from the kernel, as its real uid, and records it for the guard before giving it up, <a href="#sec-isolation-account"><RT·Counter·read snapshot="sec-isolation-account" key="counter count"></RT·Counter·read></a>; the real gid and supplementary groups the gate inherited from the invoking program stay account A's, and the guard reads them from the kernel. Account A cannot misstate any of them. A guard can therefore allow a journal from the accounts it names, or from the members of a group, as its constraints decide.
           </p>
           <p>
-            The other checks a guard makes belong to its instruction language: what a definition cannot say, such as an order the instructions are to come in or the values a literal can take, and the constraints. A language gives them as <RT·code>LIST_CHECK</RT·code>, in its guard check module, such as <RT·code>Emplace_Bio·GuardCheck.py</RT·code>, a list of named checks in the order they are made, each given the instructions as the well-formed guard has resolved them, its literals' values and, for each variable, the instruction that last wrote it. The example language's four checks are in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>.
+            The other checks a guard makes belong to its instruction language: what a definition cannot say, such as an order the instructions are to come in or the values a literal can take, and the constraints. A language gives them as <RT·code>LIST__CHECK</RT·code>, in its guard check module, such as <RT·code>Emplace_Bio·GuardCheck.py</RT·code>, a list of named checks in the order they are made, each given the instructions as the well-formed guard has resolved them, its literals' values and, for each variable, the instruction that last wrote it. The example language's four checks are in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>.
           </p>
           <RT·section id="sec-constraint">
             <RT·name>Constraint predicate</RT·name>
             <p>
-              A guard's constraints are code. The guard is a Python program, written for one application, so its constraints are Python functions written at the top of the guard itself, where they go with it, and no language for expressing constraints is needed. Each is a <RT·term>constraint predicate</RT·term>, named in the manner of <RT·code>is_allowed_account(user_name)</RT·code> or <RT·code>is_allowed_open(directory ,name ,mode ,owner ,permission)</RT·code>, and the guard refuses a journal when one does not answer <RT·code>True</RT·code>. A predicate can compare with a list, ask whether an account is in a group, or anything else Python can say. The predicates sit between the lines <RT·code># constraints begin</RT·code> and <RT·code># constraints end</RT·code>, so that <RT·code>install_gate</RT·code> can put in an administrator's and keep them when the guard is installed again. As promoted with Man-In-Grey, they refuse every account.
+              A guard's constraints are code. The guard is a Python program, written for one application, so its constraints are Python functions written at the top of the guard itself, where they go with it, and no language for expressing constraints is needed. Each is a <RT·term>constraint predicate</RT·term>, named in the manner of <RT·code>is__allowed_account(user_name)</RT·code> or <RT·code>is__allowed_open(directory ,name ,mode ,owner ,permission)</RT·code>, and the guard refuses a journal when one does not answer <RT·code>True</RT·code>. A predicate can compare with a list, ask whether an account is in a group, or anything else Python can say. The predicates sit between the lines <RT·code># constraints begin</RT·code> and <RT·code># constraints end</RT·code>, so that <RT·code>install-gate</RT·code> can put in an administrator's and keep them when the guard is installed again. As promoted with Man-In-Grey, they refuse every account.
             </p>
             <p>
               Some constraints recur from one guard to the next, and the library module <RT·code>Guard·LibraryConstraint.py</RT·code> holds them, for a guard's predicates to call:
             </p>
             <RT·dictionary key="Predicate" definition="True when">
-              <RT·entry key="is_group_member(user_name ,group_name)">
+              <RT·entry key="is__group_member(user_name ,group_name)">
                 The account is in the group by the group database: listed as a member in <RT·code>/etc/group</RT·code>, or having it as its primary group.
               </RT·entry>
-              <RT·entry key="has_real_group(group_name)">
-                The gate's real gid or supplementary groups include the group. These are what the invoking program held, passed on by the kernel, so an account that joined the group after its session began does not have it yet, though <RT·code>is_group_member</RT·code> already says yes.
+              <RT·entry key="has__real_group(group_name)">
+                The gate's real gid or supplementary groups include the group. These are what the invoking program held, passed on by the kernel, so an account that joined the group after its session began does not have it yet, though <RT·code>is__group_member</RT·code> already says yes.
               </RT·entry>
-              <RT·entry key="is_path_under(path ,directory)">
+              <RT·entry key="is__path_under(path ,directory)">
                 The path is the directory or lies within it, both absolute and in normal form.
               </RT·entry>
-              <RT·entry key="has_permission_within(permission ,limit)">
+              <RT·entry key="has__permission_within(permission ,limit)">
                 The permission sets no bit the limit does not: <RT·code>0o600</RT·code> is within <RT·code>0o644</RT·code>, and <RT·code>0o4755</RT·code>, setuid, is within neither <RT·code>0o644</RT·code> nor <RT·code>0o755</RT·code>.
               </RT·entry>
             </RT·dictionary>
             <p>
-              The guard checks and imports its modules, <RT·code>Guard·LibraryConstraint.py</RT·code> among them, only after its predicates are defined, and calls the predicates only after that, so a predicate can call <RT·code>Guard·LibraryConstraint.is_group_member</RT·code> by name, though the import comes later in the file. Code at the top level of the constraints runs before the ownership check, so the constraints hold only definitions, and imports of the standard library at most. The interpreter imports the guard program, for what execution needs from its constraints.
+              The guard checks and imports its modules, <RT·code>Guard·LibraryConstraint.py</RT·code> among them, only after its predicates are defined, and calls the predicates only after that, so a predicate can call <RT·code>Guard·LibraryConstraint.is__group_member</RT·code> by name, though the import comes later in the file. Code at the top level of the constraints runs before the ownership check, so the constraints hold only definitions, and imports of the standard library at most. The interpreter imports the guard program, for what execution needs from its constraints.
             </p>
           </RT·section>
           <RT·section>
             <RT·name>Verdict</RT·name>
             <p>
-              A guard reads the journal on its standard input. Its standard error is for the person: one line per finding, as <RT·code>&lt;tag&gt;: &lt;message&gt;</RT·code>, the first two <RT·code>name:</RT·code> and <RT·code>version:</RT·code>, then such lines as <RT·code>check_passed: wellformed</RT·code> or <RT·code>constraint_broken: &lt;what is wrong&gt;</RT·code>. Its standard output is for the verdict alone. A guard approves a journal by writing exactly one line there, <RT·code>guard &lt;language&gt; check passed</RT·code>, with the language name the gate has compiled in, and exiting 0. The gate takes the journal as approved on that line and that status together, and on nothing else, and only then admits it to the interpreter; a guard that refuses exits 1, and one that cannot check exits 2.
+              A guard reads the journal on its standard input. Its standard error is for the person: one line per finding, as <RT·code>&lt;tag&gt;: &lt;message&gt;</RT·code>, the first two <RT·code>name:</RT·code> and <RT·code>version:</RT·code>, then such lines as <RT·code>check-passed: wellformed</RT·code> or <RT·code>constraint-broken: &lt;what is wrong&gt;</RT·code>. Its standard output is for the verdict alone. A guard approves a journal by writing exactly one line there, <RT·code>guard &lt;language&gt; check passed</RT·code>, with the language name the gate has compiled in, and exiting 0. The gate takes the journal as approved on that line and that status together, and on nothing else, and only then admits it to the interpreter; a guard that refuses exits 1, and one that cannot check exits 2.
             </p>
             <p>
               The verdict travels out of band from the findings. A finding quotes the journal, a file name for instance, and goes to standard error, so nothing in a journal can put a line on standard output. A crash cannot approve a journal either: an uncaught Python exception exits 1, and a guard that dies leaves no verdict.
@@ -641,10 +641,10 @@
         <RT·section id="sec-isolation-account">
           <RT·name>Who account A is, afterwards</RT·name>
           <p>
-            Once the gate has given up account A, the kernel no longer says who account A is: the guard and the interpreter find account B as their real uid. The gate records account A before giving it up, in <RT·code>MIG_REAL_UID</RT·code>, <RT·code>MIG_REAL_GID</RT·code> and <RT·code>MIG_REAL_USER_NAME</RT·code>, having first cleared the environment, so the variables say what the gate says and nothing account A put there. The guard and the interpreter read account A from them, and refuse to work when the uid and the user name do not name the same account. Knowledge of account A therefore rests on the gate, which had it from the kernel.
+            Once the gate has given up account A, the kernel no longer says who account A is: the guard and the interpreter find account B as their real uid. The gate records account A before giving it up, in <RT·code>MIG__REAL_UID</RT·code>, <RT·code>MIG__REAL_GID</RT·code> and <RT·code>MIG__REAL_USER_NAME</RT·code>, having first cleared the environment, so the variables say what the gate says and nothing account A put there. The guard and the interpreter read account A from them, and refuse to work when the uid and the user name do not name the same account. Knowledge of account A therefore rests on the gate, which had it from the kernel.
           </p>
           <p>
-            The gate gives up only the uid. Its real gid and supplementary groups stay account A's, so <RT·code>Guard·LibraryConstraint.has_real_group</RT·code> still answers for account A's groups.
+            The gate gives up only the uid. Its real gid and supplementary groups stay account A's, so <RT·code>Guard·LibraryConstraint.has__real_group</RT·code> still answers for account A's groups.
           </p>
         </RT·section>
 
@@ -670,14 +670,14 @@
           <RT·code>
             consumer/Man_In_Grey/Man-In-Grey                          the command a person runs
             consumer/Man_In_Grey/Man_In_Grey.py                       the orchestrator
-            consumer/Man_In_Grey/install_gate                         installs a gate setuid, run by root
+            consumer/Man_In_Grey/install-gate                         installs a gate setuid, run by root
             consumer/Man_In_Grey/Guard.py                             the general guard
             consumer/Man_In_Grey/Guard·LibraryConstraint.py           predicates that recur among guards' constraints
-            consumer/Man_In_Grey/Guard·WellFormed.py                  the well-formed guard: is_well_formed_journal
+            consumer/Man_In_Grey/Guard·WellFormed.py                  the well-formed guard: is__well_formed_journal
             consumer/Man_In_Grey/Interpreter.py                       the general interpreter
             consumer/Man_In_Grey/Journal.py                           the journal's data form: decode, print, the result record
             consumer/Man_In_Grey/Journal·Interface.py                 the composer's side: variables and the journal interface
-            consumer/Man_In_Grey/Language.py                          the language definition: is_well_formed_language, its hash
+            consumer/Man_In_Grey/Language.py                          the language definition: is__well_formed_language, its hash
             consumer/Man_In_Grey/Emplace_Bio·Guard.py                 the example language's guard, with its constraints at its top
             consumer/Man_In_Grey/Emplace_Bio·GuardCheck.py            its checks for the guard
             consumer/Man_In_Grey/Emplace_Bio·Interpreter.py           its interpreter
@@ -721,13 +721,13 @@
             This composer writes in the example language; <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a> shows a whole one. <RT·code>compose</RT·code> is given <RT·code>prov</RT·code>, which says where the composer is:
           </p>
           <RT·dictionary key="Field of prov" definition="Meaning">
-            <RT·entry key="implied_fname">
+            <RT·entry key="implied__fname">
               The composer's own file name less <RT·code>.py</RT·code>, for a composer named for the file it writes.
             </RT·entry>
             <RT·entry key="process_user">
               The name of account A.
             </RT·entry>
-            <RT·entry key="composer_abs_fpath, composer_dir_dpath, cwd_dpath">
+            <RT·entry key="composer__abs_fpath, composer_dir__dpath, cwd__dpath">
               The composer's absolute path, the directory holding it, and the working directory of the run.
             </RT·entry>
           </RT·dictionary>
@@ -751,7 +751,7 @@
           <RT·code>
             def compose(prov ,journal_iface):
               file = journal_iface.declare("unbound_conf" ,"file")
-              journal_iface.open("/etc/unbound" ,"unbound.conf" ,"replace_keep" ,prov.process_user ,0o444 ,file)
+              journal_iface.open("/etc/unbound" ,"unbound.conf" ,"replace-keep" ,prov.process_user ,0o444 ,file)
               journal_iface.write(file ,b"server:\n  do-ip6: no\n")
               summary = journal_iface.declare("summary" ,"summary")
               journal_iface.summary(summary)
@@ -765,8 +765,8 @@
             A run that changes files is best preceded by two that do not. The first shows the journal while nothing has left the person's account; the second has the guard check the journal, and the gate stop before the interpreter:
           </p>
           <RT·code>
-            Man-In-Grey orchestrate composer/bio.py gate &lt;gate&gt; print compose_only
-            Man-In-Grey orchestrate composer/bio.py gate &lt;gate&gt; check_only
+            Man-In-Grey orchestrate composer/bio.py gate &lt;gate&gt; print compose-only
+            Man-In-Grey orchestrate composer/bio.py gate &lt;gate&gt; check-only
             Man-In-Grey orchestrate composer/bio.py gate &lt;gate&gt;
           </RT·code>
           <RT·dictionary key="Command or option" definition="Meaning">
@@ -779,15 +779,15 @@
             <RT·entry key="print">
               Print the journal after composing.
             </RT·entry>
-            <RT·entry key="compose_only">
+            <RT·entry key="compose-only">
               Stop after composing; nothing reaches the gate.
             </RT·entry>
-            <RT·entry key="check_only">
+            <RT·entry key="check-only">
               Have the gate run the guard and not the interpreter.
             </RT·entry>
           </RT·dictionary>
           <p>
-            The command and its path come first, then the gate, and the options follow, as plain words; given no arguments, <RT·code>Man-In-Grey</RT·code> prints its help, and so does the gate. A journal with a result has it printed as one line, <RT·code>result: &lt;type name&gt; &lt;value&gt;</RT·code>. The exit status is 0 when the run did what it was asked; 1 when the guard refused the journal or an instruction failed to execute; and 2 when the run could not start, the composer failed or was refused, or the gate, guard or interpreter could not run or broke the gate's rules. The guard's and interpreter's lines are also in the system log; on a system with journald, <RT·code>journalctl -t Man-In-Grey_Gate</RT·code> shows them.
+            The command and its path come first, then the gate, and the options follow, as plain words; given no arguments, <RT·code>Man-In-Grey</RT·code> prints its help, and so does the gate. A journal with a result has it printed as one line, <RT·code>result: &lt;type name&gt; &lt;value&gt;</RT·code>. The exit status is 0 when the run did what it was asked; 1 when the guard refused the journal or an instruction failed to execute; and 2 when the run could not start, the composer failed or was refused, or the gate, guard or interpreter could not run or broke the gate's rules. The guard's and interpreter's lines are also in the system log; on a system with journald, <RT·code>journalctl -t Man-In-Grey_gate</RT·code> shows them.
           </p>
         </RT·section>
 
@@ -797,19 +797,19 @@
             A setuid gate and everything its guard and interpreter load are to be owned by root or by account B, in directories no other account can write, and the gate, the guard and the interpreter check this on every run. A Harmony <RT·code>consumer/</RT·code> directory is owned by the person who promoted into it, so a setuid gate there refuses to run, and so does root running the gate there. Installing an instruction language's gate, guard and interpreter is therefore a step of its own, done with root's rights by the Man-In-Grey administrator, the person who installs Man-In-Grey and the applications that use it.
           </p>
           <p>
-            The installation is done by <RT·code>install_gate</RT·code>, which is promoted beside <RT·code>Man-In-Grey</RT·code> and is run by root. The administrator runs it through <RT·code>Man-In-Grey</RT·code>:
+            The installation is done by <RT·code>install-gate</RT·code>, which is promoted beside <RT·code>Man-In-Grey</RT·code> and is run by root. The administrator runs it through <RT·code>Man-In-Grey</RT·code>:
           </p>
           <RT·code>
             consumer/Man_In_Grey/Man-In-Grey install &lt;gate&gt; owner &lt;account&gt; [group &lt;group&gt;] into &lt;directory&gt; [constraints &lt;file&gt;]
           </RT·code>
           <p>
-            Run by root, <RT·code>Man-In-Grey install</RT·code> runs <RT·code>install_gate</RT·code> directly. Run by any other account, such as a developer account without <RT·code>sudo</RT·code>, it runs it through <RT·code>su</RT·code>, which asks for root's password; it first makes a constraints file's path absolute, as root's shell starts in another directory. Root can also run <RT·code>install_gate install</RT·code> itself, with the same arguments. Either way the administrator runs, with root's rights, the <RT·code>install_gate</RT·code> and the files of the tree he names, so he is to install only a tree he has reviewed.
+            Run by root, <RT·code>Man-In-Grey install</RT·code> runs <RT·code>install-gate</RT·code> directly. Run by any other account, such as a developer account without <RT·code>sudo</RT·code>, it runs it through <RT·code>su</RT·code>, which asks for root's password; it first makes a constraints file's path absolute, as root's shell starts in another directory. Root can also run <RT·code>install-gate install</RT·code> itself, with the same arguments. Either way the administrator runs, with root's rights, the <RT·code>install-gate</RT·code> and the files of the tree he names, so he is to install only a tree he has reviewed.
           </p>
           <p>
             It copies <RT·code>Man_In_Grey/</RT·code> and the one gate named from <RT·code>Man_In_Grey__Gate/</RT·code> into the directory, side by side, as the gate's compiled paths expect. Every file and directory it installs is owned by root and writable by no other account, except the gate, which it gives to account B, the owner account named, and to a group, and then makes setuid and setgid. The order matters, since changing a file's owner clears its setuid and setgid bits. The gate's mode is <RT·code>6755</RT·code>: the mode <RT·code>755</RT·code> with the setuid bit, <RT·code>4000</RT·code>, and the setgid bit, <RT·code>2000</RT·code>, added. The setgid bit gives the gate the group as its effective gid, and an interpreter makes its files with the effective gid's group: only root can give a file away, so an interpreter whose effective uid is that of an account B other than root makes files that account B owns, in that group. The group is account B's own unless <RT·code>group &lt;group&gt;</RT·code> names another, such as a group the web server reads through. When account B and the group are both root's, the setgid bit changes nothing, and the mode is <RT·code>4755</RT·code>.
           </p>
           <p>
-            With <RT·code>constraints &lt;file&gt;</RT·code>, a Python file of predicates, <RT·code>install_gate</RT·code> puts them between the constraint marks of the gate's guard. Without it, the constraints of a guard already installed are kept, so installing again brings a new guard and keeps the administrator's constraints; a first installation gets the guard's as promoted, which refuse every account. The constraints of every other installed guard are kept too. <RT·code>install_gate</RT·code> refuses a directory that is not absolute, that an account other than root owns or can write, or that is on a file system mounted <RT·code>nosuid</RT·code>, where the kernel ignores the setuid and setgid bits, as it does on removable drives and some separately mounted <RT·code>/home</RT·code> directories. It ends by printing the installed gate's flags, as root sees them: real uid and gid root's, effective uid account B's, effective gid the group's. Promotion replaces files and sets neither the owner nor the setuid bit, so the installation is redone after each promotion that changes the gate, the guard or the interpreter. The installation is a candidate for Man-In-Grey itself, once there is a language for installing programs.
+            With <RT·code>constraints &lt;file&gt;</RT·code>, a Python file of predicates, <RT·code>install-gate</RT·code> puts them between the constraint marks of the gate's guard. Without it, the constraints of a guard already installed are kept, so installing again brings a new guard and keeps the administrator's constraints; a first installation gets the guard's as promoted, which refuse every account. The constraints of every other installed guard are kept too. <RT·code>install-gate</RT·code> refuses a directory that is not absolute, that an account other than root owns or can write, or that is on a file system mounted <RT·code>nosuid</RT·code>, where the kernel ignores the setuid and setgid bits, as it does on removable drives and some separately mounted <RT·code>/home</RT·code> directories. It ends by printing the installed gate's flags, as root sees them: real uid and gid root's, effective uid account B's, effective gid the group's. Promotion replaces files and sets neither the owner nor the setuid bit, so the installation is redone after each promotion that changes the gate, the guard or the interpreter. The installation is a candidate for Man-In-Grey itself, once there is a language for installing programs.
           </p>
         </RT·section>
 
@@ -819,7 +819,7 @@
             The tester's test <RT·code>tester/authored/Emplace-Bio</RT·code> copies the promoted Man-In-Grey into its scratchpad directory, puts constraints of its own at the top of the copy's guard, and runs the copy through the example language's gate, not setuid, so accounts A and B are the same. The gate checks ownership on every run, so the test makes its copy writable by its owner alone, and every directory from <RT·code>/</RT·code> down to the scratchpad directory is to be writable by no account but its owner too.
           </p>
           <p>
-            It checks thirty-two things. A page with every style and with text that looks like markup is compared with <RT·code>expected/page.html</RT·code>, and its picture with the one given. A later run with a JPEG places it and removes the PNG, and a run with no picture removes the JPEG. A <RT·code>check_only</RT·code> run changes nothing. Seven journals are then made without the journal interface and given to the gate directly, as a program other than the orchestrator could: one whose text instruction carries a file name as a third argument, one with a style the language does not have, one with text before any paragraph, one with an SVG picture, one with more text than its constraints allow, one from an account they do not allow, and one for a page that has been made a symbolic link. Each is refused by the check that is to refuse it, and changes nothing. Last, the gate is started three times from a process that leaves signal state behind, as <a href="#sec-latent-signal"><RT·Counter·read snapshot="sec-latent-signal" key="counter count"></RT·Counter·read></a> describes:
+            It checks thirty-two things. A page with every style and with text that looks like markup is compared with <RT·code>expected/page.html</RT·code>, and its picture with the one given. A later run with a JPEG places it and removes the PNG, and a run with no picture removes the JPEG. A <RT·code>check-only</RT·code> run changes nothing. Seven journals are then made without the journal interface and given to the gate directly, as a program other than the orchestrator could: one whose text instruction carries a file name as a third argument, one with a style the language does not have, one with text before any paragraph, one with an SVG picture, one with more text than its constraints allow, one from an account they do not allow, and one for a page that has been made a symbolic link. Each is refused by the check that is to refuse it, and changes nothing. Last, the gate is started three times from a process that leaves signal state behind, as <a href="#sec-latent-signal"><RT·Counter·read snapshot="sec-latent-signal" key="counter count"></RT·Counter·read></a> describes:
           </p>
           <RT·code>
             authored/Emplace-Bio/run test
@@ -849,8 +849,8 @@
             <RT·entry key="paragraph()">
               Starts a paragraph.
             </RT·entry>
-            <RT·entry key="text(run_text ,list_style)">
-              A run of text in the current paragraph. <RT·code>list_style</RT·code> is a list drawn from <RT·code>strong</RT·code>, <RT·code>emphasis</RT·code>, <RT·code>underline</RT·code> and <RT·code>strikethrough</RT·code>; an empty list is plain text.
+            <RT·entry key="text(run_text ,list__style)">
+              A run of text in the current paragraph. <RT·code>list__style</RT·code> is a list drawn from <RT·code>strong</RT·code>, <RT·code>emphasis</RT·code>, <RT·code>underline</RT·code> and <RT·code>strikethrough</RT·code>; an empty list is plain text.
             </RT·entry>
             <RT·entry key="picture(image)">
               The bytes of a PNG or JPEG image. At most once.
@@ -861,24 +861,24 @@
           </p>
           <RT·code>
             DEFINITION = {
-              "list_type": [
+              "list__type": [
                 ["name_text" ,"text"]
                 ,["run_text" ,"text"]
-                ,["list_style" ,["list" ,"text"]]
+                ,["list__style" ,["list" ,"text"]]
                 ,["image" ,"bytes"]
               ]
-              ,"list_format": [
+              ,"list__format": [
                 ["format_name" ,["in" ,"name_text"]]
-                ,["format_empty"]
-                ,["format_run" ,["in" ,"run_text"] ,["in" ,"list_style"]]
-                ,["format_image" ,["in" ,"image"]]
+                ,["format__empty"]
+                ,["format__run" ,["in" ,"run_text"] ,["in" ,"list__style"]]
+                ,["format__image" ,["in" ,"image"]]
               ]
-              ,"list_result": []
-              ,"map_instruction": {
+              ,"list__result": []
+              ,"map__instruction": {
                 "display_name": "format_name"
-                ,"paragraph": "format_empty"
-                ,"text": "format_run"
-                ,"picture": "format_image"
+                ,"paragraph": "format__empty"
+                ,"text": "format__run"
+                ,"picture": "format__image"
               }
             }
           </RT·code>
@@ -916,7 +916,7 @@
                 journal_iface.paragraph()
                 for content ,style in paragraph:
                   journal_iface.text(content ,style)
-              journal_iface.picture((Path(prov.composer_dir_dpath).parent / "picture.jpg").read_bytes())
+              journal_iface.picture((Path(prov.composer_dir__dpath).parent / "picture.jpg").read_bytes())
           </RT·code>
           <p>
             A composer could as well read a file in a notation its author likes, such as <RT·code>*emphasis*</RT·code>, and turn it into runs. That conversion runs with the person's own uid, so a mistake in it stays on his side; the gate only ever receives runs and style names.
@@ -926,27 +926,27 @@
         <RT·section>
           <RT·name>The constraints</RT·name>
           <p>
-            The administrator writes the guard's constraints in a file, here <RT·code>bio_constraint.py</RT·code>, and <RT·code>install_gate</RT·code> puts them at the top of the installed <RT·code>Emplace_Bio·Guard.py</RT·code>:
+            The administrator writes the guard's constraints in a file, here <RT·code>bio-constraint.py</RT·code>, and <RT·code>install-gate</RT·code> puts them at the top of the installed <RT·code>Emplace_Bio·Guard.py</RT·code>:
           </p>
           <RT·code>
-            def is_allowed_account(user_name):
+            def is__allowed_account(user_name):
               return user_name in ("Thomas" ,"Alice")
 
-            def is_allowed_text_size(byte_count):
+            def is__allowed_text_size(byte_count):
               return byte_count &lt;= 8192
 
-            def is_allowed_picture_size(byte_count):
+            def is__allowed_picture_size(byte_count):
               return byte_count &lt;= 1 &lt;&lt; 20
 
             def page_directory():
               return "/srv/http/bio"
           </RT·code>
           <p>
-            One set of constraints serves every account, since the page's name follows from the account. <RT·code>is_allowed_text_size</RT·code> is given the bytes of the display name and text together. <RT·code>page_directory</RT·code> is not a predicate: the guard checks that it gives an absolute directory, and the interpreter places the pages there. To give a page to every member of a group instead:
+            One set of constraints serves every account, since the page's name follows from the account. <RT·code>is__allowed_text_size</RT·code> is given the bytes of the display name and text together. <RT·code>page_directory</RT·code> is not a predicate: the guard checks that it gives an absolute directory, and the interpreter places the pages there. To give a page to every member of a group instead:
           </p>
           <RT·code>
-            def is_allowed_account(user_name):
-              return Guard·LibraryConstraint.is_group_member(user_name ,"bio")
+            def is__allowed_account(user_name):
+              return Guard·LibraryConstraint.is__group_member(user_name ,"bio")
           </RT·code>
         </RT·section>
 
@@ -960,7 +960,7 @@
               One display name; at most one picture; text only within a paragraph, and no paragraph without text; every style one of the four, none twice; no control character in any text.
             </RT·entry>
             <RT·entry key="constraint">
-              <RT·code>is_allowed_account</RT·code> allows account A; <RT·code>is_allowed_text_size</RT·code> and <RT·code>is_allowed_picture_size</RT·code> allow the text and the picture; <RT·code>page_directory()</RT·code> gives an absolute directory.
+              <RT·code>is__allowed_account</RT·code> allows account A; <RT·code>is__allowed_text_size</RT·code> and <RT·code>is__allowed_picture_size</RT·code> allow the text and the picture; <RT·code>page_directory()</RT·code> gives an absolute directory.
             </RT·entry>
             <RT·entry key="content">
               The picture begins with the signature of a PNG or a JPEG file. SVG is refused on purpose: it is a document that can hold script, and run it when opened by itself.
@@ -1013,29 +1013,29 @@
             and installs the gate with the constraints above, from his own account, here <RT·code>ubuntu</RT·code>; <RT·code>su</RT·code> asks for root's password:
           </p>
           <RT·code>
-            consumer/Man_In_Grey/Man-In-Grey install Man_In_Grey__Gate·Emplace_Bio owner http into /usr/local/lib/Man-In-Grey constraints bio_constraint.py
+            consumer/Man_In_Grey/Man-In-Grey install Man_In_Grey__Gate·Emplace_Bio owner http into /usr/local/lib/Man-In-Grey constraints bio-constraint.py
           </RT·code>
           <RT·code>
-            install_gate is run by root; su asks for root's password
+            install-gate is run by root; su asks for root's password
             Password:
-            install_gate: installed /usr/local/lib/Man-In-Grey/Man_In_Grey/
-            install_gate: put the constraints of /home/ubuntu/bio_constraint.py in /usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Guard.py
-            install_gate: installed /usr/local/lib/Man-In-Grey/Man_In_Grey__Gate/Man_In_Grey__Gate·Emplace_Bio, owner http:http, mode 6755
-            install_gate: its flags, as seen by root:
+            install-gate: installed /usr/local/lib/Man-In-Grey/Man_In_Grey/
+            install-gate: put the constraints of /home/ubuntu/bio-constraint.py in /usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Guard.py
+            install-gate: installed /usr/local/lib/Man-In-Grey/Man_In_Grey__Gate/Man_In_Grey__Gate·Emplace_Bio, owner http:http, mode 6755
+            install-gate: its flags, as seen by root:
             real.uid=0
-            real.user_name=root
+            real.user-name=root
             real.gid=0
-            real.group_name=root
+            real.group-name=root
             effective.uid=996
-            effective.user_name=http
+            effective.user-name=http
             effective.gid=995
-            effective.group_name=http
-            uid_differ=1
-            gid_differ=1
+            effective.group-name=http
+            uid-differ=1
+            gid-differ=1
             language=Emplace_Bio
             guard.path=/usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Guard.py
             interpreter.path=/usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Interpreter.py
-            install_gate: run it as: /usr/local/lib/Man-In-Grey/Man_In_Grey/Man-In-Grey orchestrate &lt;composer&gt; gate /usr/local/lib/Man-In-Grey/Man_In_Grey__Gate/Man_In_Grey__Gate·Emplace_Bio
+            install-gate: run it as: /usr/local/lib/Man-In-Grey/Man_In_Grey/Man-In-Grey orchestrate &lt;composer&gt; gate /usr/local/lib/Man-In-Grey/Man_In_Grey__Gate/Man_In_Grey__Gate·Emplace_Bio
           </RT·code>
           <p>
             The web server is to serve <RT·code>/srv/http/bio</RT·code> as static files, with no server-side processing, which is how it serves an <RT·code>.html</RT·code> file unless configured otherwise.
@@ -1057,11 +1057,11 @@
             guard: version: 4
             guard: constraints: /usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Guard.py
             guard: journal: 0 variables, 10 instructions
-            guard: check_passed: wellformed
-            guard: check_passed: language
-            guard: check_passed: constraint
-            guard: check_passed: content
-            guard: check_passed: filesystem
+            guard: check-passed: wellformed
+            guard: check-passed: language
+            guard: check-passed: constraint
+            guard: check-passed: content
+            guard: check-passed: filesystem
             gate: approved: guard Emplace_Bio check passed
             gate: interpreting: /usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Interpreter.py
             interpreter: emplaced: /srv/http/bio/Thomas.jpg
@@ -1078,13 +1078,13 @@
             guard: version: 4
             guard: constraints: /usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Guard.py
             guard: journal: 0 variables, 10 instructions
-            guard: check_passed: wellformed
-            guard: check_passed: language
-            guard: constraint_broken: gate invoking account 'alice' is not allowed to give journals to this gate
+            guard: check-passed: wellformed
+            guard: check-passed: language
+            guard: constraint-broken: gate invoking account 'alice' is not allowed to give journals to this gate
             gate: refused: by the guard
           </RT·code>
           <p>
-            <RT·code>is_allowed_account</RT·code> allows <RT·code>Alice</RT·code>, and compares names exactly, so the account <RT·code>alice</RT·code> is not her.
+            <RT·code>is__allowed_account</RT·code> allows <RT·code>Alice</RT·code>, and compares names exactly, so the account <RT·code>alice</RT·code> is not her.
           </p>
         </RT·section>
 
@@ -1193,12 +1193,12 @@
         <RT·section id="sec-group">
           <RT·name>Group and setgid</RT·name>
           <p>
-            The gate gives up account A's uid when it isolates itself, <a href="#sec-isolate"><RT·Counter·read snapshot="sec-isolate" key="counter count"></RT·Counter·read></a>, but not account A's real gid or supplementary groups. Signals are permitted by uid alone, so the groups do not let account A interrupt it, and keeping them lets a constraint ask about account A's groups with <RT·code>Guard·LibraryConstraint.has_real_group</RT·code>. Three pieces of work remain:
+            The gate gives up account A's uid when it isolates itself, <a href="#sec-isolate"><RT·Counter·read snapshot="sec-isolate" key="counter count"></RT·Counter·read></a>, but not account A's real gid or supplementary groups. Signals are permitted by uid alone, so the groups do not let account A interrupt it, and keeping them lets a constraint ask about account A's groups with <RT·code>Guard·LibraryConstraint.has__real_group</RT·code>. Three pieces of work remain:
           </p>
           <ul>
-            <li><em>Recording account A's groups.</em> If the gate gave up account A's gids too, with <RT·code>setregid</RT·code> and <RT·code>setgroups</RT·code>, so that nothing of account A's identity remained in the process, it would record the groups first, as it records the uid, and <RT·code>has_real_group</RT·code> would read them from the record.</li>
-            <li><em>A constraint by group.</em> <RT·code>Guard·LibraryConstraint.is_group_member</RT·code> and <RT·code>has_real_group</RT·code> let a guard admit the members of a group, but the example's guard admits accounts by name; a group, such as <RT·code>bio</RT·code>, is the more natural grant on a real host, and the example could show it.</li>
-            <li><em>Which group the interpreter's files take.</em> A setgid gate makes its files in the group <RT·code>install_gate</RT·code> gives it. A language that places files for several groups would need the interpreter to set each file's group, which an account B other than root can do only to the groups account B belongs to.</li>
+            <li><em>Recording account A's groups.</em> If the gate gave up account A's gids too, with <RT·code>setregid</RT·code> and <RT·code>setgroups</RT·code>, so that nothing of account A's identity remained in the process, it would record the groups first, as it records the uid, and <RT·code>has__real_group</RT·code> would read them from the record.</li>
+            <li><em>A constraint by group.</em> <RT·code>Guard·LibraryConstraint.is__group_member</RT·code> and <RT·code>has__real_group</RT·code> let a guard admit the members of a group, but the example's guard admits accounts by name; a group, such as <RT·code>bio</RT·code>, is the more natural grant on a real host, and the example could show it.</li>
+            <li><em>Which group the interpreter's files take.</em> A setgid gate makes its files in the group <RT·code>install-gate</RT·code> gives it. A language that places files for several groups would need the interpreter to set each file's group, which an account B other than root can do only to the groups account B belongs to.</li>
           </ul>
         </RT·section>
 

@@ -9,17 +9,17 @@ cannot change it. The guard, the interpreter and the journal interface all
 read the same definition, and a journal carries the hash of the definition
 it was composed against.
 
-  list_type     a list of type declarations, each [<name> ,<type expression>].
+  list__type     a list of type declarations, each [<name> ,<type expression>].
                 A type expression is a primitive, the name of a type declared
                 earlier in the list, or a compound:
                   ["dictionary" ,[<key> ,<type expression>] ...]
                   ["list" ,<type expression>]
-  list_format   a list of instruction formats, each
+  list__format   a list of instruction formats, each
                 [<format name> ,[<direction> ,<type name>] ...], where the
                 direction is in, out or in-out, and the type name is a
                 primitive or a declared type. Arguments are given by position.
-  list_result   the list of type names a journal's result can have.
-  map_instruction
+  list__result   the list of type names a journal's result can have.
+  map__instruction
                 a map from each operation specifier to its format name. The
                 operation specifier is also the name of the function that
                 carries out the instruction.
@@ -33,7 +33,7 @@ variable of the type text, even when short_name is declared as text, so a
 reference passes only where the format names its type exactly. A literal is
 compared with the type's structure.
 
-This module is a library. is_well_formed_language(data ,report) answers
+This module is a library. is__well_formed_language(data ,report) answers
 whether a definition is well formed, reporting each problem;
 Definition(name ,data) is a definition that has passed, as the guard, the
 interpreter and the journal interface each use it.
@@ -43,26 +43,26 @@ import hashlib ,keyword
 
 import cbor2
 
-LIST_PRIMITIVE = ("text" ,"integer" ,"bytes" ,"boolean" ,"handle")
-LIST_COMPOUND = ("dictionary" ,"list")
-LIST_DIRECTION = ("in" ,"out" ,"in-out")
-LIST_SECTION = ("list_type" ,"list_format" ,"list_result" ,"map_instruction")
+LIST__PRIMITIVE = ("text" ,"integer" ,"bytes" ,"boolean" ,"handle")
+LIST__COMPOUND = ("dictionary" ,"list")
+LIST__DIRECTION = ("in" ,"out" ,"in-out")
+LIST__SECTION = ("list__type" ,"list__format" ,"list__result" ,"map__instruction")
 
 # operation specifiers the journal interface and the interpreter keep for themselves
-LIST_OPERATION_RESERVED = ("declare" ,"result" ,"finish" ,"release")
+LIST__OPERATION_RESERVED = ("declare" ,"result" ,"finish" ,"release")
 
 
 class DefinitionError(Exception):
   """A language definition is not well formed."""
 
 
-def is_control(character):
+def is__control(character):
   code = ord(character)
   return code < 0x20 or code == 0x7F or 0x80 <= code <= 0x9F
 
-def is_name(value):
+def is__name(value):
   "True for a name: text that is not empty and holds no space and no control character"
-  return type(value) is str and value != "" and not any(c.isspace() or is_control(c) for c in value)
+  return type(value) is str and value != "" and not any(c.isspace() or is__control(c) for c in value)
 
 def hash_text(data):
   "the SHA-256 of a definition's canonical CBOR encoding, in hexadecimal"
@@ -72,10 +72,10 @@ def hash_text(data):
 # --------------------------------------------------------------------------------
 # the well-formed check of a definition
 
-def _type_expression_problem(expression ,map_type ,where):
-  "None when expression is a well-formed type expression over the primitives and the types in map_type"
+def _type_expression__problem(expression ,map__type ,where):
+  "None when expression is a well-formed type expression over the primitives and the types in map__type"
   if type(expression) is str:
-    if expression in LIST_PRIMITIVE or expression in map_type:
+    if expression in LIST__PRIMITIVE or expression in map__type:
       return None
     return f"{where}: {expression!r} is neither a primitive nor a type declared before it"
   if type(expression) is not list or not expression:
@@ -84,108 +84,108 @@ def _type_expression_problem(expression ,map_type ,where):
   if head == "list":
     if len(expression) != 2:
       return f"{where}: a list type is [\"list\" ,<element type>]"
-    return _type_expression_problem(expression[1] ,map_type ,f"{where} list element")
+    return _type_expression__problem(expression[1] ,map__type ,f"{where} list element")
   if head == "dictionary":
-    set_key = set()
+    set__key = set()
     for entry in expression[1:]:
-      if type(entry) is not list or len(entry) != 2 or not is_name(entry[0]):
+      if type(entry) is not list or len(entry) != 2 or not is__name(entry[0]):
         return f"{where}: a dictionary entry is [<key> ,<type expression>]"
-      if entry[0] in set_key:
+      if entry[0] in set__key:
         return f"{where}: the key {entry[0]!r} is given twice"
-      set_key.add(entry[0])
-      problem = _type_expression_problem(entry[1] ,map_type ,f"{where} key {entry[0]}")
+      set__key.add(entry[0])
+      problem = _type_expression__problem(entry[1] ,map__type ,f"{where} key {entry[0]}")
       if problem: return problem
     return None
-  return f"{where}: {head!r} is not a compound type; the compounds are {', '.join(LIST_COMPOUND)}"
+  return f"{where}: {head!r} is not a compound type; the compounds are {', '.join(LIST__COMPOUND)}"
 
-def _is_handle_holder(expression ,map_type):
+def _is__handle_holder(expression ,map__type):
   "True when the type expression is, or holds, a handle"
   if type(expression) is str:
     if expression == "handle": return True
-    if expression in map_type: return _is_handle_holder(map_type[expression] ,map_type)
+    if expression in map__type: return _is__handle_holder(map__type[expression] ,map__type)
     return False
   if expression[0] == "list":
-    return _is_handle_holder(expression[1] ,map_type)
-  return any(_is_handle_holder(entry[1] ,map_type) for entry in expression[1:])
+    return _is__handle_holder(expression[1] ,map__type)
+  return any(_is__handle_holder(entry[1] ,map__type) for entry in expression[1:])
 
-def list_problem_language(data):
+def list__problem_language(data):
   "every problem with a language definition, as a list of messages; empty when it is well formed"
   if type(data) is not dict:
     return ["the definition is not a map"]
-  if set(data) != set(LIST_SECTION):
-    return [f"the definition has the sections {sorted(data)}; it is to have exactly {list(LIST_SECTION)}"]
-  list_problem = []
+  if set(data) != set(LIST__SECTION):
+    return [f"the definition has the sections {sorted(data)}; it is to have exactly {list(LIST__SECTION)}"]
+  list__problem = []
 
-  map_type = {}
-  if type(data["list_type"]) is not list:
-    list_problem.append("list_type: is not a list")
+  map__type = {}
+  if type(data["list__type"]) is not list:
+    list__problem.append("list__type: is not a list")
   else:
-    for index ,entry in enumerate(data["list_type"]):
-      where = f"list_type @{index}"
+    for index ,entry in enumerate(data["list__type"]):
+      where = f"list__type @{index}"
       if type(entry) is not list or len(entry) != 2:
-        list_problem.append(f"{where}: a type declaration is [<name> ,<type expression>]"); continue
+        list__problem.append(f"{where}: a type declaration is [<name> ,<type expression>]"); continue
       name ,expression = entry
-      if not is_name(name):
-        list_problem.append(f"{where}: {name!r} is not a name"); continue
-      if name in LIST_PRIMITIVE or name in LIST_COMPOUND or name in map_type:
-        list_problem.append(f"{where}: the type name {name!r} is a primitive, a compound or declared before"); continue
-      problem = _type_expression_problem(expression ,map_type ,f"{where} {name}")
-      if problem: list_problem.append(problem); continue
-      map_type[name] = expression
+      if not is__name(name):
+        list__problem.append(f"{where}: {name!r} is not a name"); continue
+      if name in LIST__PRIMITIVE or name in LIST__COMPOUND or name in map__type:
+        list__problem.append(f"{where}: the type name {name!r} is a primitive, a compound or declared before"); continue
+      problem = _type_expression__problem(expression ,map__type ,f"{where} {name}")
+      if problem: list__problem.append(problem); continue
+      map__type[name] = expression
 
-  set_format_name = set()
-  if type(data["list_format"]) is not list:
-    list_problem.append("list_format: is not a list")
+  set__format_name = set()
+  if type(data["list__format"]) is not list:
+    list__problem.append("list__format: is not a list")
   else:
-    for index ,entry in enumerate(data["list_format"]):
-      where = f"list_format @{index}"
-      if type(entry) is not list or not entry or not is_name(entry[0]):
-        list_problem.append(f"{where}: an instruction format is [<format name> ,[<direction> ,<type name>] ...]"); continue
+    for index ,entry in enumerate(data["list__format"]):
+      where = f"list__format @{index}"
+      if type(entry) is not list or not entry or not is__name(entry[0]):
+        list__problem.append(f"{where}: an instruction format is [<format name> ,[<direction> ,<type name>] ...]"); continue
       name = entry[0]
-      if name in set_format_name:
-        list_problem.append(f"{where}: the format {name!r} is declared twice"); continue
-      set_format_name.add(name)
+      if name in set__format_name:
+        list__problem.append(f"{where}: the format {name!r} is declared twice"); continue
+      set__format_name.add(name)
       for position ,argument in enumerate(entry[1:]):
         if type(argument) is not list or len(argument) != 2:
-          list_problem.append(f"{where} {name} argument {position}: an argument is [<direction> ,<type name>]"); continue
+          list__problem.append(f"{where} {name} argument {position}: an argument is [<direction> ,<type name>]"); continue
         direction ,type_name = argument
-        if direction not in LIST_DIRECTION:
-          list_problem.append(f"{where} {name} argument {position}: {direction!r} is not one of {', '.join(LIST_DIRECTION)}")
-        if type(type_name) is not str or not (type_name in LIST_PRIMITIVE or type_name in map_type):
-          list_problem.append(f"{where} {name} argument {position}: {type_name!r} is neither a primitive nor a declared type")
+        if direction not in LIST__DIRECTION:
+          list__problem.append(f"{where} {name} argument {position}: {direction!r} is not one of {', '.join(LIST__DIRECTION)}")
+        if type(type_name) is not str or not (type_name in LIST__PRIMITIVE or type_name in map__type):
+          list__problem.append(f"{where} {name} argument {position}: {type_name!r} is neither a primitive nor a declared type")
 
-  if type(data["list_result"]) is not list:
-    list_problem.append("list_result: is not a list")
+  if type(data["list__result"]) is not list:
+    list__problem.append("list__result: is not a list")
   else:
-    for type_name in data["list_result"]:
-      if type(type_name) is not str or not (type_name in LIST_PRIMITIVE or type_name in map_type):
-        list_problem.append(f"list_result: {type_name!r} is neither a primitive nor a declared type"); continue
-      if _is_handle_holder(type_name ,map_type):
-        list_problem.append(f"list_result: {type_name!r} holds a handle, which has no meaning outside the interpreter")
-    if len(set(map(repr ,data["list_result"]))) != len(data["list_result"]):
-      list_problem.append("list_result: a type is given twice")
+    for type_name in data["list__result"]:
+      if type(type_name) is not str or not (type_name in LIST__PRIMITIVE or type_name in map__type):
+        list__problem.append(f"list__result: {type_name!r} is neither a primitive nor a declared type"); continue
+      if _is__handle_holder(type_name ,map__type):
+        list__problem.append(f"list__result: {type_name!r} holds a handle, which has no meaning outside the interpreter")
+    if len(set(map(repr ,data["list__result"]))) != len(data["list__result"]):
+      list__problem.append("list__result: a type is given twice")
 
-  if type(data["map_instruction"]) is not dict or not data["map_instruction"]:
-    list_problem.append("map_instruction: is not a map of at least one operation specifier to its format name")
+  if type(data["map__instruction"]) is not dict or not data["map__instruction"]:
+    list__problem.append("map__instruction: is not a map of at least one operation specifier to its format name")
   else:
-    for operation ,format_name in data["map_instruction"].items():
+    for operation ,format_name in data["map__instruction"].items():
       if type(operation) is not str or not operation.isidentifier() or keyword.iskeyword(operation) or operation.startswith("_"):
-        list_problem.append(f"map_instruction: {operation!r} is not an operation specifier; it is a Python function name not beginning with _"); continue
-      if operation in LIST_OPERATION_RESERVED:
-        list_problem.append(f"map_instruction: {operation!r} is kept by Man-In-Grey; the kept names are {', '.join(LIST_OPERATION_RESERVED)}")
-      if format_name not in set_format_name:
-        list_problem.append(f"map_instruction: {operation} has the format {format_name!r}, which is not declared")
-  return list_problem
+        list__problem.append(f"map__instruction: {operation!r} is not an operation specifier; it is a Python function name not beginning with _"); continue
+      if operation in LIST__OPERATION_RESERVED:
+        list__problem.append(f"map__instruction: {operation!r} is kept by Man-In-Grey; the kept names are {', '.join(LIST__OPERATION_RESERVED)}")
+      if format_name not in set__format_name:
+        list__problem.append(f"map__instruction: {operation} has the format {format_name!r}, which is not declared")
+  return list__problem
 
-def is_well_formed_language(data ,report):
+def is__well_formed_language(data ,report):
   """
   True when the language definition data is well formed. Each problem found
-  is given to report(tag ,message), as definition_broken.
+  is given to report(tag ,message), as definition-broken.
   """
-  list_problem = list_problem_language(data)
-  for problem in list_problem:
-    report("definition_broken" ,problem)
-  return not list_problem
+  list__problem = list__problem_language(data)
+  for problem in list__problem:
+    report("definition-broken" ,problem)
+  return not list__problem
 
 
 # --------------------------------------------------------------------------------
@@ -198,27 +198,27 @@ class Definition:
   """
 
   def __init__(self ,name ,data):
-    list_problem = list_problem_language(data)
-    if list_problem:
-      raise DefinitionError(f"the definition of {name} is not well formed: " + "; ".join(list_problem))
+    list__problem = list__problem_language(data)
+    if list__problem:
+      raise DefinitionError(f"the definition of {name} is not well formed: " + "; ".join(list__problem))
     self.name = name
     self.data = data
     self.hash = hash_text(data)
-    self._map_type = {entry[0]: entry[1] for entry in data["list_type"]}
-    self._map_format = {entry[0]: [tuple(argument) for argument in entry[1:]] for entry in data["list_format"]}
-    self.list_result_type = list(data["list_result"])
-    self.list_operation = list(data["map_instruction"])
+    self._map__type = {entry[0]: entry[1] for entry in data["list__type"]}
+    self._map__format = {entry[0]: [tuple(argument) for argument in entry[1:]] for entry in data["list__format"]}
+    self.list__result_type = list(data["list__result"])
+    self.list__operation = list(data["map__instruction"])
 
-  def is_type_name(self ,name):
-    return type(name) is str and (name in LIST_PRIMITIVE or name in self._map_type)
+  def is__type_name(self ,name):
+    return type(name) is str and (name in LIST__PRIMITIVE or name in self._map__type)
 
   def format_of(self ,operation):
     "the arguments of the operation's format, as (direction ,type name) in order; None for an unknown operation"
-    format_name = self.data["map_instruction"].get(operation) if type(operation) is str else None
-    return None if format_name is None else self._map_format[format_name]
+    format_name = self.data["map__instruction"].get(operation) if type(operation) is str else None
+    return None if format_name is None else self._map__format[format_name]
 
-  def is_handle_holder(self ,type_name):
-    return _is_handle_holder(type_name ,self._map_type)
+  def is__handle_holder(self ,type_name):
+    return _is__handle_holder(type_name ,self._map__type)
 
   def value_problem(self ,value ,expression ,where="the value"):
     """
@@ -227,8 +227,8 @@ class Definition:
     integer, as isinstance(True ,int) would.
     """
     if type(expression) is str:
-      if expression in self._map_type:
-        return self.value_problem(value ,self._map_type[expression] ,where)
+      if expression in self._map__type:
+        return self.value_problem(value ,self._map__type[expression] ,where)
       want = {"text": str ,"integer": int ,"bytes": bytes ,"boolean": bool ,"handle": int}[expression]
       if type(value) is not want:
         return f"{where} is {type(value).__name__}, not {expression}"
@@ -240,12 +240,12 @@ class Definition:
         problem = self.value_problem(element ,expression[1] ,f"{where}[{i}]")
         if problem: return problem
       return None
-    map_key_type = {entry[0]: entry[1] for entry in expression[1:]}
+    map__key_type = {entry[0]: entry[1] for entry in expression[1:]}
     if type(value) is not dict:
       return f"{where} is {type(value).__name__}, not a dictionary"
-    if set(value) != set(map_key_type):
-      return f"{where} has the keys {sorted(map(str ,value))}, not {sorted(map_key_type)}"
-    for key ,element_type in map_key_type.items():
+    if set(value) != set(map__key_type):
+      return f"{where} has the keys {sorted(map(str ,value))}, not {sorted(map__key_type)}"
+    for key ,element_type in map__key_type.items():
       problem = self.value_problem(value[key] ,element_type ,f"{where}[{key!r}]")
       if problem: return problem
     return None

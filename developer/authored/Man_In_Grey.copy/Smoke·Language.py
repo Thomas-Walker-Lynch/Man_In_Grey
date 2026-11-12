@@ -21,7 +21,7 @@ an instruction produces, an argument both read and written, and a result.
 NAME = "Smoke"
 
 DEFINITION = {
-  "list_type": [
+  "list__type": [
     ["directory" ,"text"]
     ,["file_name" ,"text"]
     ,["mode" ,"text"]
@@ -31,17 +31,17 @@ DEFINITION = {
     ,["content" ,"bytes"]
     ,["summary" ,["dictionary" ,["open_count" ,"integer"] ,["unlink_count" ,"integer"]]]
   ]
-  ,"list_format": [
-    ["format_open" ,["in" ,"directory"] ,["in" ,"file_name"] ,["in" ,"mode"] ,["in" ,"account_name"] ,["in" ,"permission"] ,["out" ,"file"]]
-    ,["format_write" ,["in-out" ,"file"] ,["in" ,"content"]]
-    ,["format_unlink" ,["in" ,"directory"] ,["in" ,"file_name"]]
-    ,["format_summary" ,["out" ,"summary"]]
+  ,"list__format": [
+    ["format__open" ,["in" ,"directory"] ,["in" ,"file_name"] ,["in" ,"mode"] ,["in" ,"account_name"] ,["in" ,"permission"] ,["out" ,"file"]]
+    ,["format__write" ,["in-out" ,"file"] ,["in" ,"content"]]
+    ,["format__unlink" ,["in" ,"directory"] ,["in" ,"file_name"]]
+    ,["format__summary" ,["out" ,"summary"]]
   ]
-  ,"list_result": ["summary"]
-  ,"map_instruction": {
-    "open": "format_open"
-    ,"write": "format_write"
-    ,"unlink": "format_unlink"
-    ,"summary": "format_summary"
+  ,"list__result": ["summary"]
+  ,"map__instruction": {
+    "open": "format__open"
+    ,"write": "format__write"
+    ,"unlink": "format__unlink"
+    ,"summary": "format__summary"
   }
 }

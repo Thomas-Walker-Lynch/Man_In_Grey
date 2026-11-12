@@ -28,7 +28,7 @@
        writable by no other account;
     2. clears the environment, sets the file mode mask to 077, marks the
        process not dumpable, changes directory to /, and records account A
-       in MIG_REAL_UID, MIG_REAL_GID and MIG_REAL_USER_NAME;
+       in MIG__REAL_UID, MIG__REAL_GID and MIG__REAL_USER_NAME;
     3. reads the journal from standard input;
     4. isolates itself from account A, when the two accounts differ: makes
        its real uid account B's, so the kernel refuses account A's signals,
@@ -48,7 +48,7 @@
   output, up to RESULT_MAX bytes, and never examines.
 
   The guard and the interpreter inherit the gate's uids and its ignored
-  signals, and learn account A from MIG_REAL_UID and MIG_REAL_USER_NAME.
+  signals, and learn account A from MIG__REAL_UID and MIG__REAL_USER_NAME.
 
   The constraints are code installed with the guard, so nothing about them is
   given to the gate.
@@ -62,7 +62,7 @@
   refuses.
 
   Exit status: 0 when the journal was admitted and executed, or admitted
-  with check_only; 1 when the guard refused it or execution failed; 2 when
+  with check-only; 1 when the guard refused it or execution failed; 2 when
   the gate, guard or interpreter could not run, or broke the gate's rules.
 */
 
@@ -103,8 +103,8 @@ int Man_In_Grey__Gate·Gate·run(
 
   #define PYTHON "/usr/bin/python3"
   #define JOURNAL_MAX ((size_t)16 << 20)
-  #define OUTPUT_LINE_MAX 4096
-  #define OUTPUT_LINE_COUNT_MAX 2000
+  #define OUTPUT_LINE__MAX 4096
+  #define OUTPUT_LINE_COUNT__MAX 2000
   #define VERDICT_MAX 512
   #define RESULT_MAX ((size_t)16 << 20)
   #define RESULT_FD 3
@@ -117,7 +117,7 @@ int Man_In_Grey__Gate·Gate·run(
   // saying things: to the person on standard error, and to the system log
 
   Local void say(const char *tag ,const char *format ,...){
-    char message[OUTPUT_LINE_MAX + 128];
+    char message[OUTPUT_LINE__MAX + 128];
     va_list ap; va_start(ap ,format);
     vsnprintf(message ,sizeof message ,format ,ap);
     va_end(ap);
@@ -126,11 +126,11 @@ int Man_In_Grey__Gate·Gate·run(
   }
 
   Local void die(const char *format ,...){
-    char message[OUTPUT_LINE_MAX];
+    char message[OUTPUT_LINE__MAX];
     va_list ap; va_start(ap ,format);
     vsnprintf(message ,sizeof message ,format ,ap);
     va_end(ap);
-    say("cannot_run" ,"%s" ,message);
+    say("cannot-run" ,"%s" ,message);
     _exit(2);
   }
 
@@ -248,7 +248,7 @@ int Man_In_Grey__Gate·Gate·run(
      as the hard limit allows, or past it when account B is root; the gate
      refuses when a limit stays too low. */
   Local void settle_limits(void){
-    const Limit limit_list[] = {
+    const Limit limit__list[] = {
       {RLIMIT_FSIZE ,"file size (bytes)" ,RLIM_INFINITY}
       ,{RLIMIT_CPU ,"CPU time (seconds)" ,RLIM_INFINITY}
       ,{RLIMIT_AS ,"address space (bytes)" ,(rlim_t)1 << 30}
@@ -256,8 +256,8 @@ int Man_In_Grey__Gate·Gate·run(
       ,{RLIMIT_STACK ,"stack size (bytes)" ,(rlim_t)8 << 20}
       ,{RLIMIT_NOFILE ,"open files" ,64}
     };
-    for(size_t i = 0; i < sizeof limit_list / sizeof limit_list[0]; ++i){
-      const Limit *limit = &limit_list[i];
+    for(size_t i = 0; i < sizeof limit__list / sizeof limit__list[0]; ++i){
+      const Limit *limit = &limit__list[i];
       struct rlimit r;
       if( getrlimit(limit->resource ,&r) != 0 ) die("cannot read the %s limit: %s" ,limit->name ,strerror(errno));
       if( r.rlim_cur >= limit->need ) continue;
@@ -329,14 +329,14 @@ int Man_In_Grey__Gate·Gate·run(
     int fd;
     FILE *echo;              // where its lines are copied for the person
     const char *stream;      // "stdout" or "stderr", for the log
-    char line[OUTPUT_LINE_MAX];
+    char line[OUTPUT_LINE__MAX];
     size_t length;
   } Stream;
 
   typedef struct{
     const char *source;      // "guard" or "interpreter"
     bool stdout_is_verdict;  // standard output is kept as the verdict, not shown
-    bool has_result;         // given a descriptor 3, whose bytes are kept as its result
+    bool has__result;         // given a descriptor 3, whose bytes are kept as its result
     char verdict[VERDICT_MAX];
     size_t verdict_length;
     unsigned char *result;
@@ -352,7 +352,7 @@ int Man_In_Grey__Gate·Gate·run(
       child->broken = "a line that is not UTF-8 or holds a control character";
       return;
     }
-    if( ++child->line_count > OUTPUT_LINE_COUNT_MAX ){
+    if( ++child->line_count > OUTPUT_LINE_COUNT__MAX ){
       child->broken = "more lines than the gate accepts";
       return;
     }
@@ -366,7 +366,7 @@ int Man_In_Grey__Gate·Gate·run(
   Local void take(Child *child ,Stream *stream ,const char *bytes ,size_t n){
     for(size_t i = 0; i < n && !child->broken; ++i){
       if( bytes[i] == '\n' ){ finish_line(child ,stream); continue; }
-      if( stream->length == OUTPUT_LINE_MAX - 1 ){ child->broken = "a line longer than the gate accepts"; return; }
+      if( stream->length == OUTPUT_LINE__MAX - 1 ){ child->broken = "a line longer than the gate accepts"; return; }
       stream->line[stream->length++] = bytes[i];
     }
   }
@@ -403,59 +403,59 @@ int Man_In_Grey__Gate·Gate·run(
   Local int run_child(Child *child ,char *const argument[] ,const unsigned char *input ,size_t input_length){
     int in[2] ,out[2] ,err[2] ,res[2] = {-1 ,-1};
     if( pipe(in) || pipe(out) || pipe(err) ) die("cannot make a pipe: %s" ,strerror(errno));
-    if( child->has_result && pipe(res) ) die("cannot make a pipe: %s" ,strerror(errno));
+    if( child->has__result && pipe(res) ) die("cannot make a pipe: %s" ,strerror(errno));
     for(int k = 0; k < 2; ++k){
       close_on_exec(in[k]); close_on_exec(out[k]); close_on_exec(err[k]);
-      if( child->has_result ) close_on_exec(res[k]);
+      if( child->has__result ) close_on_exec(res[k]);
     }
 
     pid_t pid = fork();
     if( pid < 0 ) die("cannot start the %s: %s" ,child->source ,strerror(errno));
     if( pid == 0 ){
       if( dup2(in[0] ,0) < 0 || dup2(out[1] ,1) < 0 || dup2(err[1] ,2) < 0 ) _exit(127);
-      if( child->has_result && dup2(res[1] ,RESULT_FD) < 0 ) _exit(127);
+      if( child->has__result && dup2(res[1] ,RESULT_FD) < 0 ) _exit(127);
       execv(PYTHON ,argument);
-      dprintf(2 ,"cannot_start: %s: %s\n" ,PYTHON ,strerror(errno));
+      dprintf(2 ,"cannot-start: %s: %s\n" ,PYTHON ,strerror(errno));
       _exit(127);
     }
     close(in[0]); close(out[1]); close(err[1]);
-    if( child->has_result ) close(res[1]);
+    if( child->has__result ) close(res[1]);
     fcntl(in[1] ,F_SETFL ,fcntl(in[1] ,F_GETFL) | O_NONBLOCK);
 
     Stream out_stream = {.fd = out[0] ,.echo = stdout ,.stream = "stdout"};
     Stream err_stream = {.fd = err[0] ,.echo = stderr ,.stream = "stderr"};
     int in_fd = in[1];
-    int res_fd = child->has_result ? res[0] : -1;
+    int res_fd = child->has__result ? res[0] : -1;
     size_t written = 0;
     if( input_length == 0 ){ close(in_fd); in_fd = -1; }
 
     while( (out_stream.fd >= 0 || err_stream.fd >= 0 || res_fd >= 0) && !child->broken ){
-      struct pollfd poll_list[4];
+      struct pollfd poll__list[4];
       int count = 0 ,in_at = -1 ,out_at = -1 ,err_at = -1 ,res_at = -1;
-      if( in_fd >= 0 ){ poll_list[count] = (struct pollfd){.fd = in_fd ,.events = POLLOUT}; in_at = count++; }
-      if( res_fd >= 0 ){ poll_list[count] = (struct pollfd){.fd = res_fd ,.events = POLLIN}; res_at = count++; }
-      if( out_stream.fd >= 0 ){ poll_list[count] = (struct pollfd){.fd = out_stream.fd ,.events = POLLIN}; out_at = count++; }
-      if( err_stream.fd >= 0 ){ poll_list[count] = (struct pollfd){.fd = err_stream.fd ,.events = POLLIN}; err_at = count++; }
-      if( poll(poll_list ,count ,-1) < 0 ){
+      if( in_fd >= 0 ){ poll__list[count] = (struct pollfd){.fd = in_fd ,.events = POLLOUT}; in_at = count++; }
+      if( res_fd >= 0 ){ poll__list[count] = (struct pollfd){.fd = res_fd ,.events = POLLIN}; res_at = count++; }
+      if( out_stream.fd >= 0 ){ poll__list[count] = (struct pollfd){.fd = out_stream.fd ,.events = POLLIN}; out_at = count++; }
+      if( err_stream.fd >= 0 ){ poll__list[count] = (struct pollfd){.fd = err_stream.fd ,.events = POLLIN}; err_at = count++; }
+      if( poll(poll__list ,count ,-1) < 0 ){
         if( errno == EINTR ) continue;
         die("poll: %s" ,strerror(errno));
       }
-      if( in_at >= 0 && poll_list[in_at].revents ){
+      if( in_at >= 0 && poll__list[in_at].revents ){
         ssize_t n = write(in_fd ,input + written ,input_length - written);
         if( n > 0 ) written += (size_t)n;
         if( (n < 0 && errno != EAGAIN && errno != EINTR) || written == input_length ){ close(in_fd); in_fd = -1; }
       }
-      if( res_at >= 0 && poll_list[res_at].revents ){
+      if( res_at >= 0 && poll__list[res_at].revents ){
         char buffer[4096];
         ssize_t n = read(res_fd ,buffer ,sizeof buffer);
         if( n > 0 ) take_result(child ,buffer ,(size_t)n);
         else if( n == 0 || (errno != EAGAIN && errno != EINTR) ){ close(res_fd); res_fd = -1; }
       }
-      Stream *stream_list[2] = {&out_stream ,&err_stream};
-      int at_list[2] = {out_at ,err_at};
+      Stream *stream__list[2] = {&out_stream ,&err_stream};
+      int at__list[2] = {out_at ,err_at};
       for(int k = 0; k < 2; ++k){
-        Stream *stream = stream_list[k];
-        if( at_list[k] < 0 || !poll_list[at_list[k]].revents ) continue;
+        Stream *stream = stream__list[k];
+        if( at__list[k] < 0 || !poll__list[at__list[k]].revents ) continue;
         char buffer[4096];
         ssize_t n = read(stream->fd ,buffer ,sizeof buffer);
         if( n < 0 && (errno == EAGAIN || errno == EINTR) ) continue;
@@ -493,7 +493,7 @@ int Man_In_Grey__Gate·Gate·run(
       "  admit [option ...]   read a journal on standard input, run the guard, and when the\n"
       "                       guard passes the journal, run the interpreter\n"
       "Option of admit:\n"
-      "  check_only           run the guard and not the interpreter\n"
+      "  check-only           run the guard and not the interpreter\n"
       "A journal that declares a result has it written to descriptor 3 once the\n"
       "journal is played; when descriptor 3 is not open, the result is discarded.\n"
       ,program
@@ -512,15 +512,15 @@ int Man_In_Grey__Gate·Gate·run(
 
   Local void print_flags(const char *guard_relative ,const char *interpreter_relative){
     printf("real.uid=%ld\n" ,(long)getuid());
-    printf("real.user_name=%s\n" ,user_name(getuid()));
+    printf("real.user-name=%s\n" ,user_name(getuid()));
     printf("real.gid=%ld\n" ,(long)getgid());
-    printf("real.group_name=%s\n" ,group_name(getgid()));
+    printf("real.group-name=%s\n" ,group_name(getgid()));
     printf("effective.uid=%ld\n" ,(long)geteuid());
-    printf("effective.user_name=%s\n" ,user_name(geteuid()));
+    printf("effective.user-name=%s\n" ,user_name(geteuid()));
     printf("effective.gid=%ld\n" ,(long)getegid());
-    printf("effective.group_name=%s\n" ,group_name(getegid()));
-    printf("uid_differ=%d\n" ,getuid() != geteuid() ? 1 : 0);
-    printf("gid_differ=%d\n" ,getgid() != getegid() ? 1 : 0);
+    printf("effective.group-name=%s\n" ,group_name(getegid()));
+    printf("uid-differ=%d\n" ,getuid() != geteuid() ? 1 : 0);
+    printf("gid-differ=%d\n" ,getgid() != getegid() ? 1 : 0);
     printf("language=%s\n" ,Language);
     char resolved[PATH_MAX];
     printf("guard.path=%s\n" ,resolve(guard_relative ,resolved) ? resolved : "(missing)");
@@ -624,7 +624,7 @@ int Man_In_Grey__Gate·Gate·run(
     }
     bool check_only = false;
     for(int i = 2; i < argc; ++i){
-      if( !strcmp(argv[i] ,"check_only") ){ check_only = true; continue; }
+      if( !strcmp(argv[i] ,"check-only") ){ check_only = true; continue; }
       fprintf(stderr ,"gate: usage: unknown or incomplete option '%s'\n" ,argv[i]);
       return 2;
     }
@@ -642,28 +642,28 @@ int Man_In_Grey__Gate·Gate·run(
 
     uid_t real_uid = getuid();
     gid_t real_gid = getgid();
-    char real_user_name[256];
-    snprintf(real_user_name ,sizeof real_user_name ,"%s" ,user_name(real_uid));
+    char real_user__name[256];
+    snprintf(real_user__name ,sizeof real_user__name ,"%s" ,user_name(real_uid));
 
     clearenv();
     setenv("PATH" ,"/usr/sbin:/usr/bin:/sbin:/bin" ,1);
     setenv("LANG" ,"C.UTF-8" ,1);
     char number[32];
-    snprintf(number ,sizeof number ,"%ld" ,(long)real_uid); setenv("MIG_REAL_UID" ,number ,1);
-    snprintf(number ,sizeof number ,"%ld" ,(long)real_gid); setenv("MIG_REAL_GID" ,number ,1);
-    setenv("MIG_REAL_USER_NAME" ,real_user_name ,1);
+    snprintf(number ,sizeof number ,"%ld" ,(long)real_uid); setenv("MIG__REAL_UID" ,number ,1);
+    snprintf(number ,sizeof number ,"%ld" ,(long)real_gid); setenv("MIG__REAL_GID" ,number ,1);
+    setenv("MIG__REAL_USER_NAME" ,real_user__name ,1);
     umask(077);
     prctl(PR_SET_DUMPABLE ,0 ,0 ,0 ,0);
     if( chdir("/") != 0 ) die("cannot change directory to /");
     signal(SIGPIPE ,SIG_IGN);
 
-    openlog("Man-In-Grey_Gate" ,LOG_PID ,LOG_AUTHPRIV);
+    openlog("Man-In-Grey_gate" ,LOG_PID ,LOG_AUTHPRIV);
     Logging = true;
 
     size_t journal_length;
     unsigned char *journal = read_journal(&journal_length);
     say("received" ,"real uid %ld (%s), effective uid %ld (%s), journal of %zu bytes%s"
-        ,(long)real_uid ,real_user_name ,(long)geteuid() ,user_name(geteuid()) ,journal_length ,check_only ? ", check only" : "");
+        ,(long)real_uid ,real_user__name ,(long)geteuid() ,user_name(geteuid()) ,journal_length ,check_only ? ", check only" : "");
     if( isolate_from_invoker() ){
       say("isolated" ,"real uid now %ld (%s); account A can no longer signal the gate" ,(long)getuid() ,user_name(getuid()));
     }
@@ -698,7 +698,7 @@ int Man_In_Grey__Gate·Gate·run(
     }
     say("approved" ,"guard %s check passed" ,language);
     if( check_only ){
-      say("not_interpreted" ,"check_only was asked");
+      say("not-interpreted" ,"check-only was asked");
       return 0;
     }
 
@@ -706,7 +706,7 @@ int Man_In_Grey__Gate·Gate·run(
     char *interpreter_argument[] = {
       (char *)PYTHON ,(char *)"-E" ,(char *)"-s" ,(char *)"-B" ,interpreter_path ,(char *)"execute" ,NULL
     };
-    Child interpreter = {.source = "interpreter" ,.stdout_is_verdict = true ,.has_result = true};
+    Child interpreter = {.source = "interpreter" ,.stdout_is_verdict = true ,.has__result = true};
     say("interpreting" ,"%s" ,interpreter_path);
     status = run_child(&interpreter ,interpreter_argument ,journal ,journal_length);
     if( interpreter.broken ){
@@ -733,11 +733,11 @@ int Man_In_Grey__Gate·Gate·run(
     say("interpreted" ,"interpreter %s journal played" ,language);
     if( interpreter.result_length > 0 ){
       if( Result_discarded )
-        say("result_discarded" ,"%zu bytes; descriptor 3 was not open" ,interpreter.result_length);
+        say("result-discarded" ,"%zu bytes; descriptor 3 was not open" ,interpreter.result_length);
       else if( forward_result(interpreter.result ,interpreter.result_length) )
-        say("result_forwarded" ,"%zu bytes on descriptor 3" ,interpreter.result_length);
+        say("result-forwarded" ,"%zu bytes on descriptor 3" ,interpreter.result_length);
       else
-        say("result_lost" ,"%zu bytes; descriptor 3 cannot be written: %s" ,interpreter.result_length ,strerror(errno));
+        say("result-lost" ,"%zu bytes; descriptor 3 cannot be written: %s" ,interpreter.result_length ,strerror(errno));
     }
     return 0;
   }

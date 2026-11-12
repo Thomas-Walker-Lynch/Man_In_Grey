@@ -23,15 +23,15 @@ picture an earlier run placed.
 
 This module holds the guard's checks of the language, made after the
 well-formed guard has checked the journal against the definition. They are
-LIST_CHECK:
+LIST__CHECK:
 
   language     what the definition cannot say: the display name is given
                once, text comes only within a paragraph and no paragraph is
                empty, at most one picture, every style one of STYLE and none
                twice, and no control character in any text
   constraint   the predicates at the top of the guard, Emplace_Bio·Guard.py:
-               is_allowed_account, is_allowed_text_size and
-               is_allowed_picture_size, and page_directory(), where the
+               is__allowed_account, is__allowed_text_size and
+               is__allowed_picture_size, and page_directory(), where the
                pages go
   content      the picture is a PNG or a JPEG
   filesystem   the page directory, and the files the page can occupy
@@ -42,7 +42,7 @@ The implementation of the instructions is in Emplace_Bio·LibraryInstruction.py.
 
 import os ,stat
 
-from Journal import has_control ,clean
+from Journal import has__control ,clean
 
 # each style and its tag, in the order the tags nest, outermost first
 STYLE = {
@@ -53,7 +53,7 @@ STYLE = {
 }
 
 
-DISPLAY_NAME_MAX = 200     # characters
+DISPLAY_NAME__MAX = 200     # characters
 
 SIGNATURE = (
   (b"\x89PNG\r\n\x1a\n" ,".png")
@@ -64,19 +64,19 @@ SIGNATURE = (
 # --------------------------------------------------------------------------------
 # value checks
 
-def display_name_problem(value):
+def display_name__problem(value):
   if not isinstance(value ,str) or not value.strip():
     return "the display name is to be text that is not empty"
-  if has_control(value):
+  if has__control(value):
     return f"the display name {clean(value)} holds a control character"
-  if len(value) > DISPLAY_NAME_MAX:
-    return f"the display name is longer than {DISPLAY_NAME_MAX} characters"
+  if len(value) > DISPLAY_NAME__MAX:
+    return f"the display name is longer than {DISPLAY_NAME__MAX} characters"
   return None
 
 def content_problem(value):
   if not isinstance(value ,str) or not value:
     return "content is to be text that is not empty"
-  if has_control(value):
+  if has__control(value):
     return f"content {clean(value)} holds a control character; a new paragraph is the instruction paragraph()"
   return None
 
@@ -101,82 +101,82 @@ def picture_extension(content):
 # --------------------------------------------------------------------------------
 # the guard's checks, each given the instructions as Journal.InstructionView
 
-def check_language(list_instruction_view ,data ,constraint ,gate_invoking_account):
+def check_language(list__instruction_view ,data ,constraint ,gate_invoking_account):
   """
   What the definition cannot say. No instruction of this language writes a
   variable, so the well-formed guard has already ensured every argument is
   a literal.
   """
-  list_problem = []
+  list__problem = []
   count = {"display_name": 0 ,"paragraph": 0 ,"text": 0 ,"picture": 0}
   in_paragraph = False
   run_count = 0
-  for view in list_instruction_view:
+  for view in list__instruction_view:
     index ,name = view.index ,view.operation
-    value = [argument.value for argument in view.list_argument]
+    value = [argument.value for argument in view.list__argument]
     count[name] += 1
     if name == "paragraph":
       if in_paragraph and run_count == 0:
-        list_problem.append(f"@{index} paragraph: the paragraph before it holds no text")
+        list__problem.append(f"@{index} paragraph: the paragraph before it holds no text")
       in_paragraph ,run_count = True ,0
     elif name == "text":
       if not in_paragraph:
-        list_problem.append(f"@{index} text: no paragraph has been started")
+        list__problem.append(f"@{index} text: no paragraph has been started")
       run_count += 1
       for problem in (content_problem(value[0]) ,style_problem(value[1])):
-        if problem: list_problem.append(f"@{index} text: {problem}")
+        if problem: list__problem.append(f"@{index} text: {problem}")
     elif name == "display_name":
-      problem = display_name_problem(value[0])
-      if problem: list_problem.append(f"@{index} display_name: {problem}")
+      problem = display_name__problem(value[0])
+      if problem: list__problem.append(f"@{index} display_name: {problem}")
     elif name == "picture" and not value[0]:
-      list_problem.append(f"@{index} picture: the picture is empty")
+      list__problem.append(f"@{index} picture: the picture is empty")
   if count["display_name"] != 1:
-    list_problem.append(f"the journal gives the display name {count['display_name']} times; it is given once")
+    list__problem.append(f"the journal gives the display name {count['display_name']} times; it is given once")
   if count["paragraph"] == 0:
-    list_problem.append("the journal has no paragraph")
+    list__problem.append("the journal has no paragraph")
   elif run_count == 0:
-    list_problem.append("the last paragraph holds no text")
+    list__problem.append("the last paragraph holds no text")
   if count["picture"] > 1:
-    list_problem.append(f"the journal gives {count['picture']} pictures; it gives at most one")
-  return list_problem
+    list__problem.append(f"the journal gives {count['picture']} pictures; it gives at most one")
+  return list__problem
 
-def page_directory_problem(directory):
+def page_directory__problem(directory):
   if not isinstance(directory ,str) or not directory.startswith("/") or os.path.normpath(directory) != directory:
     return f"page_directory() gives {clean(repr(directory))}, not an absolute directory in normal form"
   return None
 
-def check_constraint(list_instruction_view ,data ,constraint ,gate_invoking_account):
+def check_constraint(list__instruction_view ,data ,constraint ,gate_invoking_account):
   "constraint is the guard, which holds the predicates; a predicate allows only by answering True"
-  if constraint.is_allowed_account(gate_invoking_account) is not True:
+  if constraint.is__allowed_account(gate_invoking_account) is not True:
     return [f"gate invoking account {clean(repr(gate_invoking_account))} is not allowed to give journals to this gate"]
-  list_problem = []
-  problem = page_directory_problem(constraint.page_directory())
-  if problem: list_problem.append(problem)
+  list__problem = []
+  problem = page_directory__problem(constraint.page_directory())
+  if problem: list__problem.append(problem)
   text_bytes = 0
-  for view in list_instruction_view:
-    value = view.list_argument[0].value if view.list_argument else None
+  for view in list__instruction_view:
+    value = view.list__argument[0].value if view.list__argument else None
     if view.operation in ("display_name" ,"text"):
       text_bytes += len(value.encode("utf-8"))
-    elif view.operation == "picture" and constraint.is_allowed_picture_size(len(value)) is not True:
-      list_problem.append(f"the picture is {len(value)} bytes, which is not allowed")
-  if constraint.is_allowed_text_size(text_bytes) is not True:
-    list_problem.append(f"the text is {text_bytes} bytes, which is not allowed")
-  return list_problem
+    elif view.operation == "picture" and constraint.is__allowed_picture_size(len(value)) is not True:
+      list__problem.append(f"the picture is {len(value)} bytes, which is not allowed")
+  if constraint.is__allowed_text_size(text_bytes) is not True:
+    list__problem.append(f"the text is {text_bytes} bytes, which is not allowed")
+  return list__problem
 
-def check_content(list_instruction_view ,data ,constraint ,gate_invoking_account):
-  list_problem = []
-  for view in list_instruction_view:
-    if view.operation == "picture" and picture_extension(view.list_argument[0].value) is None:
-      list_problem.append(f"@{view.index} picture: the content is neither a PNG nor a JPEG file")
-  return list_problem
+def check_content(list__instruction_view ,data ,constraint ,gate_invoking_account):
+  list__problem = []
+  for view in list__instruction_view:
+    if view.operation == "picture" and picture_extension(view.list__argument[0].value) is None:
+      list__problem.append(f"@{view.index} picture: the content is neither a PNG nor a JPEG file")
+  return list__problem
 
-def list_page_name(user_name):
+def list__page_name(user_name):
   "the files a page of this account can occupy"
   return [user_name + ".html"] + [user_name + extension for _ ,extension in SIGNATURE]
 
-def check_filesystem(list_instruction_view ,data ,constraint ,gate_invoking_account):
-  list_problem = []
-  if has_control(gate_invoking_account) or gate_invoking_account.startswith("."):
+def check_filesystem(list__instruction_view ,data ,constraint ,gate_invoking_account):
+  list__problem = []
+  if has__control(gate_invoking_account) or gate_invoking_account.startswith("."):
     return [f"the account name {clean(repr(gate_invoking_account))} cannot name a page"]
   directory = constraint.page_directory()
   if not os.path.isdir(directory):
@@ -185,17 +185,17 @@ def check_filesystem(list_instruction_view ,data ,constraint ,gate_invoking_acco
     return [f"{directory} passes through a symbolic link"]
   # access() alone answers for the real uid; effective_ids asks for the effective uid, which writes
   if not os.access(directory ,os.W_OK | os.X_OK ,effective_ids=os.access in os.supports_effective_ids):
-    list_problem.append(f"{directory} cannot be written by the effective uid's account")
-  for name in list_page_name(gate_invoking_account):
+    list__problem.append(f"{directory} cannot be written by the effective uid's account")
+  for name in list__page_name(gate_invoking_account):
     try:
       st = os.lstat(os.path.join(directory ,name))
     except FileNotFoundError:
       continue
     if not stat.S_ISREG(st.st_mode):
-      list_problem.append(f"{directory}/{name} exists and is not a regular file")
-  return list_problem
+      list__problem.append(f"{directory}/{name} exists and is not a regular file")
+  return list__problem
 
-LIST_CHECK = (
+LIST__CHECK = (
   ("language" ,check_language)
   ,("constraint" ,check_constraint)
   ,("content" ,check_content)

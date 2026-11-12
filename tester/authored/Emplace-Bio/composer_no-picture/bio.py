@@ -1,4 +1,4 @@
-# composer_no_picture/bio.py - the test's bio page with no picture, which
+# composer_no-picture/bio.py - the test's bio page with no picture, which
 # removes the picture an earlier run placed.
 
 def compose(prov ,journal_iface):

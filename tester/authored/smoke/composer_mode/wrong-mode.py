@@ -3,5 +3,5 @@
 
 def compose(prov ,journal_iface):
   file = journal_iface.declare("file" ,"file")
-  journal_iface.open(str(prov.cwd_dpath / "out") ,"unbound_conf" ,"overwrite" ,prov.process_user ,0o444 ,file)
+  journal_iface.open(str(prov.cwd__dpath / "out") ,"unbound_conf" ,"overwrite" ,prov.process_user ,0o444 ,file)
   journal_iface.write(file ,b"not to be written\n")

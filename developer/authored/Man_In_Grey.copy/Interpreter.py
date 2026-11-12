@@ -41,20 +41,20 @@ import Journal
 import Guard·WellFormed
 
 
-def map_operation_function(language_definition ,library_instruction):
+def map__operation_function(language_definition ,library_instruction):
   """
   The function for each operation specifier of the definition, from the
   LibraryInstruction instance. Raises RuntimeError when one is missing.
   """
-  map_function = {}
-  for operation in language_definition.list_operation:
+  map__function = {}
+  for operation in language_definition.list__operation:
     function = getattr(library_instruction ,operation ,None)
     if not callable(function):
       raise RuntimeError(f"the language's LibraryInstruction has no function {operation}, which its definition lists")
-    map_function[operation] = function
-  return map_function
+    map__function[operation] = function
+  return map__function
 
-def interpret(journal_bytes ,language_definition ,library_instruction_module ,log ,constraint ,gate_invoking_account):
+def interpret(journal_bytes ,language_definition ,library_instruction__module ,log ,constraint ,gate_invoking_account):
   """
   Given the encoded journal, the language definition, the language's
   instruction library module, log(tag ,message), the guard program, whose
@@ -68,48 +68,48 @@ def interpret(journal_bytes ,language_definition ,library_instruction_module ,lo
   try:
     data = Journal.decode(journal_bytes)
   except Journal.JournalError as error:
-    log("journal_unreadable" ,str(error))
+    log("journal-unreadable" ,str(error))
     return 2 ,None
-  if not Guard·WellFormed.is_well_formed_journal(data ,language_definition ,log):
+  if not Guard·WellFormed.is__well_formed_journal(data ,language_definition ,log):
     return 2 ,None
-  list_instruction_view = Guard·WellFormed.make_list_instruction_view(data ,language_definition)
+  list__instruction_view = Guard·WellFormed.make__list__instruction_view(data ,language_definition)
 
-  library_instruction = library_instruction_module.LibraryInstruction(constraint ,gate_invoking_account ,log)
+  library_instruction = library_instruction__module.LibraryInstruction(constraint ,gate_invoking_account ,log)
   try:
-    map_function = map_operation_function(language_definition ,library_instruction)
+    map__function = map__operation_function(language_definition ,library_instruction)
   except RuntimeError as error:
-    log("cannot_execute" ,str(error))
+    log("cannot-execute" ,str(error))
     return 2 ,None
 
-  map_value = {}   # variable name -> value
+  map__value = {}   # variable name -> value
   where = "before the first instruction"
   try:
-    for view in list_instruction_view:
+    for view in list__instruction_view:
       where = f"@{view.index} {view.operation}"
-      list_value ,list_box = [] ,[]
-      for argument ,(direction ,type_name) in zip(view.list_argument ,language_definition.format_of(view.operation)):
-        if argument.is_literal():
-          list_value.append(copy.deepcopy(argument.value))
+      list__value ,list__box = [] ,[]
+      for argument ,(direction ,type_name) in zip(view.list__argument ,language_definition.format_of(view.operation)):
+        if argument.is__literal():
+          list__value.append(copy.deepcopy(argument.value))
         elif direction == "in":
-          list_value.append(copy.deepcopy(map_value[argument.name]))
+          list__value.append(copy.deepcopy(map__value[argument.name]))
         else:
-          box = [] if direction == "out" else [copy.deepcopy(map_value[argument.name])]
-          list_value.append(box)
-          list_box.append((argument.name ,type_name ,box))
-      map_function[view.operation](*list_value)
-      for name ,type_name ,box in list_box:
+          box = [] if direction == "out" else [copy.deepcopy(map__value[argument.name])]
+          list__value.append(box)
+          list__box.append((argument.name ,type_name ,box))
+      map__function[view.operation](*list__value)
+      for name ,type_name ,box in list__box:
         if type(box) is not list or len(box) != 1:
           raise RuntimeError(f"the box for {name} holds {len(box) if type(box) is list else 'no list of'} values; it is to hold one")
         problem = language_definition.value_problem(box[0] ,type_name ,f"the value written to {name}")
         if problem:
           raise RuntimeError(problem)
-        map_value[name] = copy.deepcopy(box[0])
+        map__value[name] = copy.deepcopy(box[0])
     where = "after the last instruction"
     finish = getattr(library_instruction ,"finish" ,None)
     if callable(finish):
       finish()
   except Exception as error:
-    log("execution_failed" ,f"{where}: {error}")
+    log("execution-failed" ,f"{where}: {error}")
     return 1 ,None
   finally:
     release = getattr(library_instruction ,"release" ,None)
@@ -117,9 +117,9 @@ def interpret(journal_bytes ,language_definition ,library_instruction_module ,lo
       try:
         release()
       except Exception as error:
-        log("release_failed" ,str(error))
+        log("release-failed" ,str(error))
 
   if data["result"] is None:
     return 0 ,None
-  result_type = dict(map(tuple ,data["list_variable"]))[data["result"]]
-  return 0 ,Journal.encode_result(result_type ,map_value[data["result"]])
+  result_type = dict(map(tuple ,data["list__variable"]))[data["result"]]
+  return 0 ,Journal.encode_result(result_type ,map__value[data["result"]])

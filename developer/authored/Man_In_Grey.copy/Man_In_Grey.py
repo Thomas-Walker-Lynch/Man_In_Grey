@@ -24,14 +24,14 @@ Usage: Man-In-Grey <command> ...
                              invoke, which also sets the instruction language the
                              composer writes in
   install <gate> owner <account> [group <group>] into <directory> [constraints <file>]
-                             install a gate setuid and setgid, by running install_gate
+                             install a gate setuid and setgid, by running install-gate
                              as root; when not run by root, su asks for root's password;
-                             see install_gate for the rest
+                             see install-gate for the rest
 
 Options of orchestrate:
   print                      print the journal after composing
-  compose_only               stop after composing; nothing reaches the gate
-  check_only                 have the gate run the guard and not the interpreter
+  compose-only               stop after composing; nothing reaches the gate
+  check-only                 have the gate run the guard and not the interpreter
 
 The composer, and every directory from / down to it, is to be owned by the
 gate invoking account or by root, and writable by no other account. A
@@ -56,14 +56,14 @@ import Journal·Interface
 
 # The promoted layout: this file in Man_In_Grey/, beside Man_In_Grey__Gate/.
 # The same layout is staged in developer/scratchpad/made/ and promoted to consumer/.
-HERE_DPATH = Path(__file__).resolve().parent
+HERE__DPATH = Path(__file__).resolve().parent
 
-FLAG = ("print" ,"compose_only" ,"check_only")
+FLAG = ("print" ,"compose-only" ,"check-only")
 VALUE = ("gate" ,)
 COMMAND = ("orchestrate" ,)
 
 
-def gate_invoking_account_name():
+def gate_invoking_account__name():
   return pwd.getpwuid(os.getuid()).pw_name
 
 
@@ -75,28 +75,28 @@ class Provenance:
   Where a composer is. Given to compose().
   """
   __slots__ = (
-    "composer_abs_fpath"
-    ,"composer_dir_dpath"
-    ,"implied_fname"
+    "composer__abs_fpath"
+    ,"composer_dir__dpath"
+    ,"implied__fname"
     ,"process_user"
-    ,"cwd_dpath"
+    ,"cwd__dpath"
   )
 
   def __init__(self ,composer_path):
-    self.composer_abs_fpath = composer_path
-    self.composer_dir_dpath = composer_path.parent
+    self.composer__abs_fpath = composer_path
+    self.composer_dir__dpath = composer_path.parent
     name = composer_path.name
     if name.endswith(".py"):
       name = name[:-3]
-    self.implied_fname = name
-    self.process_user = gate_invoking_account_name()
-    self.cwd_dpath = Path.cwd().resolve()
+    self.implied__fname = name
+    self.process_user = gate_invoking_account__name()
+    self.cwd__dpath = Path.cwd().resolve()
 
 
 # --------------------------------------------------------------------------------
 # finding the composers, and the ownership check
 
-def trusted_owner_problem(path):
+def trusted_owner__problem(path):
   "None when path is owned by the gate invoking account or root and writable by no other account"
   try:
     st = os.lstat(path)
@@ -111,7 +111,7 @@ def trusted_owner_problem(path):
 def chain_problem(path):
   "the ownership check over path and every directory above it"
   for each in [path] + list(path.parents):
-    problem = trusted_owner_problem(each)
+    problem = trusted_owner__problem(each)
     if problem:
       return problem
   return None
@@ -155,7 +155,7 @@ def language_definition(name):
     raise RuntimeError(f"the gate names the language {name!r}, which names no definition")
   # a language is named by its namespace, so the name is the module's prefix
   module = name + "·Language"
-  if not (HERE_DPATH / f"{module}.py").is_file():
+  if not (HERE__DPATH / f"{module}.py").is_file():
     raise RuntimeError(f"the gate's language is {name}, and {module}.py is not beside {Path(__file__).name}")
   definition_module = importlib.import_module(module)
   if getattr(definition_module ,"NAME" ,None) != name:
@@ -173,9 +173,9 @@ def compose(prov ,language_definition):
   """Run the composer into a journal. Raises RuntimeError naming the composer when it fails."""
   journal = Journal·Interface.JournalComposed(language_definition)
   journal_iface = Journal·Interface.JournalInterface(journal)
-  name = prov.composer_abs_fpath.name
+  name = prov.composer__abs_fpath.name
   try:
-    env = runpy.run_path(str(prov.composer_abs_fpath))
+    env = runpy.run_path(str(prov.composer__abs_fpath))
     function = env.get("compose")
     if not callable(function):
       raise RuntimeError("defines no compose(prov ,journal_iface)")
@@ -189,9 +189,9 @@ def compose(prov ,language_definition):
     raise RuntimeError(f"{name}: the composer raised an error\n{traceback.format_exc()}")
   journal.meta = {
     "composed_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%SZ")
-    ,"process_user": gate_invoking_account_name()
+    ,"process_user": gate_invoking_account__name()
     ,"host": os.uname().nodename
-    ,"composer": str(prov.composer_abs_fpath)
+    ,"composer": str(prov.composer__abs_fpath)
   }
   return journal
 
@@ -207,7 +207,7 @@ def admit(gate_path ,journal_bytes ,check_only=False):
   An application that is its own orchestrator calls this function with the
   journal it made.
   """
-  command = [str(gate_path) ,"admit"] + (["check_only"] if check_only else [])
+  command = [str(gate_path) ,"admit"] + (["check-only"] if check_only else [])
   read_fd ,write_fd = os.pipe()
   try:
     gate = subprocess.Popen(command ,stdin=subprocess.PIPE ,close_fds=False
@@ -225,13 +225,13 @@ def admit(gate_path ,journal_bytes ,check_only=False):
       gate.stdin.close()
     except BrokenPipeError:
       pass
-  list_part = []
+  list__part = []
   with os.fdopen(read_fd ,"rb") as result:
     while True:
       part = result.read(1 << 16)
       if not part: break
-      list_part.append(part)
-  return gate.wait() ,b"".join(list_part)
+      list__part.append(part)
+  return gate.wait() ,b"".join(list__part)
 
 def print_result(result_bytes ,file=None):
   "one line, result: <type name> <value>, with bytes shown by their count"
@@ -257,10 +257,10 @@ def orchestrate(path ,gate ,flag):
     return 2
   if "print" in flag:
     journal.print()
-  if "compose_only" in flag:
+  if "compose-only" in flag:
     return 0
   sys.stdout.flush()
-  status ,result = admit(gate_path ,journal.encode() ,"check_only" in flag)
+  status ,result = admit(gate_path ,journal.encode() ,"check-only" in flag)
   if result and not print_result(result):
     return 2
   return status
@@ -276,20 +276,20 @@ def print_help():
 # --------------------------------------------------------------------------------
 # installing a gate
 
-def install(list_argument):
+def install(list__argument):
   """
-  Run install_gate install with the arguments given, as root. Run by root, it
-  runs install_gate itself; run by anyone else, it runs it through su, which
+  Run install-gate install with the arguments given, as root. Run by root, it
+  runs install-gate itself; run by anyone else, it runs it through su, which
   asks for root's password. A constraints file is made absolute first, as
-  root's shell starts elsewhere. Returns install_gate's exit status.
+  root's shell starts elsewhere. Returns install-gate's exit status.
   """
-  list_argument = list(list_argument)
-  for i ,word in enumerate(list_argument[:-1]):
+  list__argument = list(list__argument)
+  for i ,word in enumerate(list__argument[:-1]):
     if word == "constraints":
-      list_argument[i + 1] = str(Path(list_argument[i + 1]).absolute())
-  command = [str(HERE_DPATH / "install_gate") ,"install" ,*list_argument]
+      list__argument[i + 1] = str(Path(list__argument[i + 1]).absolute())
+  command = [str(HERE__DPATH / "install-gate") ,"install" ,*list__argument]
   if os.geteuid() != 0:
-    print("install_gate is run by root; su asks for root's password" ,file=sys.stderr)
+    print("install-gate is run by root; su asks for root's password" ,file=sys.stderr)
     command = ["su" ,"root" ,"-c" ,shlex.join(command)]
   return subprocess.run(command).returncode
 

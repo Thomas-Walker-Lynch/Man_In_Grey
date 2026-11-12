@@ -7,7 +7,7 @@ the guard and the interpreter all read it, and a journal carries its hash.
 
   display_name(name_text)          the page's title and heading; once
   paragraph()                      starts a paragraph
-  text(run_text ,list_style)       a run of text in the current paragraph,
+  text(run_text ,list__style)       a run of text in the current paragraph,
                                    with a list of style names
   picture(image)                   a PNG or JPEG image; at most once
 
@@ -18,23 +18,23 @@ journal of this language has no result.
 NAME = "Emplace_Bio"
 
 DEFINITION = {
-  "list_type": [
+  "list__type": [
     ["name_text" ,"text"]
     ,["run_text" ,"text"]
-    ,["list_style" ,["list" ,"text"]]
+    ,["list__style" ,["list" ,"text"]]
     ,["image" ,"bytes"]
   ]
-  ,"list_format": [
-    ["format_name" ,["in" ,"name_text"]]
-    ,["format_empty"]
-    ,["format_run" ,["in" ,"run_text"] ,["in" ,"list_style"]]
-    ,["format_image" ,["in" ,"image"]]
+  ,"list__format": [
+    ["format__name" ,["in" ,"name_text"]]
+    ,["format__empty"]
+    ,["format__run" ,["in" ,"run_text"] ,["in" ,"list__style"]]
+    ,["format__image" ,["in" ,"image"]]
   ]
-  ,"list_result": []
-  ,"map_instruction": {
-    "display_name": "format_name"
-    ,"paragraph": "format_empty"
-    ,"text": "format_run"
-    ,"picture": "format_image"
+  ,"list__result": []
+  ,"map__instruction": {
+    "display_name": "format__name"
+    ,"paragraph": "format__empty"
+    ,"text": "format__run"
+    ,"picture": "format__image"
   }
 }

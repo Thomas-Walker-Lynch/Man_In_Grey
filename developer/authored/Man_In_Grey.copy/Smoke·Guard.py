@@ -36,25 +36,25 @@ Exit status: 0 when every check passed, 1 when a check refused the journal,
 # ------------------------------------------------------------------------------
 # The constraints: the predicates this guard checks a journal with. They are
 # written by whoever installs the gate, between the two marks below, and
-# install_gate can put them in from a file and keeps them when it installs
+# install-gate can put them in from a file and keeps them when it installs
 # the guard again. A predicate allows only by answering True. As promoted
-# with Man-In-Grey, is_allowed_account refuses every account.
+# with Man-In-Grey, is__allowed_account refuses every account.
 #
 # They are called only after the modules below are checked and imported, so
 # they can call Guard·LibraryConstraint, the library of predicates that recur,
-# as Guard·LibraryConstraint.is_group_member(user_name ,"bio").
+# as Guard·LibraryConstraint.is__group_member(user_name ,"bio").
 
 # constraints begin
 
-def is_allowed_account(user_name):
+def is__allowed_account(user_name):
   "True when the account, the gate's real uid, can give journals to the gate"
   return False
 
-def is_allowed_open(directory ,name ,mode ,owner ,permission):
+def is__allowed_open(directory ,name ,mode ,owner ,permission):
   "True when the file can be opened in this mode, to be given this owner and permission"
   return False
 
-def is_allowed_unlink(directory ,name):
+def is__allowed_unlink(directory ,name):
   "True when the file can be removed"
   return False
 
@@ -71,11 +71,11 @@ from pathlib import Path
 LANGUAGE = "Smoke"
 VERSION = "4"
 
-HERE_DPATH = Path(__file__).resolve().parent
+HERE__DPATH = Path(__file__).resolve().parent
 MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Guard·LibraryConstraint.py" ,"Smoke·Language.py" ,"Smoke·GuardCheck.py" ,"Smoke·Guard.py")
 
 
-def trusted_owner_problem(path):
+def trusted_owner__problem(path):
   "None when path is owned by root or the effective uid's account and writable by no other account"
   try:
     st = os.lstat(path)
@@ -94,10 +94,10 @@ if __name__ == "__main__" and sys.argv[1:] == ["check"]:
   say("name" ,LANGUAGE)
   say("version" ,VERSION)
 
-for each in [HERE_DPATH] + [HERE_DPATH / m for m in MODULE]:
-  problem = trusted_owner_problem(each)
+for each in [HERE__DPATH] + [HERE__DPATH / m for m in MODULE]:
+  problem = trusted_owner__problem(each)
   if problem:
-    say("refused_to_start" ,problem)
+    say("refused-to-start" ,problem)
     sys.exit(2)
 
 try:
@@ -108,7 +108,7 @@ try:
   import Smoke·Language as language_module
   import Smoke·GuardCheck as guard_check
 except ImportError as error:
-  say("cannot_start" ,str(error))
+  say("cannot-start" ,str(error))
   sys.exit(2)
 
 
@@ -120,12 +120,12 @@ def check():
   try:
     gate_invoking_account = Guard.gate_invoking_account()
   except RuntimeError as error:
-    report("cannot_check" ,str(error))
+    report("cannot-check" ,str(error))
     return 2
   try:
     language_definition = Language.Definition(language_module.NAME ,language_module.DEFINITION)
   except Language.DefinitionError as error:
-    report("cannot_check" ,str(error))
+    report("cannot-check" ,str(error))
     return 2
   status = Guard.check(sys.stdin.buffer.read() ,language_definition ,guard_check ,sys.modules[__name__] ,gate_invoking_account ,report)
   if status == 0:

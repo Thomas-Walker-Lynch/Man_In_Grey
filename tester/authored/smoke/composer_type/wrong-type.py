@@ -3,4 +3,4 @@
 
 def compose(prov ,journal_iface):
   file = journal_iface.declare("file" ,"file")
-  journal_iface.open(str(prov.cwd_dpath / "out") ,"unbound_conf" ,"replace_keep" ,prov.process_user ,"0444" ,file)
+  journal_iface.open(str(prov.cwd__dpath / "out") ,"unbound_conf" ,"replace-keep" ,prov.process_user ,"0444" ,file)

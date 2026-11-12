@@ -43,11 +43,11 @@ sys.dont_write_bytecode = True
 import stat
 from pathlib import Path
 
-HERE_DPATH = Path(__file__).resolve().parent
+HERE__DPATH = Path(__file__).resolve().parent
 MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Interpreter.py" ,"Guard·LibraryConstraint.py" ,"Smoke·Language.py" ,"Smoke·GuardCheck.py" ,"Smoke·LibraryInstruction.py" ,"Smoke·Guard.py" ,"Smoke·Interpreter.py")
 
 
-def trusted_owner_problem(path):
+def trusted_owner__problem(path):
   "None when path is owned by root or the effective uid's account and writable by no other account"
   try:
     st = os.lstat(path)
@@ -62,10 +62,10 @@ def trusted_owner_problem(path):
 def say(tag ,message):
   print(f"{tag}: {message}" ,file=sys.stderr)
 
-for each in [HERE_DPATH] + [HERE_DPATH / m for m in MODULE]:
-  problem = trusted_owner_problem(each)
+for each in [HERE__DPATH] + [HERE__DPATH / m for m in MODULE]:
+  problem = trusted_owner__problem(each)
   if problem:
-    say("refused_to_start" ,problem)
+    say("refused-to-start" ,problem)
     sys.exit(2)
 
 try:
@@ -77,7 +77,7 @@ try:
   import Smoke·LibraryInstruction as library_instruction
   import Smoke·Guard as guard_program
 except ImportError as error:
-  say("cannot_start" ,str(error))
+  say("cannot-start" ,str(error))
   sys.exit(2)
 
 
@@ -97,12 +97,12 @@ def execute():
   try:
     gate_invoking_account = Guard.gate_invoking_account()
   except RuntimeError as error:
-    log("cannot_execute" ,str(error))
+    log("cannot-execute" ,str(error))
     return 2
   try:
     language_definition = Language.Definition(language_module.NAME ,language_module.DEFINITION)
   except Language.DefinitionError as error:
-    log("cannot_execute" ,str(error))
+    log("cannot-execute" ,str(error))
     return 2
   status ,result = Interpreter.interpret(sys.stdin.buffer.read() ,language_definition ,library_instruction ,log ,guard_program ,gate_invoking_account)
   if status != 0:
@@ -111,7 +111,7 @@ def execute():
     try:
       write_result(result)
     except OSError as error:
-      log("cannot_return_result" ,f"descriptor {RESULT_FD}: {error.strerror}")
+      log("cannot-return-result" ,f"descriptor {RESULT_FD}: {error.strerror}")
       return 2
   sys.stdout.write("interpreter Smoke journal played\n")
   return 0

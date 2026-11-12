@@ -10,12 +10,12 @@ A journal is a CBOR map of seven entries:
                        against; see Language.py
   meta                 when, where and by which account it was composed, and
                        the composer that ran; a note, never evidence
-  list_variable        the variables, each [<name> ,<type name>], the type
+  list__variable        the variables, each [<name> ,<type name>], the type
                        one the language definition declares
   result               the name of the variable whose value is the journal's
                        result, or null for a journal with no result
-  list_instruction     the instructions, each {"operation": <operation
-                       specifier> ,"list_argument": [<argument> ...]}
+  list__instruction     the instructions, each {"operation": <operation
+                       specifier> ,"list__argument": [<argument> ...]}
 
 An argument is a pair whose first element says how to read the second:
 
@@ -39,21 +39,21 @@ bytes, never code.
 import cbor2
 
 JOURNAL_VERSION = 4
-LIST_ENTRY = ("version" ,"instruction_language" ,"definition_hash" ,"meta" ,"list_variable" ,"result" ,"list_instruction")
-LIST_KIND = ("literal" ,"variable")
+LIST__ENTRY = ("version" ,"instruction_language" ,"definition_hash" ,"meta" ,"list__variable" ,"result" ,"list__instruction")
+LIST__KIND = ("literal" ,"variable")
 
 
-def is_control(character):
+def is__control(character):
   "True for C0 controls, DEL and C1 controls: the characters a gate refuses in what the guard and interpreter write"
   code = ord(character)
   return code < 0x20 or code == 0x7F or 0x80 <= code <= 0x9F
 
-def has_control(text):
-  return any(is_control(c) for c in text)
+def has__control(text):
+  return any(is__control(c) for c in text)
 
 def clean(text):
   "text with each control character written as \\u{XXXX}, for a message that quotes a journal"
-  return "".join(f"\\u{{{ord(c):04X}}}" if is_control(c) else c for c in str(text))
+  return "".join(f"\\u{{{ord(c):04X}}}" if is__control(c) else c for c in str(text))
 
 
 class JournalError(Exception):
@@ -76,26 +76,26 @@ def decode(journal_bytes):
     raise JournalError("the journal is not a map")
   if data.get("version") != JOURNAL_VERSION:
     raise JournalError(f"journal version {clean(repr(data.get('version')))}; this Man-In-Grey reads version {JOURNAL_VERSION}")
-  if set(data) != set(LIST_ENTRY):
-    raise JournalError(f"the journal has the entries {clean(sorted(map(str ,data)))}; it is to have exactly {list(LIST_ENTRY)}")
+  if set(data) != set(LIST__ENTRY):
+    raise JournalError(f"the journal has the entries {clean(sorted(map(str ,data)))}; it is to have exactly {list(LIST__ENTRY)}")
   if type(data["instruction_language"]) is not str or type(data["definition_hash"]) is not str:
     raise JournalError("the journal names no instruction language or no definition hash")
-  if type(data["meta"]) is not dict or type(data["list_variable"]) is not list or type(data["list_instruction"]) is not list:
+  if type(data["meta"]) is not dict or type(data["list__variable"]) is not list or type(data["list__instruction"]) is not list:
     raise JournalError("the journal's meta is not a map, or its variables or instructions are not a list")
   if data["result"] is not None and type(data["result"]) is not str:
     raise JournalError("the journal's result is neither a variable name nor null")
-  for index ,instruction in enumerate(data["list_instruction"]):
-    if type(instruction) is not dict or set(instruction) != {"operation" ,"list_argument"} \
-       or type(instruction["operation"]) is not str or type(instruction["list_argument"]) is not list:
-      raise JournalError(f"instruction {index} is not {{\"operation\": <text> ,\"list_argument\": [...]}}")
+  for index ,instruction in enumerate(data["list__instruction"]):
+    if type(instruction) is not dict or set(instruction) != {"operation" ,"list__argument"} \
+       or type(instruction["operation"]) is not str or type(instruction["list__argument"]) is not list:
+      raise JournalError(f"instruction {index} is not {{\"operation\": <text> ,\"list__argument\": [...]}}")
   return data
 
-MAP_DIRECTION_MARK = {"in": "<" ,"out": ">" ,"in-out": "<>"}
+MAP__DIRECTION_MARK = {"in": "<" ,"out": ">" ,"in-out": "<>"}
 
 def argument_text(pair ,direction):
   kind ,payload = pair
   if kind == "variable":
-    return f"{MAP_DIRECTION_MARK.get(direction ,'?')}{payload}"
+    return f"{MAP__DIRECTION_MARK.get(direction ,'?')}{payload}"
   if type(payload) is bytes:
     return f"<{len(payload)} bytes>"
   return clean(repr(payload))
@@ -106,17 +106,17 @@ def print_data(data ,language_definition ,file):
   shown as <name when the instruction reads it, >name when it writes it, and
   <>name when it does both.
   """
-  for name ,type_name in data["list_variable"]:
+  for name ,type_name in data["list__variable"]:
     print(f"variable     {clean(name)}  {clean(type_name)}" ,file=file)
   if data["result"] is not None:
     print(f"result       {clean(data['result'])}" ,file=file)
-  if not data["list_instruction"]:
+  if not data["list__instruction"]:
     print("(the journal has no instructions)" ,file=file)
-  for index ,instruction in enumerate(data["list_instruction"]):
+  for index ,instruction in enumerate(data["list__instruction"]):
     format_ = language_definition.format_of(instruction["operation"]) or []
-    list_direction = [d for d ,_ in format_] + ["?"] * len(instruction["list_argument"])
-    list_part = [argument_text(p ,d) for p ,d in zip(instruction["list_argument"] ,list_direction)]
-    print(f"@{index:<3} {clean(instruction['operation']):<12} {' '.join(list_part)}" ,file=file)
+    list__direction = [d for d ,_ in format_] + ["?"] * len(instruction["list__argument"])
+    list__part = [argument_text(p ,d) for p ,d in zip(instruction["list__argument"] ,list__direction)]
+    print(f"@{index:<3} {clean(instruction['operation']):<12} {' '.join(list__part)}" ,file=file)
 
 
 # --------------------------------------------------------------------------------

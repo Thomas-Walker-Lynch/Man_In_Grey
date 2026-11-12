@@ -13,7 +13,7 @@ directory from page_directory() among the guard's constraints.
 
 import html ,os ,stat ,urllib.parse
 
-from Emplace_Bio·GuardCheck import STYLE ,picture_extension ,list_page_name
+from Emplace_Bio·GuardCheck import STYLE ,picture_extension ,list__page_name
 
 PAGE_PERMISSION = 0o644
 
@@ -21,7 +21,7 @@ PAGE_PERMISSION = 0o644
 # --------------------------------------------------------------------------------
 # the interpreter's side: the page
 
-def page(display_name ,list_paragraph ,picture_name):
+def page(display_name ,list__paragraph ,picture_name):
   """
   The HTML of a page. Every text given is escaped; every tag comes from this
   function or from STYLE.
@@ -39,19 +39,19 @@ def page(display_name ,list_paragraph ,picture_name):
   ]
   if picture_name:
     part += ['<img src="' ,html.escape(urllib.parse.quote(picture_name) ,quote=True) ,'" alt="' ,name ,'">\n']
-  for list_run in list_paragraph:
+  for list__run in list__paragraph:
     part.append("<p>")
-    for content ,style in list_run:
-      list_tag = [STYLE[s] for s in STYLE if s in style]
-      part += [f"<{tag}>" for tag in list_tag]
+    for content ,style in list__run:
+      list__tag = [STYLE[s] for s in STYLE if s in style]
+      part += [f"<{tag}>" for tag in list__tag]
       part.append(html.escape(content ,quote=False))
-      part += [f"</{tag}>" for tag in reversed(list_tag)]
+      part += [f"</{tag}>" for tag in reversed(list__tag)]
     part.append("</p>\n")
   part.append("</body>\n</html>\n")
   return "".join(part)
 
 def _write_temporary(dirfd ,target ,content):
-  tmp = f".{target}.Man_In_Grey.{os.getpid()}"
+  tmp = f".{target}.Man-In-Grey.{os.getpid()}"
   fd = os.open(tmp ,os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW ,0o600 ,dir_fd=dirfd)
   try:
     view = memoryview(content)
@@ -76,17 +76,17 @@ class LibraryInstruction:
     self._user_name = gate_invoking_account
     self._log = log
     self._display_name = None
-    self._list_paragraph = []
+    self._list__paragraph = []
     self._picture = None
 
   def display_name(self ,name_text):
     self._display_name = name_text
 
   def paragraph(self):
-    self._list_paragraph.append([])
+    self._list__paragraph.append([])
 
-  def text(self ,run_text ,list_style):
-    self._list_paragraph[-1].append((run_text ,list_style))
+  def text(self ,run_text ,list__style):
+    self._list__paragraph[-1].append((run_text ,list__style))
 
   def picture(self ,image):
     self._picture = image
@@ -104,13 +104,13 @@ class LibraryInstruction:
       dirfd = os.open(directory ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
       if picture_name:
         pending.append((_write_temporary(dirfd ,picture_name ,picture) ,picture_name))
-      pending.append((_write_temporary(dirfd ,page_name ,page(self._display_name ,self._list_paragraph ,picture_name).encode("utf-8")) ,page_name))
+      pending.append((_write_temporary(dirfd ,page_name ,page(self._display_name ,self._list__paragraph ,picture_name).encode("utf-8")) ,page_name))
       while pending:
         tmp ,target = pending[0]
         os.rename(tmp ,target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd)
         pending.pop(0)
         log("emplaced" ,f"{directory}/{target}")
-      for name in list_page_name(user_name)[1:]:
+      for name in list__page_name(user_name)[1:]:
         if name == picture_name:
           continue
         try:
