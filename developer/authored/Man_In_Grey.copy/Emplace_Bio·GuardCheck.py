@@ -140,9 +140,9 @@ def check_language(list__instruction_view ,data ,constraint ,gate_invoking_accou
     list__problem.append(f"the journal gives {count['picture']} pictures; it gives at most one")
   return list__problem
 
-def dirp__page__problem(directory):
-  if not isinstance(directory ,str) or not directory.startswith("/") or os.path.normpath(directory) != directory:
-    return f"dirp__page() gives {clean(repr(directory))}, not an absolute directory in normal form"
+def dirp__page__problem(dirp__page):
+  if not isinstance(dirp__page ,str) or not dirp__page.startswith("/") or os.path.normpath(dirp__page) != dirp__page:
+    return f"dirp__page() gives {clean(repr(dirp__page))}, not an absolute directory in normal form"
   return None
 
 def check_constraint(list__instruction_view ,data ,constraint ,gate_invoking_account):
@@ -178,21 +178,21 @@ def check_filesystem(list__instruction_view ,data ,constraint ,gate_invoking_acc
   list__problem = []
   if has__control(gate_invoking_account) or gate_invoking_account.startswith("."):
     return [f"the account name {clean(repr(gate_invoking_account))} cannot name a page"]
-  directory = constraint.dirp__page()
-  if not os.path.isdir(directory):
-    return [f"{directory} is not a directory"]
-  if os.path.realpath(directory) != directory:
-    return [f"{directory} passes through a symbolic link"]
+  dirp__page = constraint.dirp__page()
+  if not os.path.isdir(dirp__page):
+    return [f"{dirp__page} is not a directory"]
+  if os.path.realpath(dirp__page) != dirp__page:
+    return [f"{dirp__page} passes through a symbolic link"]
   # access() alone answers for the real uid; effective_ids asks for the effective uid, which writes
-  if not os.access(directory ,os.W_OK | os.X_OK ,effective_ids=os.access in os.supports_effective_ids):
-    list__problem.append(f"{directory} cannot be written by the effective uid's account")
+  if not os.access(dirp__page ,os.W_OK | os.X_OK ,effective_ids=os.access in os.supports_effective_ids):
+    list__problem.append(f"{dirp__page} cannot be written by the effective uid's account")
   for name in list__page_name(gate_invoking_account):
     try:
-      st = os.lstat(os.path.join(directory ,name))
+      st = os.lstat(os.path.join(dirp__page ,name))
     except FileNotFoundError:
       continue
     if not stat.S_ISREG(st.st_mode):
-      list__problem.append(f"{directory}/{name} exists and is not a regular file")
+      list__problem.append(f"{dirp__page}/{name} exists and is not a regular file")
   return list__problem
 
 LIST__CHECK = (

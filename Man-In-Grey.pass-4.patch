@@ -1,0 +1,679 @@
+diff --git "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Guard.py" "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Guard.py"
+index f116ac7..f84ca59 100644
+--- "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Guard.py"
++++ "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Guard.py"
+@@ -79,16 +79,16 @@ DIRPA__HERE = Path(__file__).resolve().parent
+ MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Guard·LibraryConstraint.py" ,"Emplace_Bio·Language.py" ,"Emplace_Bio·GuardCheck.py" ,"Emplace_Bio·Guard.py")
+ 
+ 
+-def trusted_owner__problem(path):
++def trusted_owner__problem(fsnodp__checked):
+   "None when path is owned by root or the effective uid's account and writable by no other account"
+   try:
+-    st = os.lstat(path)
++    st = os.lstat(fsnodp__checked)
+   except OSError as error:
+-    return f"{path}: {error.strerror}"
++    return f"{fsnodp__checked}: {error.strerror}"
+   if st.st_uid not in (0 ,os.geteuid()):
+-    return f"{path} is owned by uid {st.st_uid}, neither root nor the effective uid's account"
++    return f"{fsnodp__checked} is owned by uid {st.st_uid}, neither root nor the effective uid's account"
+   if st.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+-    return f"{path} is writable by group or other accounts"
++    return f"{fsnodp__checked} is writable by group or other accounts"
+   return None
+ 
+ def say(tag ,message):
+diff --git "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267GuardCheck.py" "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267GuardCheck.py"
+index be5e4a3..e2b9456 100644
+--- "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267GuardCheck.py"
++++ "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267GuardCheck.py"
+@@ -140,9 +140,9 @@ def check_language(list__instruction_view ,data ,constraint ,gate_invoking_accou
+     list__problem.append(f"the journal gives {count['picture']} pictures; it gives at most one")
+   return list__problem
+ 
+-def dirp__page__problem(directory):
+-  if not isinstance(directory ,str) or not directory.startswith("/") or os.path.normpath(directory) != directory:
+-    return f"dirp__page() gives {clean(repr(directory))}, not an absolute directory in normal form"
++def dirp__page__problem(dirp__page):
++  if not isinstance(dirp__page ,str) or not dirp__page.startswith("/") or os.path.normpath(dirp__page) != dirp__page:
++    return f"dirp__page() gives {clean(repr(dirp__page))}, not an absolute directory in normal form"
+   return None
+ 
+ def check_constraint(list__instruction_view ,data ,constraint ,gate_invoking_account):
+@@ -178,21 +178,21 @@ def check_filesystem(list__instruction_view ,data ,constraint ,gate_invoking_acc
+   list__problem = []
+   if has__control(gate_invoking_account) or gate_invoking_account.startswith("."):
+     return [f"the account name {clean(repr(gate_invoking_account))} cannot name a page"]
+-  directory = constraint.dirp__page()
+-  if not os.path.isdir(directory):
+-    return [f"{directory} is not a directory"]
+-  if os.path.realpath(directory) != directory:
+-    return [f"{directory} passes through a symbolic link"]
++  dirp__page = constraint.dirp__page()
++  if not os.path.isdir(dirp__page):
++    return [f"{dirp__page} is not a directory"]
++  if os.path.realpath(dirp__page) != dirp__page:
++    return [f"{dirp__page} passes through a symbolic link"]
+   # access() alone answers for the real uid; effective_ids asks for the effective uid, which writes
+-  if not os.access(directory ,os.W_OK | os.X_OK ,effective_ids=os.access in os.supports_effective_ids):
+-    list__problem.append(f"{directory} cannot be written by the effective uid's account")
++  if not os.access(dirp__page ,os.W_OK | os.X_OK ,effective_ids=os.access in os.supports_effective_ids):
++    list__problem.append(f"{dirp__page} cannot be written by the effective uid's account")
+   for name in list__page_name(gate_invoking_account):
+     try:
+-      st = os.lstat(os.path.join(directory ,name))
++      st = os.lstat(os.path.join(dirp__page ,name))
+     except FileNotFoundError:
+       continue
+     if not stat.S_ISREG(st.st_mode):
+-      list__problem.append(f"{directory}/{name} exists and is not a regular file")
++      list__problem.append(f"{dirp__page}/{name} exists and is not a regular file")
+   return list__problem
+ 
+ LIST__CHECK = (
+diff --git "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Interpreter.py" "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Interpreter.py"
+index a05ae06..9b679e5 100644
+--- "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Interpreter.py"
++++ "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Interpreter.py"
+@@ -47,16 +47,16 @@ DIRPA__HERE = Path(__file__).resolve().parent
+ MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Interpreter.py" ,"Guard·LibraryConstraint.py" ,"Emplace_Bio·Language.py" ,"Emplace_Bio·GuardCheck.py" ,"Emplace_Bio·LibraryInstruction.py" ,"Emplace_Bio·Guard.py" ,"Emplace_Bio·Interpreter.py")
+ 
+ 
+-def trusted_owner__problem(path):
++def trusted_owner__problem(fsnodp__checked):
+   "None when path is owned by root or the effective uid's account and writable by no other account"
+   try:
+-    st = os.lstat(path)
++    st = os.lstat(fsnodp__checked)
+   except OSError as error:
+-    return f"{path}: {error.strerror}"
++    return f"{fsnodp__checked}: {error.strerror}"
+   if st.st_uid not in (0 ,os.geteuid()):
+-    return f"{path} is owned by uid {st.st_uid}, neither root nor the effective uid's account"
++    return f"{fsnodp__checked} is owned by uid {st.st_uid}, neither root nor the effective uid's account"
+   if st.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+-    return f"{path} is writable by group or other accounts"
++    return f"{fsnodp__checked} is writable by group or other accounts"
+   return None
+ 
+ def say(tag ,message):
+diff --git "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267LibraryInstruction.py" "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267LibraryInstruction.py"
+index 3ee6a34..5aeac34 100644
+--- "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267LibraryInstruction.py"
++++ "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267LibraryInstruction.py"
+@@ -50,8 +50,8 @@ def page(display_name ,list__paragraph ,picture_name):
+   part.append("</body>\n</html>\n")
+   return "".join(part)
+ 
+-def _write_temporary(dirfd ,target ,content):
+-  tmp = f".{target}.Man-In-Grey.{os.getpid()}"
++def _write_temporary(dirfd ,filen__target ,content):
++  tmp = f".{filen__target}.Man-In-Grey.{os.getpid()}"
+   fd = os.open(tmp ,os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW ,0o600 ,dir_fd=dirfd)
+   try:
+     view = memoryview(content)
+@@ -93,7 +93,7 @@ class LibraryInstruction:
+ 
+   def finish(self):
+     log ,user_name = self._log ,self._user_name
+-    directory = self._constraint.dirp__page()
++    dirp__page = self._constraint.dirp__page()
+     picture = self._picture
+     picture_name = user_name + picture_extension(picture) if picture is not None else None
+     page_name = user_name + ".html"
+@@ -101,15 +101,15 @@ class LibraryInstruction:
+     dirfd = None
+     pending = []   # (temporary ,target)
+     try:
+-      dirfd = os.open(directory ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
++      dirfd = os.open(dirp__page ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+       if picture_name:
+         pending.append((_write_temporary(dirfd ,picture_name ,picture) ,picture_name))
+       pending.append((_write_temporary(dirfd ,page_name ,page(self._display_name ,self._list__paragraph ,picture_name).encode("utf-8")) ,page_name))
+       while pending:
+-        tmp ,target = pending[0]
+-        os.rename(tmp ,target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd)
++        tmp ,filen__target = pending[0]
++        os.rename(tmp ,filen__target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd)
+         pending.pop(0)
+-        log("emplaced" ,f"{directory}/{target}")
++        log("emplaced" ,f"{dirp__page}/{filen__target}")
+       for name in list__page_name(user_name)[1:]:
+         if name == picture_name:
+           continue
+@@ -119,7 +119,7 @@ class LibraryInstruction:
+           continue
+         if stat.S_ISREG(st.st_mode):
+           os.unlink(name ,dir_fd=dirfd)
+-          log("removed" ,f"{directory}/{name}")
++          log("removed" ,f"{dirp__page}/{name}")
+       os.fsync(dirfd)
+     finally:
+       for tmp ,_ in pending:
+diff --git "a/developer/authored/Man_In_Grey.copy/Guard\302\267LibraryConstraint.py" "b/developer/authored/Man_In_Grey.copy/Guard\302\267LibraryConstraint.py"
+index 80a41cb..5160325 100644
+--- "a/developer/authored/Man_In_Grey.copy/Guard\302\267LibraryConstraint.py"
++++ "b/developer/authored/Man_In_Grey.copy/Guard\302\267LibraryConstraint.py"
+@@ -43,18 +43,18 @@ def has__real_group(group_name):
+     return False
+   return gid == os.getgid() or gid in os.getgroups()
+ 
+-def is__path_under(path ,directory):
++def is__path_under(fsnodpa__inner ,dirpa__outer):
+   """
+   True when path is directory or lies within it. Both are to be absolute and
+   in normal form, as the guard's wellformed check makes a journal's paths.
+   """
+-  if not (isinstance(path ,str) and isinstance(directory ,str)):
++  if not (isinstance(fsnodpa__inner ,str) and isinstance(dirpa__outer ,str)):
+     return False
+-  if not (path.startswith("/") and directory.startswith("/")):
++  if not (fsnodpa__inner.startswith("/") and dirpa__outer.startswith("/")):
+     return False
+-  if os.path.normpath(path) != path or os.path.normpath(directory) != directory:
++  if os.path.normpath(fsnodpa__inner) != fsnodpa__inner or os.path.normpath(dirpa__outer) != dirpa__outer:
+     return False
+-  return path == directory or path.startswith(directory.rstrip("/") + "/")
++  return fsnodpa__inner == dirpa__outer or fsnodpa__inner.startswith(dirpa__outer.rstrip("/") + "/")
+ 
+ def has__permission_within(permission ,limit):
+   """
+diff --git a/developer/authored/Man_In_Grey.copy/Man_In_Grey.py b/developer/authored/Man_In_Grey.copy/Man_In_Grey.py
+index d46327c..7111541 100755
+--- a/developer/authored/Man_In_Grey.copy/Man_In_Grey.py
++++ b/developer/authored/Man_In_Grey.copy/Man_In_Grey.py
+@@ -96,42 +96,42 @@ class Provenance:
+ # --------------------------------------------------------------------------------
+ # finding the composers, and the ownership check
+ 
+-def trusted_owner__problem(path):
++def trusted_owner__problem(fsnodp__checked):
+   "None when path is owned by the gate invoking account or root and writable by no other account"
+   try:
+-    st = os.lstat(path)
++    st = os.lstat(fsnodp__checked)
+   except OSError as error:
+-    return f"{path}: {error.strerror}"
++    return f"{fsnodp__checked}: {error.strerror}"
+   if st.st_uid not in (0 ,os.getuid()):
+-    return f"{path} is owned by uid {st.st_uid}, neither root nor the gate invoking account"
++    return f"{fsnodp__checked} is owned by uid {st.st_uid}, neither root nor the gate invoking account"
+   if st.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+-    return f"{path} is writable by group or other accounts"
++    return f"{fsnodp__checked} is writable by group or other accounts"
+   return None
+ 
+-def chain_problem(path):
++def chain_problem(fsnodpa__checked):
+   "the ownership check over path and every directory above it"
+-  for each in [path] + list(path.parents):
++  for each in [fsnodpa__checked] + list(fsnodpa__checked.parents):
+     problem = trusted_owner__problem(each)
+     if problem:
+       return problem
+   return None
+ 
+-def composer_provenance(path):
++def composer_provenance(fpa__composer):
+   """
+   Given a composer file, absolute. Returns its Provenance. Raises
+   RuntimeError on a symbolic link, a file that is not regular, or a failed
+   ownership check.
+   """
+-  problem = chain_problem(path)
++  problem = chain_problem(fpa__composer)
+   if problem:
+     raise RuntimeError(f"refusing to run the composer: {problem}")
+-  if path.is_symlink():
+-    raise RuntimeError(f"{path} is a symbolic link")
+-  if path.is_dir():
+-    raise RuntimeError(f"{path} is a directory; this version of Man-In-Grey runs one composer, given as a file")
+-  if not stat.S_ISREG(path.lstat().st_mode):
+-    raise RuntimeError(f"{path} is not a composer file")
+-  return Provenance(path)
++  if fpa__composer.is_symlink():
++    raise RuntimeError(f"{fpa__composer} is a symbolic link")
++  if fpa__composer.is_dir():
++    raise RuntimeError(f"{fpa__composer} is a directory; this version of Man-In-Grey runs one composer, given as a file")
++  if not stat.S_ISREG(fpa__composer.lstat().st_mode):
++    raise RuntimeError(f"{fpa__composer} is not a composer file")
++  return Provenance(fpa__composer)
+ 
+ 
+ # --------------------------------------------------------------------------------
+@@ -244,14 +244,14 @@ def print_result(result_bytes ,file=None):
+   print(f"result: {type_name} {shown}" ,file=file or sys.stdout)
+   return True
+ 
+-def orchestrate(path ,gate ,flag):
+-  path = Path(path).absolute()
++def orchestrate(filep__composer ,gate ,flag):
++  filep__composer = Path(filep__composer).absolute()
+   if not gate:
+     print("error: orchestrate is given the gate to invoke, as gate <file>" ,file=sys.stderr)
+     return 2
+   fpa__gate = Path(gate).absolute()
+   try:
+-    journal = compose(composer_provenance(path) ,language_definition(gate_flag(fpa__gate).get("language")))
++    journal = compose(composer_provenance(filep__composer) ,language_definition(gate_flag(fpa__gate).get("language")))
+   except (OSError ,RuntimeError) as error:
+     print(f"error: {error}" ,file=sys.stderr)
+     return 2
+@@ -307,7 +307,7 @@ def CLI(argv=None):
+   if not rest:
+     print(f"Error: {command} is given a composer file." ,file=sys.stderr)
+     return 2
+-  path ,rest = rest[0] ,rest[1:]
++  filep__composer ,rest = rest[0] ,rest[1:]
+   value ,flag = {} ,set()
+   i = 0
+   while i < len(rest):
+@@ -319,7 +319,7 @@ def CLI(argv=None):
+     else:
+       print(f"Error: unknown or incomplete option '{word}'." ,file=sys.stderr)
+       return 2
+-  return orchestrate(path ,value.get("gate") ,flag)
++  return orchestrate(filep__composer ,value.get("gate") ,flag)
+ 
+ 
+ if __name__ == "__main__":
+diff --git "a/developer/authored/Man_In_Grey.copy/Smoke\302\267Guard.py" "b/developer/authored/Man_In_Grey.copy/Smoke\302\267Guard.py"
+index 099bddb..a1c1e08 100644
+--- "a/developer/authored/Man_In_Grey.copy/Smoke\302\267Guard.py"
++++ "b/developer/authored/Man_In_Grey.copy/Smoke\302\267Guard.py"
+@@ -75,16 +75,16 @@ DIRPA__HERE = Path(__file__).resolve().parent
+ MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Guard·LibraryConstraint.py" ,"Smoke·Language.py" ,"Smoke·GuardCheck.py" ,"Smoke·Guard.py")
+ 
+ 
+-def trusted_owner__problem(path):
++def trusted_owner__problem(fsnodp__checked):
+   "None when path is owned by root or the effective uid's account and writable by no other account"
+   try:
+-    st = os.lstat(path)
++    st = os.lstat(fsnodp__checked)
+   except OSError as error:
+-    return f"{path}: {error.strerror}"
++    return f"{fsnodp__checked}: {error.strerror}"
+   if st.st_uid not in (0 ,os.geteuid()):
+-    return f"{path} is owned by uid {st.st_uid}, neither root nor the effective uid's account"
++    return f"{fsnodp__checked} is owned by uid {st.st_uid}, neither root nor the effective uid's account"
+   if st.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+-    return f"{path} is writable by group or other accounts"
++    return f"{fsnodp__checked} is writable by group or other accounts"
+   return None
+ 
+ def say(tag ,message):
+diff --git "a/developer/authored/Man_In_Grey.copy/Smoke\302\267Interpreter.py" "b/developer/authored/Man_In_Grey.copy/Smoke\302\267Interpreter.py"
+index 767b426..b9d6f28 100644
+--- "a/developer/authored/Man_In_Grey.copy/Smoke\302\267Interpreter.py"
++++ "b/developer/authored/Man_In_Grey.copy/Smoke\302\267Interpreter.py"
+@@ -47,16 +47,16 @@ DIRPA__HERE = Path(__file__).resolve().parent
+ MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Interpreter.py" ,"Guard·LibraryConstraint.py" ,"Smoke·Language.py" ,"Smoke·GuardCheck.py" ,"Smoke·LibraryInstruction.py" ,"Smoke·Guard.py" ,"Smoke·Interpreter.py")
+ 
+ 
+-def trusted_owner__problem(path):
++def trusted_owner__problem(fsnodp__checked):
+   "None when path is owned by root or the effective uid's account and writable by no other account"
+   try:
+-    st = os.lstat(path)
++    st = os.lstat(fsnodp__checked)
+   except OSError as error:
+-    return f"{path}: {error.strerror}"
++    return f"{fsnodp__checked}: {error.strerror}"
+   if st.st_uid not in (0 ,os.geteuid()):
+-    return f"{path} is owned by uid {st.st_uid}, neither root nor the effective uid's account"
++    return f"{fsnodp__checked} is owned by uid {st.st_uid}, neither root nor the effective uid's account"
+   if st.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+-    return f"{path} is writable by group or other accounts"
++    return f"{fsnodp__checked} is writable by group or other accounts"
+   return None
+ 
+ def say(tag ,message):
+diff --git "a/developer/authored/Man_In_Grey.copy/Smoke\302\267LibraryInstruction.py" "b/developer/authored/Man_In_Grey.copy/Smoke\302\267LibraryInstruction.py"
+index 4ca958a..d7fc3bf 100644
+--- "a/developer/authored/Man_In_Grey.copy/Smoke\302\267LibraryInstruction.py"
++++ "b/developer/authored/Man_In_Grey.copy/Smoke\302\267LibraryInstruction.py"
+@@ -74,8 +74,8 @@ class LibraryInstruction:
+ 
+   def finish(self):
+     for record in self._opened:
+-      dirfd ,fd ,tmp ,target = record["dirfd"] ,record["fd"] ,record["tmp"] ,record["name"]
+-      where = f"{record['directory']}/{target}"
++      dirfd ,fd ,tmp ,filen__target = record["dirfd"] ,record["fd"] ,record["tmp"] ,record["name"]
++      where = f"{record['directory']}/{filen__target}"
+       account = pwd.getpwnam(record["owner"])
+       os.fsync(fd)
+       # Only root can give a file away. Any other interpreter account makes
+@@ -90,15 +90,15 @@ class LibraryInstruction:
+       os.fsync(fd)
+       os.close(fd); record["fd"] = None
+       if record["mode"] == "create":
+-        os.link(tmp ,target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd ,follow_symlinks=False)
++        os.link(tmp ,filen__target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd ,follow_symlinks=False)
+         os.unlink(tmp ,dir_fd=dirfd)
+         self._log("created" ,where)
+       else:
+         kept = None
+-        if record["mode"] == "replace-keep" and not is__absent(dirfd ,target):
+-          kept = _backup_name(dirfd ,target)
+-          os.link(target ,kept ,src_dir_fd=dirfd ,dst_dir_fd=dirfd ,follow_symlinks=False)
+-        os.rename(tmp ,target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd)
++        if record["mode"] == "replace-keep" and not is__absent(dirfd ,filen__target):
++          kept = _backup_name(dirfd ,filen__target)
++          os.link(filen__target ,kept ,src_dir_fd=dirfd ,dst_dir_fd=dirfd ,follow_symlinks=False)
++        os.rename(tmp ,filen__target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd)
+         self._log("replaced" ,where + (f" (kept as {kept})" if kept else ""))
+       record["tmp"] = None
+       os.fsync(dirfd)
+diff --git a/developer/authored/Man_In_Grey.copy/install-gate b/developer/authored/Man_In_Grey.copy/install-gate
+index 1ad205e..2cfaa36 100755
+--- a/developer/authored/Man_In_Grey.copy/install-gate
++++ b/developer/authored/Man_In_Grey.copy/install-gate
+@@ -66,9 +66,9 @@ def say(message):
+ # --------------------------------------------------------------------------------
+ # checks
+ 
+-def root_chain__problem(path):
++def root_chain__problem(fsnodpa__checked):
+   "None when path and every directory above it are owned by root and writable by no other account"
+-  for each in [path] + list(path.parents):
++  for each in [fsnodpa__checked] + list(fsnodpa__checked.parents):
+     st = os.lstat(each)
+     if stat.S_ISLNK(st.st_mode):
+       return f"{each} is a symbolic link"
+@@ -78,56 +78,56 @@ def root_chain__problem(path):
+       return f"{each} is writable by group or other accounts"
+   return None
+ 
+-def nosuid(path):
+-  return bool(os.statvfs(path).f_flag & os.ST_NOSUID)
++def nosuid(fsnodp__checked):
++  return bool(os.statvfs(fsnodp__checked).f_flag & os.ST_NOSUID)
+ 
+ 
+ # --------------------------------------------------------------------------------
+ # copying
+ 
+-def install_file(source ,target ,mode):
++def install_file(filep__source ,filep__target ,mode):
+   "copy source to target through a temporary file in target's directory, owned by root"
+-  tmp = target.with_name(f".{target.name}.install-gate.{os.getpid()}")
+-  shutil.copyfile(source ,tmp ,follow_symlinks=False)
++  tmp = filep__target.with_name(f".{filep__target.name}.install-gate.{os.getpid()}")
++  shutil.copyfile(filep__source ,tmp ,follow_symlinks=False)
+   os.chown(tmp ,0 ,0)
+   os.chmod(tmp ,mode)
+-  os.rename(tmp ,target)
++  os.rename(tmp ,filep__target)
+ 
+-def make_directory(path):
+-  if not path.exists():
+-    path.mkdir(mode=0o755)
+-  st = os.lstat(path)
++def make_directory(dirp__made):
++  if not dirp__made.exists():
++    dirp__made.mkdir(mode=0o755)
++  st = os.lstat(dirp__made)
+   if not stat.S_ISDIR(st.st_mode):
+-    raise Refused(f"{path} is not a directory")
+-  os.chown(path ,0 ,0)
+-  os.chmod(path ,0o755)
++    raise Refused(f"{dirp__made} is not a directory")
++  os.chown(dirp__made ,0 ,0)
++  os.chmod(dirp__made ,0o755)
+ 
+ BEGIN ,END = "# constraints begin" ,"# constraints end"
+ 
+-def section_bound(text ,path):
++def section_bound(text ,filep__guard):
+   "the line numbers of the two constraint marks in a guard's text; raises Refused"
+   list__line = text.splitlines()
+   if list__line.count(BEGIN) != 1 or list__line.count(END) != 1 or list__line.index(BEGIN) > list__line.index(END):
+-    raise Refused(f"{path} does not hold the marks '{BEGIN}' and '{END}', once each and in that order")
++    raise Refused(f"{filep__guard} does not hold the marks '{BEGIN}' and '{END}', once each and in that order")
+   return list__line ,list__line.index(BEGIN) ,list__line.index(END)
+ 
+-def constraint_of(text ,path):
++def constraint_of(text ,filep__guard):
+   "the constraints between the marks"
+-  list__line ,begin ,end = section_bound(text ,path)
++  list__line ,begin ,end = section_bound(text ,filep__guard)
+   return "\n".join(list__line[begin + 1:end]).strip("\n") + "\n"
+ 
+-def with_constraint(text ,path ,constraint):
++def with_constraint(text ,filep__guard ,constraint):
+   "the guard's text with constraint between the marks"
+-  list__line ,begin ,end = section_bound(text ,path)
++  list__line ,begin ,end = section_bound(text ,filep__guard)
+   return "\n".join(list__line[:begin + 1] + ["" ,constraint.strip("\n") ,""] + list__line[end:]) + "\n"
+ 
+-def install_text(text ,target ,mode):
++def install_text(text ,filep__target ,mode):
+   "write text to target through a temporary file in target's directory, owned by root"
+-  tmp = target.with_name(f".{target.name}.install-gate.{os.getpid()}")
++  tmp = filep__target.with_name(f".{filep__target.name}.install-gate.{os.getpid()}")
+   tmp.write_text(text ,encoding="utf-8")
+   os.chown(tmp ,0 ,0)
+   os.chmod(tmp ,mode)
+-  os.rename(tmp ,target)
++  os.rename(tmp ,filep__target)
+ 
+ def gate_flag(fpa__gate):
+   result = subprocess.run([str(fpa__gate) ,"flags"] ,capture_output=True ,text=True ,env={"PATH": "/usr/bin:/bin"})
+@@ -139,7 +139,7 @@ def gate_flag(fpa__gate):
+ # --------------------------------------------------------------------------------
+ # installing
+ 
+-def install(gate ,owner ,directory ,constraints=None ,group=None):
++def install(gate ,owner ,dirp__install ,constraints=None ,group=None):
+   """
+   Install the gate named gate into directory, owned by the account owner
+   and by group, or by owner's own group when group is None, and setuid and
+@@ -173,19 +173,19 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
+     except SyntaxError as error:
+       raise Refused(f"{constraints} is not Python: {error}")
+ 
+-  target = Path(directory)
+-  if not target.is_absolute():
+-    raise Refused(f"{directory} is not an absolute path")
+-  if not target.parent.is_dir():
+-    raise Refused(f"{target.parent} is not a directory")
+-  problem = root_chain__problem(target.parent)
++  dirp__target = Path(dirp__install)
++  if not dirp__target.is_absolute():
++    raise Refused(f"{dirp__install} is not an absolute path")
++  if not dirp__target.parent.is_dir():
++    raise Refused(f"{dirp__target.parent} is not a directory")
++  problem = root_chain__problem(dirp__target.parent)
+   if problem:
+     raise Refused(problem)
+-  make_directory(target)
+-  if nosuid(target):
+-    raise Refused(f"{target} is on a file system mounted nosuid, where the kernel ignores the setuid bit")
++  make_directory(dirp__target)
++  if nosuid(dirp__target):
++    raise Refused(f"{dirp__target} is on a file system mounted nosuid, where the kernel ignores the setuid bit")
+ 
+-  dirp__program ,dirp__gate = target / DIRN__PROGRAM ,target / DIRN__GATE
++  dirp__program ,dirp__gate = dirp__target / DIRN__PROGRAM ,dirp__target / DIRN__GATE
+   make_directory(dirp__program)
+   make_directory(dirp__gate)
+ 
+@@ -199,17 +199,17 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
+         say(f"{problem}; it holds no constraints to keep")
+ 
+   # Man_In_Grey/: every regular file, a guard with its kept constraints
+-  for source in sorted((DIRPA__SOURCE / DIRN__PROGRAM).iterdir()):
+-    st = os.lstat(source)
++  for filep__source in sorted((DIRPA__SOURCE / DIRN__PROGRAM).iterdir()):
++    st = os.lstat(filep__source)
+     if not stat.S_ISREG(st.st_mode):
+       continue
+-    destination = dirp__program / source.name
++    destination = dirp__program / filep__source.name
+     mode = 0o755 if st.st_mode & stat.S_IXUSR else 0o644
+-    if source.name in kept:
+-      install_text(with_constraint(source.read_text(encoding="utf-8") ,source ,kept[source.name]) ,destination ,mode)
++    if filep__source.name in kept:
++      install_text(with_constraint(filep__source.read_text(encoding="utf-8") ,filep__source ,kept[filep__source.name]) ,destination ,mode)
+       say(f"kept the constraints of {destination}")
+     else:
+-      install_file(source ,destination ,mode)
++      install_file(filep__source ,destination ,mode)
+   say(f"installed {dirp__program}/")
+ 
+   # the gate, owned by root until it is complete
+diff --git a/tester/authored/Emplace-Bio/run b/tester/authored/Emplace-Bio/run
+index 58c6625..f73220a 100755
+--- a/tester/authored/Emplace-Bio/run
++++ b/tester/authored/Emplace-Bio/run
+@@ -93,13 +93,13 @@ class Log:
+ # --------------------------------------------------------------------------------
+ # the work
+ 
+-def snapshot(root):
++def snapshot(dirp__root):
+   "every entry in root, by name, with its content or link target, and its mode"
+   result = {}
+-  for path in sorted(root.iterdir()):
+-    st = path.lstat()
+-    content = os.readlink(path).encode() if stat.S_ISLNK(st.st_mode) else path.read_bytes()
+-    result[path.name] = (content ,st.st_mode)
++  for filep__each in sorted(dirp__root.iterdir()):
++    st = filep__each.lstat()
++    content = os.readlink(filep__each).encode() if stat.S_ISLNK(st.st_mode) else filep__each.read_bytes()
++    result[filep__each.name] = (content ,st.st_mode)
+   return result
+ 
+ def check_status(log ,what ,status ,want ,output ,want_text=None):
+@@ -126,9 +126,9 @@ def make_tree(dirpa__consumer ,dirpa__tree):
+   for name in ("Man_In_Grey" ,"Man_In_Grey__Gate"):
+     (dirpa__tree / name).mkdir()
+     os.chmod(dirpa__tree / name ,0o755)
+-    for source in sorted((dirpa__consumer / name).iterdir()):
+-      if source.is_file():
+-        shutil.copy2(source ,dirpa__tree / name / source.name)
++    for filep__source in sorted((dirpa__consumer / name).iterdir()):
++      if filep__source.is_file():
++        shutil.copy2(filep__source ,dirpa__tree / name / filep__source.name)
+ 
+ def put_constraint(fpa__guard ,constraint):
+   "replace the predicates between the guard's constraint marks with constraint"
+@@ -154,8 +154,8 @@ def write_constraint(dirpa__tree ,dirpa__work ,account ,text__max_bytes=8192):
+   )
+   put_constraint(dirpa__tree / "Man_In_Grey" / "Emplace_Bio·Guard.py" ,text)
+ 
+-def run__Man_In_Grey(fpa__program ,fpa__gate ,path ,dirpa__work ,*option):
+-  command = [str(fpa__program) ,"orchestrate" ,str(path) ,"gate" ,str(fpa__gate) ,*option]
++def run__Man_In_Grey(fpa__program ,fpa__gate ,filep__composer ,dirpa__work ,*option):
++  command = [str(fpa__program) ,"orchestrate" ,str(filep__composer) ,"gate" ,str(fpa__gate) ,*option]
+   result = subprocess.run(command ,cwd=dirpa__work ,capture_output=True ,text=True)
+   return result.returncode ,(result.stdout + result.stderr).strip()
+ 
+@@ -294,14 +294,14 @@ def test(dirpa__repo_home):
+   log.check(snapshot(bio) == before ,"pending changes nothing")
+ 
+   # a page made a symbolic link
+-  target = dirpa__work / "elsewhere.html"
+-  target.write_text("not to be overwritten\n")
++  fpa__target = dirpa__work / "elsewhere.html"
++  fpa__target.write_text("not to be overwritten\n")
+   fpa__page.unlink()
+-  fpa__page.symlink_to(target)
++  fpa__page.symlink_to(fpa__target)
+   before = snapshot(bio)
+   status ,output = run_gate(fpa__gate ,hand_made(definition_hash ,good_page()))
+   check_status(log ,"link is refused by the filesystem check" ,status ,1 ,output ,"filesystem-broken:")
+-  log.check(snapshot(bio) == before and target.read_text() == "not to be overwritten\n" ,"link changes nothing")
++  log.check(snapshot(bio) == before and fpa__target.read_text() == "not to be overwritten\n" ,"link changes nothing")
+ 
+   return log.summary()
+ 
+diff --git a/tester/authored/smoke/run b/tester/authored/smoke/run
+index d218eb8..d689ac5 100755
+--- a/tester/authored/smoke/run
++++ b/tester/authored/smoke/run
+@@ -138,28 +138,28 @@ class Log:
+ # --------------------------------------------------------------------------------
+ # the work
+ 
+-def tree(root):
++def tree(dirp__root):
+   """
+   The files under root as {name: path}, the name relative to root with any
+   backup time replaced by the placeholder; a name met twice is listed with
+   a count, so two backups of one file are seen.
+   """
+   result = {}
+-  for path in sorted(p for p in root.rglob("*") if p.is_file() or p.is_symlink()):
+-    name = TIME_SUFFIX.sub(TIME_PLACEHOLDER ,path.relative_to(root).as_posix())
++  for filep__each in sorted(p for p in dirp__root.rglob("*") if p.is_file() or p.is_symlink()):
++    name = TIME_SUFFIX.sub(TIME_PLACEHOLDER ,filep__each.relative_to(dirp__root).as_posix())
+     if name in result:
+       n = 2
+       while f"{name} (copy {n})" in result: n += 1
+       name = f"{name} (copy {n})"
+-    result[name] = path
++    result[name] = filep__each
+   return result
+ 
+-def snapshot(root):
++def snapshot(dirp__root):
+   "every file under root, by its exact name, with its content, mode and owner"
+   result = {}
+-  for path in sorted(p for p in root.rglob("*") if p.is_file()):
+-    st = path.lstat()
+-    result[path.relative_to(root).as_posix()] = (path.read_bytes() ,stat.S_IMODE(st.st_mode) ,st.st_uid)
++  for filep__each in sorted(p for p in dirp__root.rglob("*") if p.is_file()):
++    st = filep__each.lstat()
++    result[filep__each.relative_to(dirp__root).as_posix()] = (filep__each.read_bytes() ,stat.S_IMODE(st.st_mode) ,st.st_uid)
+   return result
+ 
+ def compare(log ,run_name ,dirpa__work):
+@@ -171,25 +171,25 @@ def compare(log ,run_name ,dirpa__work):
+       log.check(False ,what ,"expected, not written"); continue
+     if name not in expected:
+       log.check(False ,what ,"written, not expected"); continue
+-    path = found[name]
++    filep__found = found[name]
+     problem = []
+-    if path.read_bytes() != expected[name].read_bytes():
++    if filep__found.read_bytes() != expected[name].read_bytes():
+       problem.append(f"content differs from expected/{run_name}/{name}")
+-    mode = stat.S_IMODE(path.lstat().st_mode)
++    mode = stat.S_IMODE(filep__found.lstat().st_mode)
+     want = MODE[run_name].get(name)
+     if want is not None and mode != want:
+       problem.append(f"mode {mode:04o}, expected {want:04o}")
+-    if path.lstat().st_uid != os.getuid():
+-      problem.append(f"owner uid {path.lstat().st_uid}, expected {os.getuid()}")
++    if filep__found.lstat().st_uid != os.getuid():
++      problem.append(f"owner uid {filep__found.lstat().st_uid}, expected {os.getuid()}")
+     log.check(not problem ,what ,"; ".join(problem) or None)
+ 
+ def limit_file_size():
+   "run in the child before Man-In-Grey starts: a file size limit, soft and hard, of 1 MiB"
+   resource.setrlimit(resource.RLIMIT_FSIZE ,(1 << 20 ,1 << 20))
+ 
+-def run__Man_In_Grey(fpa__program ,path ,dirpa__work ,*option ,preexec=None):
++def run__Man_In_Grey(fpa__program ,filep__composer ,dirpa__work ,*option ,preexec=None):
+   fpa__gate = fpa__program.parent.parent / "Man_In_Grey__Gate" / GATE_NAME
+-  command = [str(fpa__program) ,"orchestrate" ,str(path) ,"gate" ,str(fpa__gate) ,*option]
++  command = [str(fpa__program) ,"orchestrate" ,str(filep__composer) ,"gate" ,str(fpa__gate) ,*option]
+   result = subprocess.run(command ,cwd=dirpa__work ,capture_output=True ,text=True ,preexec_fn=preexec)
+   return result.returncode ,(result.stdout + result.stderr).strip()
+ 
+@@ -234,9 +234,9 @@ def make_tree(dirpa__consumer ,dirpa__tree):
+   for name in ("Man_In_Grey" ,"Man_In_Grey__Gate"):
+     (dirpa__tree / name).mkdir()
+     os.chmod(dirpa__tree / name ,0o755)
+-    for source in sorted((dirpa__consumer / name).iterdir()):
+-      if source.is_file():
+-        shutil.copy2(source ,dirpa__tree / name / source.name)
++    for filep__source in sorted((dirpa__consumer / name).iterdir()):
++      if filep__source.is_file():
++        shutil.copy2(filep__source ,dirpa__tree / name / filep__source.name)
+ 
+ def put_constraint(fpa__guard ,constraint):
+   "replace the predicates between the guard's constraint marks with constraint"

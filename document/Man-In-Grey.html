@@ -214,8 +214,8 @@
           <RT·code>
             DEFINITION = {
               "list__type": [
-                ["directory" ,"text"]
-                ,["file_name" ,"text"]
+                ["dirpa" ,"text"]
+                ,["filen" ,"text"]
                 ,["mode" ,"text"]
                 ,["account_name" ,"text"]
                 ,["permission" ,"integer"]
@@ -224,9 +224,9 @@
                 ,["summary" ,["dictionary" ,["count_of__open" ,"integer"] ,["count_of__unlink" ,"integer"]]]
               ]
               ,"list__format": [
-                ["format__open" ,["in" ,"directory"] ,["in" ,"file_name"] ,["in" ,"mode"] ,["in" ,"account_name"] ,["in" ,"permission"] ,["out" ,"file"]]
+                ["format__open" ,["in" ,"dirpa"] ,["in" ,"filen"] ,["in" ,"mode"] ,["in" ,"account_name"] ,["in" ,"permission"] ,["out" ,"file"]]
                 ,["format__write" ,["in-out" ,"file"] ,["in" ,"content"]]
-                ,["format__unlink" ,["in" ,"directory"] ,["in" ,"file_name"]]
+                ,["format__unlink" ,["in" ,"dirpa"] ,["in" ,"filen"]]
                 ,["format__summary" ,["out" ,"summary"]]
               ]
               ,"list__result": ["summary"]

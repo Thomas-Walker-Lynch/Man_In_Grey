@@ -93,13 +93,13 @@ class Log:
 # --------------------------------------------------------------------------------
 # the work
 
-def snapshot(root):
+def snapshot(dirp__root):
   "every entry in root, by name, with its content or link target, and its mode"
   result = {}
-  for path in sorted(root.iterdir()):
-    st = path.lstat()
-    content = os.readlink(path).encode() if stat.S_ISLNK(st.st_mode) else path.read_bytes()
-    result[path.name] = (content ,st.st_mode)
+  for filep__each in sorted(dirp__root.iterdir()):
+    st = filep__each.lstat()
+    content = os.readlink(filep__each).encode() if stat.S_ISLNK(st.st_mode) else filep__each.read_bytes()
+    result[filep__each.name] = (content ,st.st_mode)
   return result
 
 def check_status(log ,what ,status ,want ,output ,want_text=None):
@@ -126,9 +126,9 @@ def make_tree(dirpa__consumer ,dirpa__tree):
   for name in ("Man_In_Grey" ,"Man_In_Grey__Gate"):
     (dirpa__tree / name).mkdir()
     os.chmod(dirpa__tree / name ,0o755)
-    for source in sorted((dirpa__consumer / name).iterdir()):
-      if source.is_file():
-        shutil.copy2(source ,dirpa__tree / name / source.name)
+    for filep__source in sorted((dirpa__consumer / name).iterdir()):
+      if filep__source.is_file():
+        shutil.copy2(filep__source ,dirpa__tree / name / filep__source.name)
 
 def put_constraint(fpa__guard ,constraint):
   "replace the predicates between the guard's constraint marks with constraint"
@@ -154,8 +154,8 @@ def write_constraint(dirpa__tree ,dirpa__work ,account ,text__max_bytes=8192):
   )
   put_constraint(dirpa__tree / "Man_In_Grey" / "Emplace_Bio·Guard.py" ,text)
 
-def run__Man_In_Grey(fpa__program ,fpa__gate ,path ,dirpa__work ,*option):
-  command = [str(fpa__program) ,"orchestrate" ,str(path) ,"gate" ,str(fpa__gate) ,*option]
+def run__Man_In_Grey(fpa__program ,fpa__gate ,filep__composer ,dirpa__work ,*option):
+  command = [str(fpa__program) ,"orchestrate" ,str(filep__composer) ,"gate" ,str(fpa__gate) ,*option]
   result = subprocess.run(command ,cwd=dirpa__work ,capture_output=True ,text=True)
   return result.returncode ,(result.stdout + result.stderr).strip()
 
@@ -294,14 +294,14 @@ def test(dirpa__repo_home):
   log.check(snapshot(bio) == before ,"pending changes nothing")
 
   # a page made a symbolic link
-  target = dirpa__work / "elsewhere.html"
-  target.write_text("not to be overwritten\n")
+  fpa__target = dirpa__work / "elsewhere.html"
+  fpa__target.write_text("not to be overwritten\n")
   fpa__page.unlink()
-  fpa__page.symlink_to(target)
+  fpa__page.symlink_to(fpa__target)
   before = snapshot(bio)
   status ,output = run_gate(fpa__gate ,hand_made(definition_hash ,good_page()))
   check_status(log ,"link is refused by the filesystem check" ,status ,1 ,output ,"filesystem-broken:")
-  log.check(snapshot(bio) == before and target.read_text() == "not to be overwritten\n" ,"link changes nothing")
+  log.check(snapshot(bio) == before and fpa__target.read_text() == "not to be overwritten\n" ,"link changes nothing")
 
   return log.summary()
 

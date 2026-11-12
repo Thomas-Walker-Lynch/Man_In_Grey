@@ -96,42 +96,42 @@ class Provenance:
 # --------------------------------------------------------------------------------
 # finding the composers, and the ownership check
 
-def trusted_owner__problem(path):
+def trusted_owner__problem(fsnodp__checked):
   "None when path is owned by the gate invoking account or root and writable by no other account"
   try:
-    st = os.lstat(path)
+    st = os.lstat(fsnodp__checked)
   except OSError as error:
-    return f"{path}: {error.strerror}"
+    return f"{fsnodp__checked}: {error.strerror}"
   if st.st_uid not in (0 ,os.getuid()):
-    return f"{path} is owned by uid {st.st_uid}, neither root nor the gate invoking account"
+    return f"{fsnodp__checked} is owned by uid {st.st_uid}, neither root nor the gate invoking account"
   if st.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
-    return f"{path} is writable by group or other accounts"
+    return f"{fsnodp__checked} is writable by group or other accounts"
   return None
 
-def chain_problem(path):
+def chain_problem(fsnodpa__checked):
   "the ownership check over path and every directory above it"
-  for each in [path] + list(path.parents):
+  for each in [fsnodpa__checked] + list(fsnodpa__checked.parents):
     problem = trusted_owner__problem(each)
     if problem:
       return problem
   return None
 
-def composer_provenance(path):
+def composer_provenance(fpa__composer):
   """
   Given a composer file, absolute. Returns its Provenance. Raises
   RuntimeError on a symbolic link, a file that is not regular, or a failed
   ownership check.
   """
-  problem = chain_problem(path)
+  problem = chain_problem(fpa__composer)
   if problem:
     raise RuntimeError(f"refusing to run the composer: {problem}")
-  if path.is_symlink():
-    raise RuntimeError(f"{path} is a symbolic link")
-  if path.is_dir():
-    raise RuntimeError(f"{path} is a directory; this version of Man-In-Grey runs one composer, given as a file")
-  if not stat.S_ISREG(path.lstat().st_mode):
-    raise RuntimeError(f"{path} is not a composer file")
-  return Provenance(path)
+  if fpa__composer.is_symlink():
+    raise RuntimeError(f"{fpa__composer} is a symbolic link")
+  if fpa__composer.is_dir():
+    raise RuntimeError(f"{fpa__composer} is a directory; this version of Man-In-Grey runs one composer, given as a file")
+  if not stat.S_ISREG(fpa__composer.lstat().st_mode):
+    raise RuntimeError(f"{fpa__composer} is not a composer file")
+  return Provenance(fpa__composer)
 
 
 # --------------------------------------------------------------------------------
@@ -244,14 +244,14 @@ def print_result(result_bytes ,file=None):
   print(f"result: {type_name} {shown}" ,file=file or sys.stdout)
   return True
 
-def orchestrate(path ,gate ,flag):
-  path = Path(path).absolute()
+def orchestrate(filep__composer ,gate ,flag):
+  filep__composer = Path(filep__composer).absolute()
   if not gate:
     print("error: orchestrate is given the gate to invoke, as gate <file>" ,file=sys.stderr)
     return 2
   fpa__gate = Path(gate).absolute()
   try:
-    journal = compose(composer_provenance(path) ,language_definition(gate_flag(fpa__gate).get("language")))
+    journal = compose(composer_provenance(filep__composer) ,language_definition(gate_flag(fpa__gate).get("language")))
   except (OSError ,RuntimeError) as error:
     print(f"error: {error}" ,file=sys.stderr)
     return 2
@@ -307,7 +307,7 @@ def CLI(argv=None):
   if not rest:
     print(f"Error: {command} is given a composer file." ,file=sys.stderr)
     return 2
-  path ,rest = rest[0] ,rest[1:]
+  filep__composer ,rest = rest[0] ,rest[1:]
   value ,flag = {} ,set()
   i = 0
   while i < len(rest):
@@ -319,7 +319,7 @@ def CLI(argv=None):
     else:
       print(f"Error: unknown or incomplete option '{word}'." ,file=sys.stderr)
       return 2
-  return orchestrate(path ,value.get("gate") ,flag)
+  return orchestrate(filep__composer ,value.get("gate") ,flag)
 
 
 if __name__ == "__main__":

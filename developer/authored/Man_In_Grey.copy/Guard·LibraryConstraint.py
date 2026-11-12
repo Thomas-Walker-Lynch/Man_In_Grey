@@ -43,18 +43,18 @@ def has__real_group(group_name):
     return False
   return gid == os.getgid() or gid in os.getgroups()
 
-def is__path_under(path ,directory):
+def is__path_under(fsnodpa__inner ,dirpa__outer):
   """
   True when path is directory or lies within it. Both are to be absolute and
   in normal form, as the guard's wellformed check makes a journal's paths.
   """
-  if not (isinstance(path ,str) and isinstance(directory ,str)):
+  if not (isinstance(fsnodpa__inner ,str) and isinstance(dirpa__outer ,str)):
     return False
-  if not (path.startswith("/") and directory.startswith("/")):
+  if not (fsnodpa__inner.startswith("/") and dirpa__outer.startswith("/")):
     return False
-  if os.path.normpath(path) != path or os.path.normpath(directory) != directory:
+  if os.path.normpath(fsnodpa__inner) != fsnodpa__inner or os.path.normpath(dirpa__outer) != dirpa__outer:
     return False
-  return path == directory or path.startswith(directory.rstrip("/") + "/")
+  return fsnodpa__inner == dirpa__outer or fsnodpa__inner.startswith(dirpa__outer.rstrip("/") + "/")
 
 def has__permission_within(permission ,limit):
   """

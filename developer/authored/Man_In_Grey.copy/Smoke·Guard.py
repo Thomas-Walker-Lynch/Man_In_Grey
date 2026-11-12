@@ -50,11 +50,11 @@ def is__allowed_account(user_name):
   "True when the account, the gate's real uid, can give journals to the gate"
   return False
 
-def is__allowed_open(directory ,name ,mode ,owner ,permission):
+def is__allowed_open(dirpa__target ,filen__target ,mode ,owner ,permission):
   "True when the file can be opened in this mode, to be given this owner and permission"
   return False
 
-def is__allowed_unlink(directory ,name):
+def is__allowed_unlink(dirpa__target ,filen__target):
   "True when the file can be removed"
   return False
 
@@ -75,16 +75,16 @@ DIRPA__HERE = Path(__file__).resolve().parent
 MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Guard·LibraryConstraint.py" ,"Smoke·Language.py" ,"Smoke·GuardCheck.py" ,"Smoke·Guard.py")
 
 
-def trusted_owner__problem(path):
+def trusted_owner__problem(fsnodp__checked):
   "None when path is owned by root or the effective uid's account and writable by no other account"
   try:
-    st = os.lstat(path)
+    st = os.lstat(fsnodp__checked)
   except OSError as error:
-    return f"{path}: {error.strerror}"
+    return f"{fsnodp__checked}: {error.strerror}"
   if st.st_uid not in (0 ,os.geteuid()):
-    return f"{path} is owned by uid {st.st_uid}, neither root nor the effective uid's account"
+    return f"{fsnodp__checked} is owned by uid {st.st_uid}, neither root nor the effective uid's account"
   if st.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
-    return f"{path} is writable by group or other accounts"
+    return f"{fsnodp__checked} is writable by group or other accounts"
   return None
 
 def say(tag ,message):

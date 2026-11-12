@@ -66,9 +66,9 @@ def say(message):
 # --------------------------------------------------------------------------------
 # checks
 
-def root_chain__problem(path):
+def root_chain__problem(fsnodpa__checked):
   "None when path and every directory above it are owned by root and writable by no other account"
-  for each in [path] + list(path.parents):
+  for each in [fsnodpa__checked] + list(fsnodpa__checked.parents):
     st = os.lstat(each)
     if stat.S_ISLNK(st.st_mode):
       return f"{each} is a symbolic link"
@@ -78,56 +78,56 @@ def root_chain__problem(path):
       return f"{each} is writable by group or other accounts"
   return None
 
-def nosuid(path):
-  return bool(os.statvfs(path).f_flag & os.ST_NOSUID)
+def nosuid(fsnodp__checked):
+  return bool(os.statvfs(fsnodp__checked).f_flag & os.ST_NOSUID)
 
 
 # --------------------------------------------------------------------------------
 # copying
 
-def install_file(source ,target ,mode):
+def install_file(filep__source ,filep__target ,mode):
   "copy source to target through a temporary file in target's directory, owned by root"
-  tmp = target.with_name(f".{target.name}.install-gate.{os.getpid()}")
-  shutil.copyfile(source ,tmp ,follow_symlinks=False)
+  tmp = filep__target.with_name(f".{filep__target.name}.install-gate.{os.getpid()}")
+  shutil.copyfile(filep__source ,tmp ,follow_symlinks=False)
   os.chown(tmp ,0 ,0)
   os.chmod(tmp ,mode)
-  os.rename(tmp ,target)
+  os.rename(tmp ,filep__target)
 
-def make_directory(path):
-  if not path.exists():
-    path.mkdir(mode=0o755)
-  st = os.lstat(path)
+def make_directory(dirp__made):
+  if not dirp__made.exists():
+    dirp__made.mkdir(mode=0o755)
+  st = os.lstat(dirp__made)
   if not stat.S_ISDIR(st.st_mode):
-    raise Refused(f"{path} is not a directory")
-  os.chown(path ,0 ,0)
-  os.chmod(path ,0o755)
+    raise Refused(f"{dirp__made} is not a directory")
+  os.chown(dirp__made ,0 ,0)
+  os.chmod(dirp__made ,0o755)
 
 BEGIN ,END = "# constraints begin" ,"# constraints end"
 
-def section_bound(text ,path):
+def section_bound(text ,filep__guard):
   "the line numbers of the two constraint marks in a guard's text; raises Refused"
   list__line = text.splitlines()
   if list__line.count(BEGIN) != 1 or list__line.count(END) != 1 or list__line.index(BEGIN) > list__line.index(END):
-    raise Refused(f"{path} does not hold the marks '{BEGIN}' and '{END}', once each and in that order")
+    raise Refused(f"{filep__guard} does not hold the marks '{BEGIN}' and '{END}', once each and in that order")
   return list__line ,list__line.index(BEGIN) ,list__line.index(END)
 
-def constraint_of(text ,path):
+def constraint_of(text ,filep__guard):
   "the constraints between the marks"
-  list__line ,begin ,end = section_bound(text ,path)
+  list__line ,begin ,end = section_bound(text ,filep__guard)
   return "\n".join(list__line[begin + 1:end]).strip("\n") + "\n"
 
-def with_constraint(text ,path ,constraint):
+def with_constraint(text ,filep__guard ,constraint):
   "the guard's text with constraint between the marks"
-  list__line ,begin ,end = section_bound(text ,path)
+  list__line ,begin ,end = section_bound(text ,filep__guard)
   return "\n".join(list__line[:begin + 1] + ["" ,constraint.strip("\n") ,""] + list__line[end:]) + "\n"
 
-def install_text(text ,target ,mode):
+def install_text(text ,filep__target ,mode):
   "write text to target through a temporary file in target's directory, owned by root"
-  tmp = target.with_name(f".{target.name}.install-gate.{os.getpid()}")
+  tmp = filep__target.with_name(f".{filep__target.name}.install-gate.{os.getpid()}")
   tmp.write_text(text ,encoding="utf-8")
   os.chown(tmp ,0 ,0)
   os.chmod(tmp ,mode)
-  os.rename(tmp ,target)
+  os.rename(tmp ,filep__target)
 
 def gate_flag(fpa__gate):
   result = subprocess.run([str(fpa__gate) ,"flags"] ,capture_output=True ,text=True ,env={"PATH": "/usr/bin:/bin"})
@@ -139,7 +139,7 @@ def gate_flag(fpa__gate):
 # --------------------------------------------------------------------------------
 # installing
 
-def install(gate ,owner ,directory ,constraints=None ,group=None):
+def install(gate ,owner ,dirp__install ,constraints=None ,group=None):
   """
   Install the gate named gate into directory, owned by the account owner
   and by group, or by owner's own group when group is None, and setuid and
@@ -173,19 +173,19 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
     except SyntaxError as error:
       raise Refused(f"{constraints} is not Python: {error}")
 
-  target = Path(directory)
-  if not target.is_absolute():
-    raise Refused(f"{directory} is not an absolute path")
-  if not target.parent.is_dir():
-    raise Refused(f"{target.parent} is not a directory")
-  problem = root_chain__problem(target.parent)
+  dirp__target = Path(dirp__install)
+  if not dirp__target.is_absolute():
+    raise Refused(f"{dirp__install} is not an absolute path")
+  if not dirp__target.parent.is_dir():
+    raise Refused(f"{dirp__target.parent} is not a directory")
+  problem = root_chain__problem(dirp__target.parent)
   if problem:
     raise Refused(problem)
-  make_directory(target)
-  if nosuid(target):
-    raise Refused(f"{target} is on a file system mounted nosuid, where the kernel ignores the setuid bit")
+  make_directory(dirp__target)
+  if nosuid(dirp__target):
+    raise Refused(f"{dirp__target} is on a file system mounted nosuid, where the kernel ignores the setuid bit")
 
-  dirp__program ,dirp__gate = target / DIRN__PROGRAM ,target / DIRN__GATE
+  dirp__program ,dirp__gate = dirp__target / DIRN__PROGRAM ,dirp__target / DIRN__GATE
   make_directory(dirp__program)
   make_directory(dirp__gate)
 
@@ -199,17 +199,17 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
         say(f"{problem}; it holds no constraints to keep")
 
   # Man_In_Grey/: every regular file, a guard with its kept constraints
-  for source in sorted((DIRPA__SOURCE / DIRN__PROGRAM).iterdir()):
-    st = os.lstat(source)
+  for filep__source in sorted((DIRPA__SOURCE / DIRN__PROGRAM).iterdir()):
+    st = os.lstat(filep__source)
     if not stat.S_ISREG(st.st_mode):
       continue
-    destination = dirp__program / source.name
+    destination = dirp__program / filep__source.name
     mode = 0o755 if st.st_mode & stat.S_IXUSR else 0o644
-    if source.name in kept:
-      install_text(with_constraint(source.read_text(encoding="utf-8") ,source ,kept[source.name]) ,destination ,mode)
+    if filep__source.name in kept:
+      install_text(with_constraint(filep__source.read_text(encoding="utf-8") ,filep__source ,kept[filep__source.name]) ,destination ,mode)
       say(f"kept the constraints of {destination}")
     else:
-      install_file(source ,destination ,mode)
+      install_file(filep__source ,destination ,mode)
   say(f"installed {dirp__program}/")
 
   # the gate, owned by root until it is complete

@@ -39,16 +39,16 @@ class LibraryInstruction:
 
   def __init__(self ,constraint ,gate_invoking_account ,log):
     self._log = log
-    self._opened = []   # by handle: {dirfd ,fd ,tmp ,directory ,name ,mode ,owner ,permission}
+    self._opened = []   # by handle: {dirfd ,fd ,tmp ,dirpa ,name ,mode ,owner ,permission}
     self._count_of__unlink = 0
 
-  def open(self ,directory ,file_name ,mode ,account_name ,permission ,file):
+  def open(self ,dirpa__target ,filen__target ,mode ,account_name ,permission ,file):
     handle = len(self._opened)
-    dirfd = os.open(directory ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-    record = {"dirfd": dirfd ,"fd": None ,"tmp": None ,"directory": directory ,"name": file_name
+    dirfd = os.open(dirpa__target ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    record = {"dirfd": dirfd ,"fd": None ,"tmp": None ,"dirpa": dirpa__target ,"name": filen__target
               ,"mode": mode ,"owner": account_name ,"permission": permission}
     self._opened.append(record)
-    tmp = f".{file_name}.Man-In-Grey.{os.getpid()}.{handle}"
+    tmp = f".{filen__target}.Man-In-Grey.{os.getpid()}.{handle}"
     record["fd"] = os.open(tmp ,os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW ,0o600 ,dir_fd=dirfd)
     record["tmp"] = tmp
     file.append(handle)
@@ -58,13 +58,13 @@ class LibraryInstruction:
     while view:
       view = view[os.write(fd ,view):]
 
-  def unlink(self ,directory ,file_name):
-    dirfd = os.open(directory ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+  def unlink(self ,dirpa__target ,filen__target):
+    dirfd = os.open(dirpa__target ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
-      if not is__absent(dirfd ,file_name):
-        os.unlink(file_name ,dir_fd=dirfd)
+      if not is__absent(dirfd ,filen__target):
+        os.unlink(filen__target ,dir_fd=dirfd)
         os.fsync(dirfd)
-        self._log("unlinked" ,f"{directory}/{file_name}")
+        self._log("unlinked" ,f"{dirpa__target}/{filen__target}")
     finally:
       os.close(dirfd)
     self._count_of__unlink += 1
@@ -74,8 +74,8 @@ class LibraryInstruction:
 
   def finish(self):
     for record in self._opened:
-      dirfd ,fd ,tmp ,target = record["dirfd"] ,record["fd"] ,record["tmp"] ,record["name"]
-      where = f"{record['directory']}/{target}"
+      dirfd ,fd ,tmp ,filen__target = record["dirfd"] ,record["fd"] ,record["tmp"] ,record["name"]
+      where = f"{record['dirpa']}/{filen__target}"
       account = pwd.getpwnam(record["owner"])
       os.fsync(fd)
       # Only root can give a file away. Any other interpreter account makes
@@ -90,15 +90,15 @@ class LibraryInstruction:
       os.fsync(fd)
       os.close(fd); record["fd"] = None
       if record["mode"] == "create":
-        os.link(tmp ,target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd ,follow_symlinks=False)
+        os.link(tmp ,filen__target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd ,follow_symlinks=False)
         os.unlink(tmp ,dir_fd=dirfd)
         self._log("created" ,where)
       else:
         kept = None
-        if record["mode"] == "replace-keep" and not is__absent(dirfd ,target):
-          kept = _backup_name(dirfd ,target)
-          os.link(target ,kept ,src_dir_fd=dirfd ,dst_dir_fd=dirfd ,follow_symlinks=False)
-        os.rename(tmp ,target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd)
+        if record["mode"] == "replace-keep" and not is__absent(dirfd ,filen__target):
+          kept = _backup_name(dirfd ,filen__target)
+          os.link(filen__target ,kept ,src_dir_fd=dirfd ,dst_dir_fd=dirfd ,follow_symlinks=False)
+        os.rename(tmp ,filen__target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd)
         self._log("replaced" ,where + (f" (kept as {kept})" if kept else ""))
       record["tmp"] = None
       os.fsync(dirfd)

@@ -49,7 +49,7 @@ MODE = ("create" ,"replace" ,"replace-keep")
 # --------------------------------------------------------------------------------
 # value checks
 
-def directory_problem(value):
+def dirpa__problem(value):
   if not value.startswith("/"):
     return f"directory {clean(repr(value))} is not an absolute path"
   if has__control(value):
@@ -58,7 +58,7 @@ def directory_problem(value):
     return f"directory {value!r} is not in normal form; give {os.path.normpath(value)!r}"
   return None
 
-def file_name__problem(value):
+def filen__problem(value):
   if not value or "/" in value or value in ("." ,".."):
     return f"file name {clean(repr(value))} is not a bare file name"
   if has__control(value):
@@ -83,7 +83,7 @@ def check_language(list__instruction_view ,data ,constraint ,gate_invoking_accou
   for view in list__instruction_view:
     name ,value = view.operation ,literal(view)
     if name in ("open" ,"unlink"):
-      for problem in (directory_problem(value[0]) ,file_name__problem(value[1])):
+      for problem in (dirpa__problem(value[0]) ,filen__problem(value[1])):
         if problem: list__problem.append(f"@{view.index} {name}: {problem}")
     if name == "open":
       if value[2] not in MODE:
@@ -102,13 +102,13 @@ def check_constraint(list__instruction_view ,data ,constraint ,gate_invoking_acc
   for view in list__instruction_view:
     name ,value = view.operation ,literal(view)
     if name == "open":
-      directory ,file_name ,mode ,owner ,permission = value[:5]
-      if constraint.is__allowed_open(directory ,file_name ,mode ,owner ,permission) is not True:
-        list__problem.append(f"@{view.index} open: {directory}/{file_name} in mode {mode}, owner {owner}, permission {permission:04o} is not allowed")
+      dirpa__target ,filen__target ,mode ,owner ,permission = value[:5]
+      if constraint.is__allowed_open(dirpa__target ,filen__target ,mode ,owner ,permission) is not True:
+        list__problem.append(f"@{view.index} open: {dirpa__target}/{filen__target} in mode {mode}, owner {owner}, permission {permission:04o} is not allowed")
     elif name == "unlink":
-      directory ,file_name = value
-      if constraint.is__allowed_unlink(directory ,file_name) is not True:
-        list__problem.append(f"@{view.index} unlink: {directory}/{file_name} is not allowed to be removed")
+      dirpa__target ,filen__target = value
+      if constraint.is__allowed_unlink(dirpa__target ,filen__target) is not True:
+        list__problem.append(f"@{view.index} unlink: {dirpa__target}/{filen__target} is not allowed to be removed")
   return list__problem
 
 def check_validity(list__instruction_view ,data ,constraint ,gate_invoking_account):
@@ -139,19 +139,19 @@ def check_filesystem(list__instruction_view ,data ,constraint ,gate_invoking_acc
     name ,value = view.operation ,literal(view)
     if name not in ("open" ,"unlink"):
       continue
-    directory ,file_name = value[0] ,value[1]
-    where = f"{directory}/{file_name}"
-    if (directory ,file_name) in seen:
+    dirpa__target ,filen__target = value[0] ,value[1]
+    where = f"{dirpa__target}/{filen__target}"
+    if (dirpa__target ,filen__target) in seen:
       list__problem.append(f"@{view.index} {name}: {where} is named by more than one instruction"); continue
-    seen.add((directory ,file_name))
-    if os.path.realpath(directory) != directory:
-      list__problem.append(f"@{view.index} {name}: {directory} passes through a symbolic link"); continue
+    seen.add((dirpa__target ,filen__target))
+    if os.path.realpath(dirpa__target) != dirpa__target:
+      list__problem.append(f"@{view.index} {name}: {dirpa__target} passes through a symbolic link"); continue
     try:
-      dirfd = os.open(directory ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+      dirfd = os.open(dirpa__target ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     except OSError as error:
-      list__problem.append(f"@{view.index} {name}: cannot open directory {directory} ({error.strerror})"); continue
+      list__problem.append(f"@{view.index} {name}: cannot open directory {dirpa__target} ({error.strerror})"); continue
     try:
-      absent = is__absent(dirfd ,file_name)
+      absent = is__absent(dirfd ,filen__target)
       if name == "open" and value[2] == "create" and not absent:
         list__problem.append(f"@{view.index} open: {where} exists, and the mode is create")
     except OSError as error:

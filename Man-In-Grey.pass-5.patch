@@ -1,0 +1,242 @@
+diff --git "a/developer/authored/Man_In_Grey.copy/Smoke\302\267Guard.py" "b/developer/authored/Man_In_Grey.copy/Smoke\302\267Guard.py"
+index a1c1e08..a359799 100644
+--- "a/developer/authored/Man_In_Grey.copy/Smoke\302\267Guard.py"
++++ "b/developer/authored/Man_In_Grey.copy/Smoke\302\267Guard.py"
+@@ -50,11 +50,11 @@ def is__allowed_account(user_name):
+   "True when the account, the gate's real uid, can give journals to the gate"
+   return False
+ 
+-def is__allowed_open(directory ,name ,mode ,owner ,permission):
++def is__allowed_open(dirpa__target ,filen__target ,mode ,owner ,permission):
+   "True when the file can be opened in this mode, to be given this owner and permission"
+   return False
+ 
+-def is__allowed_unlink(directory ,name):
++def is__allowed_unlink(dirpa__target ,filen__target):
+   "True when the file can be removed"
+   return False
+ 
+diff --git "a/developer/authored/Man_In_Grey.copy/Smoke\302\267GuardCheck.py" "b/developer/authored/Man_In_Grey.copy/Smoke\302\267GuardCheck.py"
+index 6dc3531..8383403 100644
+--- "a/developer/authored/Man_In_Grey.copy/Smoke\302\267GuardCheck.py"
++++ "b/developer/authored/Man_In_Grey.copy/Smoke\302\267GuardCheck.py"
+@@ -49,7 +49,7 @@ MODE = ("create" ,"replace" ,"replace-keep")
+ # --------------------------------------------------------------------------------
+ # value checks
+ 
+-def directory_problem(value):
++def dirpa__problem(value):
+   if not value.startswith("/"):
+     return f"directory {clean(repr(value))} is not an absolute path"
+   if has__control(value):
+@@ -58,7 +58,7 @@ def directory_problem(value):
+     return f"directory {value!r} is not in normal form; give {os.path.normpath(value)!r}"
+   return None
+ 
+-def file_name__problem(value):
++def filen__problem(value):
+   if not value or "/" in value or value in ("." ,".."):
+     return f"file name {clean(repr(value))} is not a bare file name"
+   if has__control(value):
+@@ -83,7 +83,7 @@ def check_language(list__instruction_view ,data ,constraint ,gate_invoking_accou
+   for view in list__instruction_view:
+     name ,value = view.operation ,literal(view)
+     if name in ("open" ,"unlink"):
+-      for problem in (directory_problem(value[0]) ,file_name__problem(value[1])):
++      for problem in (dirpa__problem(value[0]) ,filen__problem(value[1])):
+         if problem: list__problem.append(f"@{view.index} {name}: {problem}")
+     if name == "open":
+       if value[2] not in MODE:
+@@ -102,13 +102,13 @@ def check_constraint(list__instruction_view ,data ,constraint ,gate_invoking_acc
+   for view in list__instruction_view:
+     name ,value = view.operation ,literal(view)
+     if name == "open":
+-      directory ,file_name ,mode ,owner ,permission = value[:5]
+-      if constraint.is__allowed_open(directory ,file_name ,mode ,owner ,permission) is not True:
+-        list__problem.append(f"@{view.index} open: {directory}/{file_name} in mode {mode}, owner {owner}, permission {permission:04o} is not allowed")
++      dirpa__target ,filen__target ,mode ,owner ,permission = value[:5]
++      if constraint.is__allowed_open(dirpa__target ,filen__target ,mode ,owner ,permission) is not True:
++        list__problem.append(f"@{view.index} open: {dirpa__target}/{filen__target} in mode {mode}, owner {owner}, permission {permission:04o} is not allowed")
+     elif name == "unlink":
+-      directory ,file_name = value
+-      if constraint.is__allowed_unlink(directory ,file_name) is not True:
+-        list__problem.append(f"@{view.index} unlink: {directory}/{file_name} is not allowed to be removed")
++      dirpa__target ,filen__target = value
++      if constraint.is__allowed_unlink(dirpa__target ,filen__target) is not True:
++        list__problem.append(f"@{view.index} unlink: {dirpa__target}/{filen__target} is not allowed to be removed")
+   return list__problem
+ 
+ def check_validity(list__instruction_view ,data ,constraint ,gate_invoking_account):
+@@ -139,19 +139,19 @@ def check_filesystem(list__instruction_view ,data ,constraint ,gate_invoking_acc
+     name ,value = view.operation ,literal(view)
+     if name not in ("open" ,"unlink"):
+       continue
+-    directory ,file_name = value[0] ,value[1]
+-    where = f"{directory}/{file_name}"
+-    if (directory ,file_name) in seen:
++    dirpa__target ,filen__target = value[0] ,value[1]
++    where = f"{dirpa__target}/{filen__target}"
++    if (dirpa__target ,filen__target) in seen:
+       list__problem.append(f"@{view.index} {name}: {where} is named by more than one instruction"); continue
+-    seen.add((directory ,file_name))
+-    if os.path.realpath(directory) != directory:
+-      list__problem.append(f"@{view.index} {name}: {directory} passes through a symbolic link"); continue
++    seen.add((dirpa__target ,filen__target))
++    if os.path.realpath(dirpa__target) != dirpa__target:
++      list__problem.append(f"@{view.index} {name}: {dirpa__target} passes through a symbolic link"); continue
+     try:
+-      dirfd = os.open(directory ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
++      dirfd = os.open(dirpa__target ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+     except OSError as error:
+-      list__problem.append(f"@{view.index} {name}: cannot open directory {directory} ({error.strerror})"); continue
++      list__problem.append(f"@{view.index} {name}: cannot open directory {dirpa__target} ({error.strerror})"); continue
+     try:
+-      absent = is__absent(dirfd ,file_name)
++      absent = is__absent(dirfd ,filen__target)
+       if name == "open" and value[2] == "create" and not absent:
+         list__problem.append(f"@{view.index} open: {where} exists, and the mode is create")
+     except OSError as error:
+diff --git "a/developer/authored/Man_In_Grey.copy/Smoke\302\267Language.py" "b/developer/authored/Man_In_Grey.copy/Smoke\302\267Language.py"
+index 485a78f..448bf90 100644
+--- "a/developer/authored/Man_In_Grey.copy/Smoke\302\267Language.py"
++++ "b/developer/authored/Man_In_Grey.copy/Smoke\302\267Language.py"
+@@ -6,13 +6,13 @@ Data only; see Language.py for its form. A constrained form of the POSIX
+ file interface, made to exercise every part of the journal's form: a handle
+ an instruction produces, an argument both read and written, and a result.
+ 
+-  open(directory ,file_name ,mode ,account_name ,permission ,>file)
++  open(dirpa ,filen ,mode ,account_name ,permission ,>file)
+                        opens a file to be put in place after the last
+                        instruction, and writes its handle to the variable file
+   write(<>file ,content)
+                        appends content to the file; the file is read and
+                        written, as the instruction changes it
+-  unlink(directory ,file_name)
++  unlink(dirpa ,filen)
+                        removes a file
+   summary(>summary)    writes the counts of the files opened and removed so
+                        far, which a journal can make its result
+@@ -22,8 +22,8 @@ NAME = "Smoke"
+ 
+ DEFINITION = {
+   "list__type": [
+-    ["directory" ,"text"]
+-    ,["file_name" ,"text"]
++    ["dirpa" ,"text"]
++    ,["filen" ,"text"]
+     ,["mode" ,"text"]
+     ,["account_name" ,"text"]
+     ,["permission" ,"integer"]
+@@ -32,9 +32,9 @@ DEFINITION = {
+     ,["summary" ,["dictionary" ,["count_of__open" ,"integer"] ,["count_of__unlink" ,"integer"]]]
+   ]
+   ,"list__format": [
+-    ["format__open" ,["in" ,"directory"] ,["in" ,"file_name"] ,["in" ,"mode"] ,["in" ,"account_name"] ,["in" ,"permission"] ,["out" ,"file"]]
++    ["format__open" ,["in" ,"dirpa"] ,["in" ,"filen"] ,["in" ,"mode"] ,["in" ,"account_name"] ,["in" ,"permission"] ,["out" ,"file"]]
+     ,["format__write" ,["in-out" ,"file"] ,["in" ,"content"]]
+-    ,["format__unlink" ,["in" ,"directory"] ,["in" ,"file_name"]]
++    ,["format__unlink" ,["in" ,"dirpa"] ,["in" ,"filen"]]
+     ,["format__summary" ,["out" ,"summary"]]
+   ]
+   ,"list__result": ["summary"]
+diff --git "a/developer/authored/Man_In_Grey.copy/Smoke\302\267LibraryInstruction.py" "b/developer/authored/Man_In_Grey.copy/Smoke\302\267LibraryInstruction.py"
+index d7fc3bf..25ac8e1 100644
+--- "a/developer/authored/Man_In_Grey.copy/Smoke\302\267LibraryInstruction.py"
++++ "b/developer/authored/Man_In_Grey.copy/Smoke\302\267LibraryInstruction.py"
+@@ -39,16 +39,16 @@ class LibraryInstruction:
+ 
+   def __init__(self ,constraint ,gate_invoking_account ,log):
+     self._log = log
+-    self._opened = []   # by handle: {dirfd ,fd ,tmp ,directory ,name ,mode ,owner ,permission}
++    self._opened = []   # by handle: {dirfd ,fd ,tmp ,dirpa ,name ,mode ,owner ,permission}
+     self._count_of__unlink = 0
+ 
+-  def open(self ,directory ,file_name ,mode ,account_name ,permission ,file):
++  def open(self ,dirpa__target ,filen__target ,mode ,account_name ,permission ,file):
+     handle = len(self._opened)
+-    dirfd = os.open(directory ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+-    record = {"dirfd": dirfd ,"fd": None ,"tmp": None ,"directory": directory ,"name": file_name
++    dirfd = os.open(dirpa__target ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
++    record = {"dirfd": dirfd ,"fd": None ,"tmp": None ,"dirpa": dirpa__target ,"name": filen__target
+               ,"mode": mode ,"owner": account_name ,"permission": permission}
+     self._opened.append(record)
+-    tmp = f".{file_name}.Man-In-Grey.{os.getpid()}.{handle}"
++    tmp = f".{filen__target}.Man-In-Grey.{os.getpid()}.{handle}"
+     record["fd"] = os.open(tmp ,os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW ,0o600 ,dir_fd=dirfd)
+     record["tmp"] = tmp
+     file.append(handle)
+@@ -58,13 +58,13 @@ class LibraryInstruction:
+     while view:
+       view = view[os.write(fd ,view):]
+ 
+-  def unlink(self ,directory ,file_name):
+-    dirfd = os.open(directory ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
++  def unlink(self ,dirpa__target ,filen__target):
++    dirfd = os.open(dirpa__target ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+     try:
+-      if not is__absent(dirfd ,file_name):
+-        os.unlink(file_name ,dir_fd=dirfd)
++      if not is__absent(dirfd ,filen__target):
++        os.unlink(filen__target ,dir_fd=dirfd)
+         os.fsync(dirfd)
+-        self._log("unlinked" ,f"{directory}/{file_name}")
++        self._log("unlinked" ,f"{dirpa__target}/{filen__target}")
+     finally:
+       os.close(dirfd)
+     self._count_of__unlink += 1
+@@ -75,7 +75,7 @@ class LibraryInstruction:
+   def finish(self):
+     for record in self._opened:
+       dirfd ,fd ,tmp ,filen__target = record["dirfd"] ,record["fd"] ,record["tmp"] ,record["name"]
+-      where = f"{record['directory']}/{filen__target}"
++      where = f"{record['dirpa']}/{filen__target}"
+       account = pwd.getpwnam(record["owner"])
+       os.fsync(fd)
+       # Only root can give a file away. Any other interpreter account makes
+diff --git a/document/Man-In-Grey.html b/document/Man-In-Grey.html
+index 7add393..921b894 100644
+--- a/document/Man-In-Grey.html
++++ b/document/Man-In-Grey.html
+@@ -214,8 +214,8 @@
+           <RT·code>
+             DEFINITION = {
+               "list__type": [
+-                ["directory" ,"text"]
+-                ,["file_name" ,"text"]
++                ["dirpa" ,"text"]
++                ,["filen" ,"text"]
+                 ,["mode" ,"text"]
+                 ,["account_name" ,"text"]
+                 ,["permission" ,"integer"]
+@@ -224,9 +224,9 @@
+                 ,["summary" ,["dictionary" ,["count_of__open" ,"integer"] ,["count_of__unlink" ,"integer"]]]
+               ]
+               ,"list__format": [
+-                ["format__open" ,["in" ,"directory"] ,["in" ,"file_name"] ,["in" ,"mode"] ,["in" ,"account_name"] ,["in" ,"permission"] ,["out" ,"file"]]
++                ["format__open" ,["in" ,"dirpa"] ,["in" ,"filen"] ,["in" ,"mode"] ,["in" ,"account_name"] ,["in" ,"permission"] ,["out" ,"file"]]
+                 ,["format__write" ,["in-out" ,"file"] ,["in" ,"content"]]
+-                ,["format__unlink" ,["in" ,"directory"] ,["in" ,"file_name"]]
++                ,["format__unlink" ,["in" ,"dirpa"] ,["in" ,"filen"]]
+                 ,["format__summary" ,["out" ,"summary"]]
+               ]
+               ,"list__result": ["summary"]
+diff --git a/tester/authored/smoke/run b/tester/authored/smoke/run
+index d689ac5..5dc10c1 100755
+--- a/tester/authored/smoke/run
++++ b/tester/authored/smoke/run
+@@ -257,11 +257,11 @@ def write_constraint(dirpa__tree ,dirpa__work):
+     f"ALLOWED = {allowed!r}\n\n"
+     "def is__allowed_account(user_name):\n"
+     "  return user_name == PERSON\n\n"
+-    "def is__allowed_open(directory ,name ,mode ,owner ,permission):\n"
+-    "  entry = ALLOWED.get((directory ,name))\n"
++    "def is__allowed_open(dirpa__target ,filen__target ,mode ,owner ,permission):\n"
++    "  entry = ALLOWED.get((dirpa__target ,filen__target))\n"
+     "  return entry is not None and mode in entry[0] and owner == PERSON and permission == entry[1]\n\n"
+-    "def is__allowed_unlink(directory ,name):\n"
+-    "  entry = ALLOWED.get((directory ,name))\n"
++    "def is__allowed_unlink(dirpa__target ,filen__target):\n"
++    "  entry = ALLOWED.get((dirpa__target ,filen__target))\n"
+     "  return entry is not None and \"unlink\" in entry[0]\n"
+   )
+   put_constraint(dirpa__tree / "Man_In_Grey" / "Smoke·Guard.py" ,text)

@@ -138,28 +138,28 @@ class Log:
 # --------------------------------------------------------------------------------
 # the work
 
-def tree(root):
+def tree(dirp__root):
   """
   The files under root as {name: path}, the name relative to root with any
   backup time replaced by the placeholder; a name met twice is listed with
   a count, so two backups of one file are seen.
   """
   result = {}
-  for path in sorted(p for p in root.rglob("*") if p.is_file() or p.is_symlink()):
-    name = TIME_SUFFIX.sub(TIME_PLACEHOLDER ,path.relative_to(root).as_posix())
+  for filep__each in sorted(p for p in dirp__root.rglob("*") if p.is_file() or p.is_symlink()):
+    name = TIME_SUFFIX.sub(TIME_PLACEHOLDER ,filep__each.relative_to(dirp__root).as_posix())
     if name in result:
       n = 2
       while f"{name} (copy {n})" in result: n += 1
       name = f"{name} (copy {n})"
-    result[name] = path
+    result[name] = filep__each
   return result
 
-def snapshot(root):
+def snapshot(dirp__root):
   "every file under root, by its exact name, with its content, mode and owner"
   result = {}
-  for path in sorted(p for p in root.rglob("*") if p.is_file()):
-    st = path.lstat()
-    result[path.relative_to(root).as_posix()] = (path.read_bytes() ,stat.S_IMODE(st.st_mode) ,st.st_uid)
+  for filep__each in sorted(p for p in dirp__root.rglob("*") if p.is_file()):
+    st = filep__each.lstat()
+    result[filep__each.relative_to(dirp__root).as_posix()] = (filep__each.read_bytes() ,stat.S_IMODE(st.st_mode) ,st.st_uid)
   return result
 
 def compare(log ,run_name ,dirpa__work):
@@ -171,25 +171,25 @@ def compare(log ,run_name ,dirpa__work):
       log.check(False ,what ,"expected, not written"); continue
     if name not in expected:
       log.check(False ,what ,"written, not expected"); continue
-    path = found[name]
+    filep__found = found[name]
     problem = []
-    if path.read_bytes() != expected[name].read_bytes():
+    if filep__found.read_bytes() != expected[name].read_bytes():
       problem.append(f"content differs from expected/{run_name}/{name}")
-    mode = stat.S_IMODE(path.lstat().st_mode)
+    mode = stat.S_IMODE(filep__found.lstat().st_mode)
     want = MODE[run_name].get(name)
     if want is not None and mode != want:
       problem.append(f"mode {mode:04o}, expected {want:04o}")
-    if path.lstat().st_uid != os.getuid():
-      problem.append(f"owner uid {path.lstat().st_uid}, expected {os.getuid()}")
+    if filep__found.lstat().st_uid != os.getuid():
+      problem.append(f"owner uid {filep__found.lstat().st_uid}, expected {os.getuid()}")
     log.check(not problem ,what ,"; ".join(problem) or None)
 
 def limit_file_size():
   "run in the child before Man-In-Grey starts: a file size limit, soft and hard, of 1 MiB"
   resource.setrlimit(resource.RLIMIT_FSIZE ,(1 << 20 ,1 << 20))
 
-def run__Man_In_Grey(fpa__program ,path ,dirpa__work ,*option ,preexec=None):
+def run__Man_In_Grey(fpa__program ,filep__composer ,dirpa__work ,*option ,preexec=None):
   fpa__gate = fpa__program.parent.parent / "Man_In_Grey__Gate" / GATE_NAME
-  command = [str(fpa__program) ,"orchestrate" ,str(path) ,"gate" ,str(fpa__gate) ,*option]
+  command = [str(fpa__program) ,"orchestrate" ,str(filep__composer) ,"gate" ,str(fpa__gate) ,*option]
   result = subprocess.run(command ,cwd=dirpa__work ,capture_output=True ,text=True ,preexec_fn=preexec)
   return result.returncode ,(result.stdout + result.stderr).strip()
 
@@ -234,9 +234,9 @@ def make_tree(dirpa__consumer ,dirpa__tree):
   for name in ("Man_In_Grey" ,"Man_In_Grey__Gate"):
     (dirpa__tree / name).mkdir()
     os.chmod(dirpa__tree / name ,0o755)
-    for source in sorted((dirpa__consumer / name).iterdir()):
-      if source.is_file():
-        shutil.copy2(source ,dirpa__tree / name / source.name)
+    for filep__source in sorted((dirpa__consumer / name).iterdir()):
+      if filep__source.is_file():
+        shutil.copy2(filep__source ,dirpa__tree / name / filep__source.name)
 
 def put_constraint(fpa__guard ,constraint):
   "replace the predicates between the guard's constraint marks with constraint"
@@ -257,11 +257,11 @@ def write_constraint(dirpa__tree ,dirpa__work):
     f"ALLOWED = {allowed!r}\n\n"
     "def is__allowed_account(user_name):\n"
     "  return user_name == PERSON\n\n"
-    "def is__allowed_open(directory ,name ,mode ,owner ,permission):\n"
-    "  entry = ALLOWED.get((directory ,name))\n"
+    "def is__allowed_open(dirpa__target ,filen__target ,mode ,owner ,permission):\n"
+    "  entry = ALLOWED.get((dirpa__target ,filen__target))\n"
     "  return entry is not None and mode in entry[0] and owner == PERSON and permission == entry[1]\n\n"
-    "def is__allowed_unlink(directory ,name):\n"
-    "  entry = ALLOWED.get((directory ,name))\n"
+    "def is__allowed_unlink(dirpa__target ,filen__target):\n"
+    "  entry = ALLOWED.get((dirpa__target ,filen__target))\n"
     "  return entry is not None and \"unlink\" in entry[0]\n"
   )
   put_constraint(dirpa__tree / "Man_In_Grey" / "Smoke·Guard.py" ,text)

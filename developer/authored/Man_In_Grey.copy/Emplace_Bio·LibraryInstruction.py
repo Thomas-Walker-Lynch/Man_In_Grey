@@ -50,8 +50,8 @@ def page(display_name ,list__paragraph ,picture_name):
   part.append("</body>\n</html>\n")
   return "".join(part)
 
-def _write_temporary(dirfd ,target ,content):
-  tmp = f".{target}.Man-In-Grey.{os.getpid()}"
+def _write_temporary(dirfd ,filen__target ,content):
+  tmp = f".{filen__target}.Man-In-Grey.{os.getpid()}"
   fd = os.open(tmp ,os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW ,0o600 ,dir_fd=dirfd)
   try:
     view = memoryview(content)
@@ -93,7 +93,7 @@ class LibraryInstruction:
 
   def finish(self):
     log ,user_name = self._log ,self._user_name
-    directory = self._constraint.dirp__page()
+    dirp__page = self._constraint.dirp__page()
     picture = self._picture
     picture_name = user_name + picture_extension(picture) if picture is not None else None
     page_name = user_name + ".html"
@@ -101,15 +101,15 @@ class LibraryInstruction:
     dirfd = None
     pending = []   # (temporary ,target)
     try:
-      dirfd = os.open(directory ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+      dirfd = os.open(dirp__page ,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
       if picture_name:
         pending.append((_write_temporary(dirfd ,picture_name ,picture) ,picture_name))
       pending.append((_write_temporary(dirfd ,page_name ,page(self._display_name ,self._list__paragraph ,picture_name).encode("utf-8")) ,page_name))
       while pending:
-        tmp ,target = pending[0]
-        os.rename(tmp ,target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd)
+        tmp ,filen__target = pending[0]
+        os.rename(tmp ,filen__target ,src_dir_fd=dirfd ,dst_dir_fd=dirfd)
         pending.pop(0)
-        log("emplaced" ,f"{directory}/{target}")
+        log("emplaced" ,f"{dirp__page}/{filen__target}")
       for name in list__page_name(user_name)[1:]:
         if name == picture_name:
           continue
@@ -119,7 +119,7 @@ class LibraryInstruction:
           continue
         if stat.S_ISREG(st.st_mode):
           os.unlink(name ,dir_fd=dirfd)
-          log("removed" ,f"{directory}/{name}")
+          log("removed" ,f"{dirp__page}/{name}")
       os.fsync(dirfd)
     finally:
       for tmp ,_ in pending:
