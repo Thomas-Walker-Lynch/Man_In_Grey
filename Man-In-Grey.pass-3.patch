@@ -1,0 +1,1508 @@
+diff --git "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Guard.py" "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Guard.py"
+index 0815805..f116ac7 100644
+--- "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Guard.py"
++++ "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Guard.py"
+@@ -50,15 +50,15 @@ def is__allowed_account(user_name):
+   "True when the account, the gate's real uid, can have a page"
+   return False
+ 
+-def is__allowed_text_size(byte_count):
+-  "True when the display name and the text together can be byte_count bytes of UTF-8"
+-  return byte_count <= 8192
++def is__allowed_text_size(count_of__byte):
++  "True when the display name and the text together can be count_of__byte bytes of UTF-8"
++  return count_of__byte <= 8192
+ 
+-def is__allowed_picture_size(byte_count):
+-  "True when the picture can be byte_count bytes"
+-  return byte_count <= 1 << 20
++def is__allowed_picture_size(count_of__byte):
++  "True when the picture can be count_of__byte bytes"
++  return count_of__byte <= 1 << 20
+ 
+-def page_directory():
++def dirp__page():
+   "the absolute directory the pages are placed in, owned by the gate owner account"
+   return "/srv/http/bio"
+ 
+@@ -75,7 +75,7 @@ from pathlib import Path
+ LANGUAGE = "Emplace_Bio"
+ VERSION = "4"
+ 
+-HERE__DPATH = Path(__file__).resolve().parent
++DIRPA__HERE = Path(__file__).resolve().parent
+ MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Guard·LibraryConstraint.py" ,"Emplace_Bio·Language.py" ,"Emplace_Bio·GuardCheck.py" ,"Emplace_Bio·Guard.py")
+ 
+ 
+@@ -98,7 +98,7 @@ if __name__ == "__main__" and sys.argv[1:] == ["check"]:
+   say("name" ,LANGUAGE)
+   say("version" ,VERSION)
+ 
+-for each in [HERE__DPATH] + [HERE__DPATH / m for m in MODULE]:
++for each in [DIRPA__HERE] + [DIRPA__HERE / m for m in MODULE]:
+   problem = trusted_owner__problem(each)
+   if problem:
+     say("refused-to-start" ,problem)
+diff --git "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267GuardCheck.py" "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267GuardCheck.py"
+index b202f3a..be5e4a3 100644
+--- "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267GuardCheck.py"
++++ "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267GuardCheck.py"
+@@ -11,7 +11,7 @@ owned by the web server's account, places the page.
+ 
+ A journal names no file. The file names come from the user name of
+ account A, which the gate gives the interpreter, and the directory comes
+-from page_directory() at the top of the guard. The interpreter writes the
++from dirp__page() at the top of the guard. The interpreter writes the
+ HTML itself, from a fixed form, and escapes every text it is given, so
+ nothing a person gives becomes markup. Decoration travels out of band, as a
+ list of styles beside each run of text, and each style becomes one fixed
+@@ -31,7 +31,7 @@ LIST__CHECK:
+                twice, and no control character in any text
+   constraint   the predicates at the top of the guard, Emplace_Bio·Guard.py:
+                is__allowed_account, is__allowed_text_size and
+-               is__allowed_picture_size, and page_directory(), where the
++               is__allowed_picture_size, and dirp__page(), where the
+                pages go
+   content      the picture is a PNG or a JPEG
+   filesystem   the page directory, and the files the page can occupy
+@@ -110,19 +110,19 @@ def check_language(list__instruction_view ,data ,constraint ,gate_invoking_accou
+   list__problem = []
+   count = {"display_name": 0 ,"paragraph": 0 ,"text": 0 ,"picture": 0}
+   in_paragraph = False
+-  run_count = 0
++  count_of__run = 0
+   for view in list__instruction_view:
+     index ,name = view.index ,view.operation
+     value = [argument.value for argument in view.list__argument]
+     count[name] += 1
+     if name == "paragraph":
+-      if in_paragraph and run_count == 0:
++      if in_paragraph and count_of__run == 0:
+         list__problem.append(f"@{index} paragraph: the paragraph before it holds no text")
+-      in_paragraph ,run_count = True ,0
++      in_paragraph ,count_of__run = True ,0
+     elif name == "text":
+       if not in_paragraph:
+         list__problem.append(f"@{index} text: no paragraph has been started")
+-      run_count += 1
++      count_of__run += 1
+       for problem in (content_problem(value[0]) ,style_problem(value[1])):
+         if problem: list__problem.append(f"@{index} text: {problem}")
+     elif name == "display_name":
+@@ -134,15 +134,15 @@ def check_language(list__instruction_view ,data ,constraint ,gate_invoking_accou
+     list__problem.append(f"the journal gives the display name {count['display_name']} times; it is given once")
+   if count["paragraph"] == 0:
+     list__problem.append("the journal has no paragraph")
+-  elif run_count == 0:
++  elif count_of__run == 0:
+     list__problem.append("the last paragraph holds no text")
+   if count["picture"] > 1:
+     list__problem.append(f"the journal gives {count['picture']} pictures; it gives at most one")
+   return list__problem
+ 
+-def page_directory__problem(directory):
++def dirp__page__problem(directory):
+   if not isinstance(directory ,str) or not directory.startswith("/") or os.path.normpath(directory) != directory:
+-    return f"page_directory() gives {clean(repr(directory))}, not an absolute directory in normal form"
++    return f"dirp__page() gives {clean(repr(directory))}, not an absolute directory in normal form"
+   return None
+ 
+ def check_constraint(list__instruction_view ,data ,constraint ,gate_invoking_account):
+@@ -150,7 +150,7 @@ def check_constraint(list__instruction_view ,data ,constraint ,gate_invoking_acc
+   if constraint.is__allowed_account(gate_invoking_account) is not True:
+     return [f"gate invoking account {clean(repr(gate_invoking_account))} is not allowed to give journals to this gate"]
+   list__problem = []
+-  problem = page_directory__problem(constraint.page_directory())
++  problem = dirp__page__problem(constraint.dirp__page())
+   if problem: list__problem.append(problem)
+   text_bytes = 0
+   for view in list__instruction_view:
+@@ -178,7 +178,7 @@ def check_filesystem(list__instruction_view ,data ,constraint ,gate_invoking_acc
+   list__problem = []
+   if has__control(gate_invoking_account) or gate_invoking_account.startswith("."):
+     return [f"the account name {clean(repr(gate_invoking_account))} cannot name a page"]
+-  directory = constraint.page_directory()
++  directory = constraint.dirp__page()
+   if not os.path.isdir(directory):
+     return [f"{directory} is not a directory"]
+   if os.path.realpath(directory) != directory:
+diff --git "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Interpreter.py" "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Interpreter.py"
+index 857e587..a05ae06 100644
+--- "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Interpreter.py"
++++ "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267Interpreter.py"
+@@ -43,7 +43,7 @@ sys.dont_write_bytecode = True
+ import stat
+ from pathlib import Path
+ 
+-HERE__DPATH = Path(__file__).resolve().parent
++DIRPA__HERE = Path(__file__).resolve().parent
+ MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Interpreter.py" ,"Guard·LibraryConstraint.py" ,"Emplace_Bio·Language.py" ,"Emplace_Bio·GuardCheck.py" ,"Emplace_Bio·LibraryInstruction.py" ,"Emplace_Bio·Guard.py" ,"Emplace_Bio·Interpreter.py")
+ 
+ 
+@@ -62,7 +62,7 @@ def trusted_owner__problem(path):
+ def say(tag ,message):
+   print(f"{tag}: {message}" ,file=sys.stderr)
+ 
+-for each in [HERE__DPATH] + [HERE__DPATH / m for m in MODULE]:
++for each in [DIRPA__HERE] + [DIRPA__HERE / m for m in MODULE]:
+   problem = trusted_owner__problem(each)
+   if problem:
+     say("refused-to-start" ,problem)
+diff --git "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267LibraryInstruction.py" "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267LibraryInstruction.py"
+index e4592f8..3ee6a34 100644
+--- "a/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267LibraryInstruction.py"
++++ "b/developer/authored/Man_In_Grey.copy/Emplace_Bio\302\267LibraryInstruction.py"
+@@ -8,7 +8,7 @@ Emplace_Bio·Language.py, given each instruction's arguments by
+ position. They build the page up; finish() writes it from a fixed form, and
+ escapes every text it is given, so nothing a person gives becomes markup.
+ The page's file names come from the user name of account A, and its
+-directory from page_directory() among the guard's constraints.
++directory from dirp__page() among the guard's constraints.
+ """
+ 
+ import html ,os ,stat ,urllib.parse
+@@ -93,7 +93,7 @@ class LibraryInstruction:
+ 
+   def finish(self):
+     log ,user_name = self._log ,self._user_name
+-    directory = self._constraint.page_directory()
++    directory = self._constraint.dirp__page()
+     picture = self._picture
+     picture_name = user_name + picture_extension(picture) if picture is not None else None
+     page_name = user_name + ".html"
+diff --git a/developer/authored/Man_In_Grey.copy/Man_In_Grey.py b/developer/authored/Man_In_Grey.copy/Man_In_Grey.py
+index 94192cd..d46327c 100755
+--- a/developer/authored/Man_In_Grey.copy/Man_In_Grey.py
++++ b/developer/authored/Man_In_Grey.copy/Man_In_Grey.py
+@@ -56,7 +56,7 @@ import Journal·Interface
+ 
+ # The promoted layout: this file in Man_In_Grey/, beside Man_In_Grey__Gate/.
+ # The same layout is staged in developer/scratchpad/made/ and promoted to consumer/.
+-HERE__DPATH = Path(__file__).resolve().parent
++DIRPA__HERE = Path(__file__).resolve().parent
+ 
+ FLAG = ("print" ,"compose-only" ,"check-only")
+ VALUE = ("gate" ,)
+@@ -75,22 +75,22 @@ class Provenance:
+   Where a composer is. Given to compose().
+   """
+   __slots__ = (
+-    "composer__abs_fpath"
+-    ,"composer_dir__dpath"
+-    ,"implied__fname"
++    "fpa__composer"
++    ,"dirpa__composer"
++    ,"filen__implied"
+     ,"process_user"
+-    ,"cwd__dpath"
++    ,"dirpa__cwd"
+   )
+ 
+-  def __init__(self ,composer_path):
+-    self.composer__abs_fpath = composer_path
+-    self.composer_dir__dpath = composer_path.parent
+-    name = composer_path.name
++  def __init__(self ,fpa__composer):
++    self.fpa__composer = fpa__composer
++    self.dirpa__composer = fpa__composer.parent
++    name = fpa__composer.name
+     if name.endswith(".py"):
+       name = name[:-3]
+-    self.implied__fname = name
++    self.filen__implied = name
+     self.process_user = gate_invoking_account__name()
+-    self.cwd__dpath = Path.cwd().resolve()
++    self.dirpa__cwd = Path.cwd().resolve()
+ 
+ 
+ # --------------------------------------------------------------------------------
+@@ -137,13 +137,13 @@ def composer_provenance(path):
+ # --------------------------------------------------------------------------------
+ # the gate's language
+ 
+-def gate_flag(gate_path):
++def gate_flag(fpa__gate):
+   """The gate's flags as a dict. Raises RuntimeError."""
+-  if not os.access(gate_path ,os.X_OK):
+-    raise RuntimeError(f"the gate {gate_path} is missing; in the developer role, build and promote it")
+-  result = subprocess.run([str(gate_path) ,"flags"] ,capture_output=True ,text=True)
++  if not os.access(fpa__gate ,os.X_OK):
++    raise RuntimeError(f"the gate {fpa__gate} is missing; in the developer role, build and promote it")
++  result = subprocess.run([str(fpa__gate) ,"flags"] ,capture_output=True ,text=True)
+   if result.returncode != 0:
+-    raise RuntimeError(f"the gate {gate_path} did not report its flags")
++    raise RuntimeError(f"the gate {fpa__gate} did not report its flags")
+   return dict(line.split("=" ,1) for line in result.stdout.splitlines() if "=" in line)
+ 
+ def language_definition(name):
+@@ -155,7 +155,7 @@ def language_definition(name):
+     raise RuntimeError(f"the gate names the language {name!r}, which names no definition")
+   # a language is named by its namespace, so the name is the module's prefix
+   module = name + "·Language"
+-  if not (HERE__DPATH / f"{module}.py").is_file():
++  if not (DIRPA__HERE / f"{module}.py").is_file():
+     raise RuntimeError(f"the gate's language is {name}, and {module}.py is not beside {Path(__file__).name}")
+   definition_module = importlib.import_module(module)
+   if getattr(definition_module ,"NAME" ,None) != name:
+@@ -173,9 +173,9 @@ def compose(prov ,language_definition):
+   """Run the composer into a journal. Raises RuntimeError naming the composer when it fails."""
+   journal = Journal·Interface.JournalComposed(language_definition)
+   journal_iface = Journal·Interface.JournalInterface(journal)
+-  name = prov.composer__abs_fpath.name
++  name = prov.fpa__composer.name
+   try:
+-    env = runpy.run_path(str(prov.composer__abs_fpath))
++    env = runpy.run_path(str(prov.fpa__composer))
+     function = env.get("compose")
+     if not callable(function):
+       raise RuntimeError("defines no compose(prov ,journal_iface)")
+@@ -191,13 +191,13 @@ def compose(prov ,language_definition):
+     "composed_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%SZ")
+     ,"process_user": gate_invoking_account__name()
+     ,"host": os.uname().nodename
+-    ,"composer": str(prov.composer__abs_fpath)
++    ,"composer": str(prov.fpa__composer)
+   }
+   return journal
+ 
+ RESULT_FD = 3
+ 
+-def admit(gate_path ,journal_bytes ,check_only=False):
++def admit(fpa__gate ,journal_bytes ,check_only=False):
+   """
+   Invoke the gate with the journal on its standard input, and descriptor 3
+   open to receive the result. The gate's standard output and standard error
+@@ -207,7 +207,7 @@ def admit(gate_path ,journal_bytes ,check_only=False):
+   An application that is its own orchestrator calls this function with the
+   journal it made.
+   """
+-  command = [str(gate_path) ,"admit"] + (["check-only"] if check_only else [])
++  command = [str(fpa__gate) ,"admit"] + (["check-only"] if check_only else [])
+   read_fd ,write_fd = os.pipe()
+   try:
+     gate = subprocess.Popen(command ,stdin=subprocess.PIPE ,close_fds=False
+@@ -249,9 +249,9 @@ def orchestrate(path ,gate ,flag):
+   if not gate:
+     print("error: orchestrate is given the gate to invoke, as gate <file>" ,file=sys.stderr)
+     return 2
+-  gate_path = Path(gate).absolute()
++  fpa__gate = Path(gate).absolute()
+   try:
+-    journal = compose(composer_provenance(path) ,language_definition(gate_flag(gate_path).get("language")))
++    journal = compose(composer_provenance(path) ,language_definition(gate_flag(fpa__gate).get("language")))
+   except (OSError ,RuntimeError) as error:
+     print(f"error: {error}" ,file=sys.stderr)
+     return 2
+@@ -260,7 +260,7 @@ def orchestrate(path ,gate ,flag):
+   if "compose-only" in flag:
+     return 0
+   sys.stdout.flush()
+-  status ,result = admit(gate_path ,journal.encode() ,"check-only" in flag)
++  status ,result = admit(fpa__gate ,journal.encode() ,"check-only" in flag)
+   if result and not print_result(result):
+     return 2
+   return status
+@@ -287,7 +287,7 @@ def install(list__argument):
+   for i ,word in enumerate(list__argument[:-1]):
+     if word == "constraints":
+       list__argument[i + 1] = str(Path(list__argument[i + 1]).absolute())
+-  command = [str(HERE__DPATH / "install-gate") ,"install" ,*list__argument]
++  command = [str(DIRPA__HERE / "install-gate") ,"install" ,*list__argument]
+   if os.geteuid() != 0:
+     print("install-gate is run by root; su asks for root's password" ,file=sys.stderr)
+     command = ["su" ,"root" ,"-c" ,shlex.join(command)]
+diff --git "a/developer/authored/Man_In_Grey.copy/Smoke\302\267Guard.py" "b/developer/authored/Man_In_Grey.copy/Smoke\302\267Guard.py"
+index 55f3984..099bddb 100644
+--- "a/developer/authored/Man_In_Grey.copy/Smoke\302\267Guard.py"
++++ "b/developer/authored/Man_In_Grey.copy/Smoke\302\267Guard.py"
+@@ -71,7 +71,7 @@ from pathlib import Path
+ LANGUAGE = "Smoke"
+ VERSION = "4"
+ 
+-HERE__DPATH = Path(__file__).resolve().parent
++DIRPA__HERE = Path(__file__).resolve().parent
+ MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Guard·LibraryConstraint.py" ,"Smoke·Language.py" ,"Smoke·GuardCheck.py" ,"Smoke·Guard.py")
+ 
+ 
+@@ -94,7 +94,7 @@ if __name__ == "__main__" and sys.argv[1:] == ["check"]:
+   say("name" ,LANGUAGE)
+   say("version" ,VERSION)
+ 
+-for each in [HERE__DPATH] + [HERE__DPATH / m for m in MODULE]:
++for each in [DIRPA__HERE] + [DIRPA__HERE / m for m in MODULE]:
+   problem = trusted_owner__problem(each)
+   if problem:
+     say("refused-to-start" ,problem)
+diff --git "a/developer/authored/Man_In_Grey.copy/Smoke\302\267Interpreter.py" "b/developer/authored/Man_In_Grey.copy/Smoke\302\267Interpreter.py"
+index ae04fbb..767b426 100644
+--- "a/developer/authored/Man_In_Grey.copy/Smoke\302\267Interpreter.py"
++++ "b/developer/authored/Man_In_Grey.copy/Smoke\302\267Interpreter.py"
+@@ -43,7 +43,7 @@ sys.dont_write_bytecode = True
+ import stat
+ from pathlib import Path
+ 
+-HERE__DPATH = Path(__file__).resolve().parent
++DIRPA__HERE = Path(__file__).resolve().parent
+ MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Interpreter.py" ,"Guard·LibraryConstraint.py" ,"Smoke·Language.py" ,"Smoke·GuardCheck.py" ,"Smoke·LibraryInstruction.py" ,"Smoke·Guard.py" ,"Smoke·Interpreter.py")
+ 
+ 
+@@ -62,7 +62,7 @@ def trusted_owner__problem(path):
+ def say(tag ,message):
+   print(f"{tag}: {message}" ,file=sys.stderr)
+ 
+-for each in [HERE__DPATH] + [HERE__DPATH / m for m in MODULE]:
++for each in [DIRPA__HERE] + [DIRPA__HERE / m for m in MODULE]:
+   problem = trusted_owner__problem(each)
+   if problem:
+     say("refused-to-start" ,problem)
+diff --git "a/developer/authored/Man_In_Grey.copy/Smoke\302\267Language.py" "b/developer/authored/Man_In_Grey.copy/Smoke\302\267Language.py"
+index 31264e1..485a78f 100644
+--- "a/developer/authored/Man_In_Grey.copy/Smoke\302\267Language.py"
++++ "b/developer/authored/Man_In_Grey.copy/Smoke\302\267Language.py"
+@@ -29,7 +29,7 @@ DEFINITION = {
+     ,["permission" ,"integer"]
+     ,["file" ,"handle"]
+     ,["content" ,"bytes"]
+-    ,["summary" ,["dictionary" ,["open_count" ,"integer"] ,["unlink_count" ,"integer"]]]
++    ,["summary" ,["dictionary" ,["count_of__open" ,"integer"] ,["count_of__unlink" ,"integer"]]]
+   ]
+   ,"list__format": [
+     ["format__open" ,["in" ,"directory"] ,["in" ,"file_name"] ,["in" ,"mode"] ,["in" ,"account_name"] ,["in" ,"permission"] ,["out" ,"file"]]
+diff --git "a/developer/authored/Man_In_Grey.copy/Smoke\302\267LibraryInstruction.py" "b/developer/authored/Man_In_Grey.copy/Smoke\302\267LibraryInstruction.py"
+index ee1a287..4ca958a 100644
+--- "a/developer/authored/Man_In_Grey.copy/Smoke\302\267LibraryInstruction.py"
++++ "b/developer/authored/Man_In_Grey.copy/Smoke\302\267LibraryInstruction.py"
+@@ -40,7 +40,7 @@ class LibraryInstruction:
+   def __init__(self ,constraint ,gate_invoking_account ,log):
+     self._log = log
+     self._opened = []   # by handle: {dirfd ,fd ,tmp ,directory ,name ,mode ,owner ,permission}
+-    self._unlink_count = 0
++    self._count_of__unlink = 0
+ 
+   def open(self ,directory ,file_name ,mode ,account_name ,permission ,file):
+     handle = len(self._opened)
+@@ -67,10 +67,10 @@ class LibraryInstruction:
+         self._log("unlinked" ,f"{directory}/{file_name}")
+     finally:
+       os.close(dirfd)
+-    self._unlink_count += 1
++    self._count_of__unlink += 1
+ 
+   def summary(self ,summary):
+-    summary.append({"open_count": len(self._opened) ,"unlink_count": self._unlink_count})
++    summary.append({"count_of__open": len(self._opened) ,"count_of__unlink": self._count_of__unlink})
+ 
+   def finish(self):
+     for record in self._opened:
+diff --git a/developer/authored/Man_In_Grey.copy/install-gate b/developer/authored/Man_In_Grey.copy/install-gate
+index d9e253d..1ad205e 100755
+--- a/developer/authored/Man_In_Grey.copy/install-gate
++++ b/developer/authored/Man_In_Grey.copy/install-gate
+@@ -49,10 +49,10 @@ sys.dont_write_bytecode = True
+ import grp ,pwd ,shutil ,stat ,subprocess
+ from pathlib import Path
+ 
+-HERE__DPATH = Path(__file__).resolve().parent          # .../Man_In_Grey
+-SOURCE__DPATH = HERE__DPATH.parent                       # holds Man_In_Grey/ and Man_In_Grey__Gate/
+-PROGRAM__DNAME = "Man_In_Grey"
+-GATE__DNAME = "Man_In_Grey__Gate"
++DIRPA__HERE = Path(__file__).resolve().parent          # .../Man_In_Grey
++DIRPA__SOURCE = DIRPA__HERE.parent                       # holds Man_In_Grey/ and Man_In_Grey__Gate/
++DIRN__PROGRAM = "Man_In_Grey"
++DIRN__GATE = "Man_In_Grey__Gate"
+ 
+ 
+ class Refused(Exception):
+@@ -129,10 +129,10 @@ def install_text(text ,target ,mode):
+   os.chmod(tmp ,mode)
+   os.rename(tmp ,target)
+ 
+-def gate_flag(gate__fpath):
+-  result = subprocess.run([str(gate__fpath) ,"flags"] ,capture_output=True ,text=True ,env={"PATH": "/usr/bin:/bin"})
++def gate_flag(fpa__gate):
++  result = subprocess.run([str(fpa__gate) ,"flags"] ,capture_output=True ,text=True ,env={"PATH": "/usr/bin:/bin"})
+   if result.returncode != 0:
+-    raise Refused(f"{gate__fpath} did not report its flags")
++    raise Refused(f"{fpa__gate} did not report its flags")
+   return result.stdout ,dict(line.split("=" ,1) for line in result.stdout.splitlines() if "=" in line)
+ 
+ 
+@@ -148,8 +148,8 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
+   if os.geteuid() != 0:
+     raise Refused("install-gate is run by root; a person without root's rights runs Man-In-Grey install, which asks for root's password")
+   if "/" in gate or gate in ("" ,"." ,".."):
+-    raise Refused(f"{gate!r} is to be the file name of a gate in {SOURCE__DPATH / GATE__DNAME}")
+-  source_gate = SOURCE__DPATH / GATE__DNAME / gate
++    raise Refused(f"{gate!r} is to be the file name of a gate in {DIRPA__SOURCE / DIRN__GATE}")
++  source_gate = DIRPA__SOURCE / DIRN__GATE / gate
+   if not source_gate.is_file() or source_gate.is_symlink():
+     raise Refused(f"there is no gate {source_gate}")
+   try:
+@@ -185,13 +185,13 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
+   if nosuid(target):
+     raise Refused(f"{target} is on a file system mounted nosuid, where the kernel ignores the setuid bit")
+ 
+-  program__dpath ,gate__dpath = target / PROGRAM__DNAME ,target / GATE__DNAME
+-  make_directory(program__dpath)
+-  make_directory(gate__dpath)
++  dirp__program ,dirp__gate = target / DIRN__PROGRAM ,target / DIRN__GATE
++  make_directory(dirp__program)
++  make_directory(dirp__gate)
+ 
+   # the constraints of the guards installed already, to keep
+   kept = {}
+-  for installed in sorted(program__dpath.glob("*·Guard.py")):
++  for installed in sorted(dirp__program.glob("*·Guard.py")):
+     if installed.is_file() and not installed.is_symlink():
+       try:
+         kept[installed.name] = constraint_of(installed.read_text(encoding="utf-8") ,installed)
+@@ -199,31 +199,31 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
+         say(f"{problem}; it holds no constraints to keep")
+ 
+   # Man_In_Grey/: every regular file, a guard with its kept constraints
+-  for source in sorted((SOURCE__DPATH / PROGRAM__DNAME).iterdir()):
++  for source in sorted((DIRPA__SOURCE / DIRN__PROGRAM).iterdir()):
+     st = os.lstat(source)
+     if not stat.S_ISREG(st.st_mode):
+       continue
+-    destination = program__dpath / source.name
++    destination = dirp__program / source.name
+     mode = 0o755 if st.st_mode & stat.S_IXUSR else 0o644
+     if source.name in kept:
+       install_text(with_constraint(source.read_text(encoding="utf-8") ,source ,kept[source.name]) ,destination ,mode)
+       say(f"kept the constraints of {destination}")
+     else:
+       install_file(source ,destination ,mode)
+-  say(f"installed {program__dpath}/")
++  say(f"installed {dirp__program}/")
+ 
+   # the gate, owned by root until it is complete
+-  installed_gate = gate__dpath / gate
++  installed_gate = dirp__gate / gate
+   install_file(source_gate ,installed_gate ,0o755)
+   _ ,flag = gate_flag(installed_gate)
+   language = flag.get("language" ,"")
+-  guard_path = Path(flag.get("guard.path" ,""))
+-  if not language or guard_path.parent != program__dpath:
+-    raise Refused(f"{installed_gate} does not find its guard in {program__dpath}")
++  fpa__guard = Path(flag.get("guard.path" ,""))
++  if not language or fpa__guard.parent != dirp__program:
++    raise Refused(f"{installed_gate} does not find its guard in {dirp__program}")
+ 
+   if given_constraints is not None:
+-    install_text(with_constraint(guard_path.read_text(encoding="utf-8") ,guard_path ,given_text) ,guard_path ,0o644)
+-    say(f"put the constraints of {given_constraints} in {guard_path}")
++    install_text(with_constraint(fpa__guard.read_text(encoding="utf-8") ,fpa__guard ,given_text) ,fpa__guard ,0o644)
++    say(f"put the constraints of {given_constraints} in {fpa__guard}")
+ 
+   # chown clears the setuid and setgid bits, so the mode is set after it
+   os.chown(installed_gate ,account.pw_uid ,gid)
+@@ -231,13 +231,13 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
+   os.chmod(installed_gate ,mode)
+   say(f"installed {installed_gate}, owner {owner}:{grp.getgrgid(gid).gr_name}, mode {mode:o}")
+ 
+-  problem = root_chain__problem(program__dpath)
++  problem = root_chain__problem(dirp__program)
+   if problem:
+     raise Refused(problem)
+   text ,_ = gate_flag(installed_gate)
+   say("its flags, as seen by root:")
+   sys.stdout.write(text)
+-  say(f"run it as: {program__dpath / 'Man-In-Grey'} orchestrate <composer> gate {installed_gate}")
++  say(f"run it as: {dirp__program / 'Man-In-Grey'} orchestrate <composer> gate {installed_gate}")
+   return 0
+ 
+ 
+diff --git a/developer/authored/Man_In_Grey__Gate.make/Gate.lib.c b/developer/authored/Man_In_Grey__Gate.make/Gate.lib.c
+index 73f1f4a..d093a3f 100644
+--- a/developer/authored/Man_In_Grey__Gate.make/Gate.lib.c
++++ b/developer/authored/Man_In_Grey__Gate.make/Gate.lib.c
+@@ -71,8 +71,8 @@
+ 
+ int Man_In_Grey__Gate·Gate·run(
+   const char *language
+-  ,const char *guard_relative
+-  ,const char *interpreter_relative
++  ,const char *fpr__guard
++  ,const char *fpr__interpreter
+   ,int argc
+   ,char **argv
+ );
+@@ -104,7 +104,7 @@ int Man_In_Grey__Gate·Gate·run(
+   #define PYTHON "/usr/bin/python3"
+   #define JOURNAL_MAX ((size_t)16 << 20)
+   #define OUTPUT_LINE__MAX 4096
+-  #define OUTPUT_LINE_COUNT__MAX 2000
++  #define COUNT_OF__OUTPUT_LINE__MAX 2000
+   #define VERDICT_MAX 512
+   #define RESULT_MAX ((size_t)16 << 20)
+   #define RESULT_FD 3
+@@ -248,7 +248,7 @@ int Man_In_Grey__Gate·Gate·run(
+      as the hard limit allows, or past it when account B is root; the gate
+      refuses when a limit stays too low. */
+   Local void settle_limits(void){
+-    const Limit limit__list[] = {
++    const Limit list__limit[] = {
+       {RLIMIT_FSIZE ,"file size (bytes)" ,RLIM_INFINITY}
+       ,{RLIMIT_CPU ,"CPU time (seconds)" ,RLIM_INFINITY}
+       ,{RLIMIT_AS ,"address space (bytes)" ,(rlim_t)1 << 30}
+@@ -256,8 +256,8 @@ int Man_In_Grey__Gate·Gate·run(
+       ,{RLIMIT_STACK ,"stack size (bytes)" ,(rlim_t)8 << 20}
+       ,{RLIMIT_NOFILE ,"open files" ,64}
+     };
+-    for(size_t i = 0; i < sizeof limit__list / sizeof limit__list[0]; ++i){
+-      const Limit *limit = &limit__list[i];
++    for(size_t i = 0; i < sizeof list__limit / sizeof list__limit[0]; ++i){
++      const Limit *limit = &list__limit[i];
+       struct rlimit r;
+       if( getrlimit(limit->resource ,&r) != 0 ) die("cannot read the %s limit: %s" ,limit->name ,strerror(errno));
+       if( r.rlim_cur >= limit->need ) continue;
+@@ -286,7 +286,7 @@ int Man_In_Grey__Gate·Gate·run(
+   }
+ 
+   // a language name: not empty, no space, no control character
+-  Local bool name_is_valid(const char *name){
++  Local bool is__valid_name(const char *name){
+     if( !*name ) return false;
+     for(const unsigned char *p = (const unsigned char *)name; *p; ++p)
+       if( *p <= 0x20 || *p == 0x7F ) return false;
+@@ -298,7 +298,7 @@ int Man_In_Grey__Gate·Gate·run(
+ 
+   /* true when the line is UTF-8 holding no control character: none of C0,
+      DEL or C1, no overlong form, no surrogate */
+-  Local bool line_is_clean(const unsigned char *s ,size_t n){
++  Local bool is__clean_line(const unsigned char *s ,size_t n){
+     size_t i = 0;
+     while( i < n ){
+       unsigned c = s[i];
+@@ -335,24 +335,24 @@ int Man_In_Grey__Gate·Gate·run(
+ 
+   typedef struct{
+     const char *source;      // "guard" or "interpreter"
+-    bool stdout_is_verdict;  // standard output is kept as the verdict, not shown
++    bool is__stdout_verdict;  // standard output is kept as the verdict, not shown
+     bool has__result;         // given a descriptor 3, whose bytes are kept as its result
+     char verdict[VERDICT_MAX];
+     size_t verdict_length;
+     unsigned char *result;
+     size_t result_length;
+     size_t result_size;
+-    size_t line_count;
++    size_t count_of__line;
+     const char *broken;      // the rule broken, or NULL
+   } Child;
+ 
+   Local void finish_line(Child *child ,Stream *stream){
+     if( child->broken ) return;
+-    if( !line_is_clean((unsigned char *)stream->line ,stream->length) ){
++    if( !is__clean_line((unsigned char *)stream->line ,stream->length) ){
+       child->broken = "a line that is not UTF-8 or holds a control character";
+       return;
+     }
+-    if( ++child->line_count > OUTPUT_LINE_COUNT__MAX ){
++    if( ++child->count_of__line > COUNT_OF__OUTPUT_LINE__MAX ){
+       child->broken = "more lines than the gate accepts";
+       return;
+     }
+@@ -430,41 +430,41 @@ int Man_In_Grey__Gate·Gate·run(
+     if( input_length == 0 ){ close(in_fd); in_fd = -1; }
+ 
+     while( (out_stream.fd >= 0 || err_stream.fd >= 0 || res_fd >= 0) && !child->broken ){
+-      struct pollfd poll__list[4];
++      struct pollfd list__poll[4];
+       int count = 0 ,in_at = -1 ,out_at = -1 ,err_at = -1 ,res_at = -1;
+-      if( in_fd >= 0 ){ poll__list[count] = (struct pollfd){.fd = in_fd ,.events = POLLOUT}; in_at = count++; }
+-      if( res_fd >= 0 ){ poll__list[count] = (struct pollfd){.fd = res_fd ,.events = POLLIN}; res_at = count++; }
+-      if( out_stream.fd >= 0 ){ poll__list[count] = (struct pollfd){.fd = out_stream.fd ,.events = POLLIN}; out_at = count++; }
+-      if( err_stream.fd >= 0 ){ poll__list[count] = (struct pollfd){.fd = err_stream.fd ,.events = POLLIN}; err_at = count++; }
+-      if( poll(poll__list ,count ,-1) < 0 ){
++      if( in_fd >= 0 ){ list__poll[count] = (struct pollfd){.fd = in_fd ,.events = POLLOUT}; in_at = count++; }
++      if( res_fd >= 0 ){ list__poll[count] = (struct pollfd){.fd = res_fd ,.events = POLLIN}; res_at = count++; }
++      if( out_stream.fd >= 0 ){ list__poll[count] = (struct pollfd){.fd = out_stream.fd ,.events = POLLIN}; out_at = count++; }
++      if( err_stream.fd >= 0 ){ list__poll[count] = (struct pollfd){.fd = err_stream.fd ,.events = POLLIN}; err_at = count++; }
++      if( poll(list__poll ,count ,-1) < 0 ){
+         if( errno == EINTR ) continue;
+         die("poll: %s" ,strerror(errno));
+       }
+-      if( in_at >= 0 && poll__list[in_at].revents ){
++      if( in_at >= 0 && list__poll[in_at].revents ){
+         ssize_t n = write(in_fd ,input + written ,input_length - written);
+         if( n > 0 ) written += (size_t)n;
+         if( (n < 0 && errno != EAGAIN && errno != EINTR) || written == input_length ){ close(in_fd); in_fd = -1; }
+       }
+-      if( res_at >= 0 && poll__list[res_at].revents ){
++      if( res_at >= 0 && list__poll[res_at].revents ){
+         char buffer[4096];
+         ssize_t n = read(res_fd ,buffer ,sizeof buffer);
+         if( n > 0 ) take_result(child ,buffer ,(size_t)n);
+         else if( n == 0 || (errno != EAGAIN && errno != EINTR) ){ close(res_fd); res_fd = -1; }
+       }
+-      Stream *stream__list[2] = {&out_stream ,&err_stream};
+-      int at__list[2] = {out_at ,err_at};
++      Stream *list__stream[2] = {&out_stream ,&err_stream};
++      int list__at[2] = {out_at ,err_at};
+       for(int k = 0; k < 2; ++k){
+-        Stream *stream = stream__list[k];
+-        if( at__list[k] < 0 || !poll__list[at__list[k]].revents ) continue;
++        Stream *stream = list__stream[k];
++        if( list__at[k] < 0 || !list__poll[list__at[k]].revents ) continue;
+         char buffer[4096];
+         ssize_t n = read(stream->fd ,buffer ,sizeof buffer);
+         if( n < 0 && (errno == EAGAIN || errno == EINTR) ) continue;
+         if( n <= 0 ){
+-          if( stream->length > 0 && !(stream == &out_stream && child->stdout_is_verdict) ) finish_line(child ,stream);
++          if( stream->length > 0 && !(stream == &out_stream && child->is__stdout_verdict) ) finish_line(child ,stream);
+           close(stream->fd); stream->fd = -1;
+           continue;
+         }
+-        if( stream == &out_stream && child->stdout_is_verdict ) take_verdict(child ,buffer ,(size_t)n);
++        if( stream == &out_stream && child->is__stdout_verdict ) take_verdict(child ,buffer ,(size_t)n);
+         else take(child ,stream ,buffer ,(size_t)n);
+       }
+     }
+@@ -510,7 +510,7 @@ int Man_In_Grey__Gate·Gate·run(
+     return gr ? gr->gr_name : "unknown";
+   }
+ 
+-  Local void print_flags(const char *guard_relative ,const char *interpreter_relative){
++  Local void print_flags(const char *fpr__guard ,const char *fpr__interpreter){
+     printf("real.uid=%ld\n" ,(long)getuid());
+     printf("real.user-name=%s\n" ,user_name(getuid()));
+     printf("real.gid=%ld\n" ,(long)getgid());
+@@ -523,8 +523,8 @@ int Man_In_Grey__Gate·Gate·run(
+     printf("gid-differ=%d\n" ,getgid() != getegid() ? 1 : 0);
+     printf("language=%s\n" ,Language);
+     char resolved[PATH_MAX];
+-    printf("guard.path=%s\n" ,resolve(guard_relative ,resolved) ? resolved : "(missing)");
+-    printf("interpreter.path=%s\n" ,resolve(interpreter_relative ,resolved) ? resolved : "(missing)");
++    printf("guard.path=%s\n" ,resolve(fpr__guard ,resolved) ? resolved : "(missing)");
++    printf("interpreter.path=%s\n" ,resolve(fpr__interpreter ,resolved) ? resolved : "(missing)");
+   }
+ 
+   // ------------------------------------------------------------------------------
+@@ -602,8 +602,8 @@ int Man_In_Grey__Gate·Gate·run(
+ 
+   int Man_In_Grey__Gate·Gate·run(
+     const char *language
+-    ,const char *guard_relative
+-    ,const char *interpreter_relative
++    ,const char *fpr__guard
++    ,const char *fpr__interpreter
+     ,int argc
+     ,char **argv
+   ){
+@@ -614,7 +614,7 @@ int Man_In_Grey__Gate·Gate·run(
+       return 0;
+     }
+     if( !strcmp(argv[1] ,"flags") && argc == 2 ){
+-      print_flags(guard_relative ,interpreter_relative);
++      print_flags(fpr__guard ,fpr__interpreter);
+       return 0;
+     }
+     if( strcmp(argv[1] ,"admit") ){
+@@ -633,12 +633,12 @@ int Man_In_Grey__Gate·Gate·run(
+     settle_descriptors();
+     settle_limits();
+ 
+-    if( !name_is_valid(language) ) die("the language name compiled into this gate is empty or holds a space or control character");
+-    char guard_path[PATH_MAX] ,interpreter_path[PATH_MAX];
+-    if( !resolve(guard_relative ,guard_path) ) die("the guard is missing: %s" ,guard_relative);
+-    if( !resolve(interpreter_relative ,interpreter_path) ) die("the interpreter is missing: %s" ,interpreter_relative);
+-    check_trusted_owner(guard_path);
+-    check_trusted_owner(interpreter_path);
++    if( !is__valid_name(language) ) die("the language name compiled into this gate is empty or holds a space or control character");
++    char fpa__guard[PATH_MAX] ,fpa__interpreter[PATH_MAX];
++    if( !resolve(fpr__guard ,fpa__guard) ) die("the guard is missing: %s" ,fpr__guard);
++    if( !resolve(fpr__interpreter ,fpa__interpreter) ) die("the interpreter is missing: %s" ,fpr__interpreter);
++    check_trusted_owner(fpa__guard);
++    check_trusted_owner(fpa__interpreter);
+ 
+     uid_t real_uid = getuid();
+     gid_t real_gid = getgid();
+@@ -670,9 +670,9 @@ int Man_In_Grey__Gate·Gate·run(
+ 
+     // the guard
+     char *guard_argument[] = {
+-      (char *)PYTHON ,(char *)"-E" ,(char *)"-s" ,(char *)"-B" ,guard_path ,(char *)"check" ,NULL
++      (char *)PYTHON ,(char *)"-E" ,(char *)"-s" ,(char *)"-B" ,fpa__guard ,(char *)"check" ,NULL
+     };
+-    Child guard = {.source = "guard" ,.stdout_is_verdict = true};
++    Child guard = {.source = "guard" ,.is__stdout_verdict = true};
+     int status = run_child(&guard ,guard_argument ,journal ,journal_length);
+     if( guard.broken ){
+       say("refused" ,"the guard broke the gate's rules: %s" ,guard.broken);
+@@ -704,10 +704,10 @@ int Man_In_Grey__Gate·Gate·run(
+ 
+     // the interpreter
+     char *interpreter_argument[] = {
+-      (char *)PYTHON ,(char *)"-E" ,(char *)"-s" ,(char *)"-B" ,interpreter_path ,(char *)"execute" ,NULL
++      (char *)PYTHON ,(char *)"-E" ,(char *)"-s" ,(char *)"-B" ,fpa__interpreter ,(char *)"execute" ,NULL
+     };
+-    Child interpreter = {.source = "interpreter" ,.stdout_is_verdict = true ,.has__result = true};
+-    say("interpreting" ,"%s" ,interpreter_path);
++    Child interpreter = {.source = "interpreter" ,.is__stdout_verdict = true ,.has__result = true};
++    say("interpreting" ,"%s" ,fpa__interpreter);
+     status = run_child(&interpreter ,interpreter_argument ,journal ,journal_length);
+     if( interpreter.broken ){
+       say("failed" ,"the interpreter broke the gate's rules: %s; what it had done stays done" ,interpreter.broken);
+diff --git a/document/Man-In-Grey.html b/document/Man-In-Grey.html
+index 67ac967..7add393 100644
+--- a/document/Man-In-Grey.html
++++ b/document/Man-In-Grey.html
+@@ -221,7 +221,7 @@
+                 ,["permission" ,"integer"]
+                 ,["file" ,"handle"]
+                 ,["content" ,"bytes"]
+-                ,["summary" ,["dictionary" ,["open_count" ,"integer"] ,["unlink_count" ,"integer"]]]
++                ,["summary" ,["dictionary" ,["count_of__open" ,"integer"] ,["count_of__unlink" ,"integer"]]]
+               ]
+               ,"list__format": [
+                 ["format__open" ,["in" ,"directory"] ,["in" ,"file_name"] ,["in" ,"mode"] ,["in" ,"account_name"] ,["in" ,"permission"] ,["out" ,"file"]]
+@@ -721,13 +721,13 @@
+             This composer writes in the example language; <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a> shows a whole one. <RT·code>compose</RT·code> is given <RT·code>prov</RT·code>, which says where the composer is:
+           </p>
+           <RT·dictionary key="Field of prov" definition="Meaning">
+-            <RT·entry key="implied__fname">
++            <RT·entry key="filen__implied">
+               The composer's own file name less <RT·code>.py</RT·code>, for a composer named for the file it writes.
+             </RT·entry>
+             <RT·entry key="process_user">
+               The name of account A.
+             </RT·entry>
+-            <RT·entry key="composer__abs_fpath, composer_dir__dpath, cwd__dpath">
++            <RT·entry key="fpa__composer, dirpa__composer, dirpa__cwd">
+               The composer's absolute path, the directory holding it, and the working directory of the run.
+             </RT·entry>
+           </RT·dictionary>
+@@ -886,7 +886,7 @@
+             No instruction writes a variable, so every argument of a journal in this language is a literal, and the journal has no result.
+           </p>
+           <p>
+-            No instruction names a file. The page's file names come from the user name of the real uid, which the kernel gives the guard and the interpreter, so a person can write only his own page. The directory comes from <RT·code>page_directory()</RT·code> among the guard's constraints, which the administrator writes. A journal describes the whole page: a run that gives no picture removes the picture an earlier run placed.
++            No instruction names a file. The page's file names come from the user name of the real uid, which the kernel gives the guard and the interpreter, so a person can write only his own page. The directory comes from <RT·code>dirp__page()</RT·code> among the guard's constraints, which the administrator writes. A journal describes the whole page: a run that gives no picture removes the picture an earlier run placed.
+           </p>
+           <p>
+             Decoration travels out of band. A run's styles are a list beside its text, not marks in it, and the interpreter turns each style into one fixed tag with no attribute: <RT·code>&lt;strong&gt;</RT·code>, <RT·code>&lt;em&gt;</RT·code>, <RT·code>&lt;u&gt;</RT·code> and <RT·code>&lt;s&gt;</RT·code>, nested in that order. It writes the rest of the page from a fixed form, and escapes every text it is given, so nothing a person gives becomes markup. There is nothing to sanitize: an attribute such as <RT·code>onload</RT·code>, or a <RT·code>&lt;script&gt;</RT·code> element, cannot be expressed in the language.
+@@ -916,7 +916,7 @@
+                 journal_iface.paragraph()
+                 for content ,style in paragraph:
+                   journal_iface.text(content ,style)
+-              journal_iface.picture((Path(prov.composer_dir__dpath).parent / "picture.jpg").read_bytes())
++              journal_iface.picture((Path(prov.dirpa__composer).parent / "picture.jpg").read_bytes())
+           </RT·code>
+           <p>
+             A composer could as well read a file in a notation its author likes, such as <RT·code>*emphasis*</RT·code>, and turn it into runs. That conversion runs with the person's own uid, so a mistake in it stays on his side; the gate only ever receives runs and style names.
+@@ -932,17 +932,17 @@
+             def is__allowed_account(user_name):
+               return user_name in ("Thomas" ,"Alice")
+ 
+-            def is__allowed_text_size(byte_count):
+-              return byte_count &lt;= 8192
++            def is__allowed_text_size(count_of__byte):
++              return count_of__byte &lt;= 8192
+ 
+-            def is__allowed_picture_size(byte_count):
+-              return byte_count &lt;= 1 &lt;&lt; 20
++            def is__allowed_picture_size(count_of__byte):
++              return count_of__byte &lt;= 1 &lt;&lt; 20
+ 
+-            def page_directory():
++            def dirp__page():
+               return "/srv/http/bio"
+           </RT·code>
+           <p>
+-            One set of constraints serves every account, since the page's name follows from the account. <RT·code>is__allowed_text_size</RT·code> is given the bytes of the display name and text together. <RT·code>page_directory</RT·code> is not a predicate: the guard checks that it gives an absolute directory, and the interpreter places the pages there. To give a page to every member of a group instead:
++            One set of constraints serves every account, since the page's name follows from the account. <RT·code>is__allowed_text_size</RT·code> is given the bytes of the display name and text together. <RT·code>dirp__page</RT·code> is not a predicate: the guard checks that it gives an absolute directory, and the interpreter places the pages there. To give a page to every member of a group instead:
+           </p>
+           <RT·code>
+             def is__allowed_account(user_name):
+@@ -960,7 +960,7 @@
+               One display name; at most one picture; text only within a paragraph, and no paragraph without text; every style one of the four, none twice; no control character in any text.
+             </RT·entry>
+             <RT·entry key="constraint">
+-              <RT·code>is__allowed_account</RT·code> allows account A; <RT·code>is__allowed_text_size</RT·code> and <RT·code>is__allowed_picture_size</RT·code> allow the text and the picture; <RT·code>page_directory()</RT·code> gives an absolute directory.
++              <RT·code>is__allowed_account</RT·code> allows account A; <RT·code>is__allowed_text_size</RT·code> and <RT·code>is__allowed_picture_size</RT·code> allow the text and the picture; <RT·code>dirp__page()</RT·code> gives an absolute directory.
+             </RT·entry>
+             <RT·entry key="content">
+               The picture begins with the signature of a PNG or a JPEG file. SVG is refused on purpose: it is a document that can hold script, and run it when opened by itself.
+diff --git a/tester/authored/Emplace-Bio/composer/bio.py b/tester/authored/Emplace-Bio/composer/bio.py
+index de9bed1..8c85629 100644
+--- a/tester/authored/Emplace-Bio/composer/bio.py
++++ b/tester/authored/Emplace-Bio/composer/bio.py
+@@ -16,4 +16,4 @@ def compose(prov ,journal_iface):
+     journal_iface.paragraph()
+     for content ,style in paragraph:
+       journal_iface.text(content ,style)
+-  journal_iface.picture((Path(prov.composer_dir__dpath).parent / "picture.png").read_bytes())
++  journal_iface.picture((Path(prov.dirpa__composer).parent / "picture.png").read_bytes())
+diff --git a/tester/authored/Emplace-Bio/composer_jpeg/bio.py b/tester/authored/Emplace-Bio/composer_jpeg/bio.py
+index e222a49..a8ea567 100644
+--- a/tester/authored/Emplace-Bio/composer_jpeg/bio.py
++++ b/tester/authored/Emplace-Bio/composer_jpeg/bio.py
+@@ -7,4 +7,4 @@ def compose(prov ,journal_iface):
+   journal_iface.display_name("A. Tester")
+   journal_iface.paragraph()
+   journal_iface.text("Now with a JPEG." ,[])
+-  journal_iface.picture((Path(prov.composer_dir__dpath).parent / "picture.jpg").read_bytes())
++  journal_iface.picture((Path(prov.dirpa__composer).parent / "picture.jpg").read_bytes())
+diff --git a/tester/authored/Emplace-Bio/run b/tester/authored/Emplace-Bio/run
+index c54ce4f..58c6625 100755
+--- a/tester/authored/Emplace-Bio/run
++++ b/tester/authored/Emplace-Bio/run
+@@ -60,7 +60,7 @@ from pathlib import Path
+ import cbor2
+ 
+ TEST_NAME = "Emplace-Bio"
+-TEST__DPATH = Path(__file__).resolve().parent
++DIRPA__TEST = Path(__file__).resolve().parent
+ GATE_NAME = "Man_In_Grey__Gate·Emplace_Bio"
+ 
+ 
+@@ -114,58 +114,58 @@ def check_status(log ,what ,status ,want ,output ,want_text=None):
+     log.note(output)
+   return passed
+ 
+-def make_tree(consumer ,tree):
++def make_tree(dirpa__consumer ,dirpa__tree):
+   """
+   A copy of the promoted Man_In_Grey/ and Man_In_Grey__Gate/, side by side, in
+   tree. The gate refuses a guard in a directory other accounts can write,
+   so tree and the directory holding it are made writable by the owner alone.
+   """
+-  tree.mkdir(parents=True)
+-  for each in (tree.parent ,tree):
++  dirpa__tree.mkdir(parents=True)
++  for each in (dirpa__tree.parent ,dirpa__tree):
+     os.chmod(each ,0o755)
+   for name in ("Man_In_Grey" ,"Man_In_Grey__Gate"):
+-    (tree / name).mkdir()
+-    os.chmod(tree / name ,0o755)
+-    for source in sorted((consumer / name).iterdir()):
++    (dirpa__tree / name).mkdir()
++    os.chmod(dirpa__tree / name ,0o755)
++    for source in sorted((dirpa__consumer / name).iterdir()):
+       if source.is_file():
+-        shutil.copy2(source ,tree / name / source.name)
++        shutil.copy2(source ,dirpa__tree / name / source.name)
+ 
+-def put_constraint(guard__fpath ,constraint):
++def put_constraint(fpa__guard ,constraint):
+   "replace the predicates between the guard's constraint marks with constraint"
+-  list__line = guard__fpath.read_text(encoding="utf-8").splitlines()
++  list__line = fpa__guard.read_text(encoding="utf-8").splitlines()
+   begin ,end = list__line.index("# constraints begin") ,list__line.index("# constraints end")
+   text = "\n".join(list__line[:begin + 1] + ["" ,constraint.strip("\n") ,""] + list__line[end:]) + "\n"
+-  guard__fpath.unlink()
+-  guard__fpath.write_text(text ,encoding="utf-8")
+-  os.chmod(guard__fpath ,0o644)
++  fpa__guard.unlink()
++  fpa__guard.write_text(text ,encoding="utf-8")
++  os.chmod(fpa__guard ,0o644)
+ 
+-def write_constraint(tree ,work__dpath ,account ,text__max_bytes=8192):
+-  "the test's constraints in its copy of Emplace_Bio·Guard.py, giving account a page in work__dpath/bio"
++def write_constraint(dirpa__tree ,dirpa__work ,account ,text__max_bytes=8192):
++  "the test's constraints in its copy of Emplace_Bio·Guard.py, giving account a page in dirpa__work/bio"
+   text = (
+     "# written by the Emplace-Bio test\n\n"
+     "def is__allowed_account(user_name):\n"
+     f"  return user_name == {account!r}\n\n"
+-    "def is__allowed_text_size(byte_count):\n"
+-    f"  return byte_count <= {text__max_bytes}\n\n"
+-    "def is__allowed_picture_size(byte_count):\n"
+-    "  return byte_count <= 1 << 20\n\n"
+-    "def page_directory():\n"
+-    f"  return {str(work__dpath / 'bio')!r}\n"
++    "def is__allowed_text_size(count_of__byte):\n"
++    f"  return count_of__byte <= {text__max_bytes}\n\n"
++    "def is__allowed_picture_size(count_of__byte):\n"
++    "  return count_of__byte <= 1 << 20\n\n"
++    "def dirp__page():\n"
++    f"  return {str(dirpa__work / 'bio')!r}\n"
+   )
+-  put_constraint(tree / "Man_In_Grey" / "Emplace_Bio·Guard.py" ,text)
++  put_constraint(dirpa__tree / "Man_In_Grey" / "Emplace_Bio·Guard.py" ,text)
+ 
+-def run__Man_In_Grey(program ,gate ,path ,work__dpath ,*option):
+-  command = [str(program) ,"orchestrate" ,str(path) ,"gate" ,str(gate) ,*option]
+-  result = subprocess.run(command ,cwd=work__dpath ,capture_output=True ,text=True)
++def run__Man_In_Grey(fpa__program ,fpa__gate ,path ,dirpa__work ,*option):
++  command = [str(fpa__program) ,"orchestrate" ,str(path) ,"gate" ,str(fpa__gate) ,*option]
++  result = subprocess.run(command ,cwd=dirpa__work ,capture_output=True ,text=True)
+   return result.returncode ,(result.stdout + result.stderr).strip()
+ 
+-def run_gate(gate ,journal_bytes ,preexec=None):
++def run_gate(fpa__gate ,journal_bytes ,preexec=None):
+   """
+   A journal given to the gate directly, with no orchestrator. preexec runs in
+   the gate's process before exec, to leave state behind as an invoking
+   program could.
+   """
+-  result = subprocess.run([str(gate) ,"admit"] ,input=journal_bytes ,capture_output=True ,preexec_fn=preexec)
++  result = subprocess.run([str(fpa__gate) ,"admit"] ,input=journal_bytes ,capture_output=True ,preexec_fn=preexec)
+   return result.returncode ,(result.stdout + result.stderr).decode("utf-8" ,"replace").strip()
+ 
+ # state an invoking program can leave behind, which survives exec
+@@ -181,7 +181,7 @@ def leave_sigterm_pending():
+   signal.pthread_sigmask(signal.SIG_BLOCK ,{signal.SIGTERM})
+   os.kill(os.getpid() ,signal.SIGTERM)
+ 
+-def hand_made(definition_hash ,instruction__list):
++def hand_made(definition_hash ,list__instruction):
+   """
+   A journal of the Emplace_Bio language holding the instructions given as
+   (operation ,[value ...]), every value a literal, made as data and encoded,
+@@ -194,73 +194,73 @@ def hand_made(definition_hash ,instruction__list):
+     ,"meta": {}
+     ,"list__variable": []
+     ,"result": None
+-    ,"list__instruction": [{"operation": o ,"list__argument": [["literal" ,v] for v in value]} for o ,value in instruction__list]
++    ,"list__instruction": [{"operation": o ,"list__argument": [["literal" ,v] for v in value]} for o ,value in list__instruction]
+   } ,canonical=True)
+ 
+ def good_page(*extra):
+   return [("display_name" ,["A. Tester"]) ,("paragraph" ,[]) ,("text" ,["Hello." ,[]]) ,*extra]
+ 
+-def test(repo_home):
+-  consumer = repo_home / "consumer"
+-  work__dpath = (repo_home / "tester" / "scratchpad" / TEST_NAME).resolve()
+-  tree = work__dpath / "tree"
+-  program = tree / "Man_In_Grey" / "Man-In-Grey"
+-  gate = tree / "Man_In_Grey__Gate" / GATE_NAME
+-  print(f"run test   in {TEST__DPATH}")
+-  print(f"  program  {program}")
+-  print(f"  gate     {gate}")
+-  print(f"  writes   {work__dpath}")
++def test(dirpa__repo_home):
++  dirpa__consumer = dirpa__repo_home / "consumer"
++  dirpa__work = (dirpa__repo_home / "tester" / "scratchpad" / TEST_NAME).resolve()
++  dirpa__tree = dirpa__work / "tree"
++  fpa__program = dirpa__tree / "Man_In_Grey" / "Man-In-Grey"
++  fpa__gate = dirpa__tree / "Man_In_Grey__Gate" / GATE_NAME
++  print(f"run test   in {DIRPA__TEST}")
++  print(f"  program  {fpa__program}")
++  print(f"  gate     {fpa__gate}")
++  print(f"  writes   {dirpa__work}")
+   log = Log()
+ 
+-  promoted = os.access(consumer / "Man_In_Grey" / "Man-In-Grey" ,os.X_OK) and os.access(consumer / "Man_In_Grey__Gate" / GATE_NAME ,os.X_OK)
++  promoted = os.access(dirpa__consumer / "Man_In_Grey" / "Man-In-Grey" ,os.X_OK) and os.access(dirpa__consumer / "Man_In_Grey__Gate" / GATE_NAME ,os.X_OK)
+   if not log.check(promoted ,"Man-In-Grey and the Emplace_Bio gate are promoted"
+                    ,None if promoted else f"the developer promotes Man-In-Grey and {GATE_NAME} first"):
+     return log.summary()
+ 
+-  if work__dpath.exists():
+-    shutil.rmtree(work__dpath)
+-  (work__dpath / "bio").mkdir(parents=True)
+-  make_tree(consumer ,tree)
++  if dirpa__work.exists():
++    shutil.rmtree(dirpa__work)
++  (dirpa__work / "bio").mkdir(parents=True)
++  make_tree(dirpa__consumer ,dirpa__tree)
+   # the journals the test makes by hand carry the hash of the copy's definition, so it is imported once the copy exists
+-  sys.path.insert(0 ,str(tree / "Man_In_Grey"))
++  sys.path.insert(0 ,str(dirpa__tree / "Man_In_Grey"))
+   import importlib ,Language
+   language_module = importlib.import_module("Emplace_Bio·Language")
+   definition_hash = Language.Definition(language_module.NAME ,language_module.DEFINITION).hash
+   person = getpass.getuser()
+-  write_constraint(tree ,work__dpath ,person)
+-  bio = work__dpath / "bio"
+-  page__fpath ,png ,jpg = bio / f"{person}.html" ,bio / f"{person}.png" ,bio / f"{person}.jpg"
++  write_constraint(dirpa__tree ,dirpa__work ,person)
++  bio = dirpa__work / "bio"
++  fpa__page ,png ,jpg = bio / f"{person}.html" ,bio / f"{person}.png" ,bio / f"{person}.jpg"
+ 
+   # page
+-  status ,output = run__Man_In_Grey(program ,gate ,TEST__DPATH / "composer" / "bio.py" ,work__dpath)
++  status ,output = run__Man_In_Grey(fpa__program ,fpa__gate ,DIRPA__TEST / "composer" / "bio.py" ,dirpa__work)
+   if not check_status(log ,"page Man-In-Grey exits 0" ,status ,0 ,output):
+     return log.summary()
+-  expected = (TEST__DPATH / "expected" / "page.html").read_text(encoding="utf-8").replace("USER_NAME" ,urllib.parse.quote(person))
+-  found = page__fpath.read_text(encoding="utf-8") if page__fpath.is_file() else None
++  expected = (DIRPA__TEST / "expected" / "page.html").read_text(encoding="utf-8").replace("USER_NAME" ,urllib.parse.quote(person))
++  found = fpa__page.read_text(encoding="utf-8") if fpa__page.is_file() else None
+   log.check(found == expected ,f"page {person}.html is expected/page.html"
+             ,None if found == expected else ("not written" if found is None else "content differs"))
+   log.check(found is not None and "<script" not in found and "&lt;script&gt;" in found ,"page text that looks like markup is escaped")
+-  log.check(png.is_file() and png.read_bytes() == (TEST__DPATH / "picture.png").read_bytes() ,f"page {person}.png is the given picture")
+-  modes = [stat.S_IMODE(p.stat().st_mode) for p in (page__fpath ,png) if p.exists()]
++  log.check(png.is_file() and png.read_bytes() == (DIRPA__TEST / "picture.png").read_bytes() ,f"page {person}.png is the given picture")
++  modes = [stat.S_IMODE(p.stat().st_mode) for p in (fpa__page ,png) if p.exists()]
+   log.check(modes == [0o644 ,0o644] ,"page files have permission 0644" ,None if modes == [0o644 ,0o644] else f"{[oct(m) for m in modes]}")
+ 
+   # jpeg, then no picture
+-  status ,output = run__Man_In_Grey(program ,gate ,TEST__DPATH / "composer_jpeg" / "bio.py" ,work__dpath)
++  status ,output = run__Man_In_Grey(fpa__program ,fpa__gate ,DIRPA__TEST / "composer_jpeg" / "bio.py" ,dirpa__work)
+   check_status(log ,"jpeg Man-In-Grey exits 0" ,status ,0 ,output)
+-  log.check(jpg.is_file() and not png.exists() and f'src="{urllib.parse.quote(person)}.jpg"' in page__fpath.read_text()
++  log.check(jpg.is_file() and not png.exists() and f'src="{urllib.parse.quote(person)}.jpg"' in fpa__page.read_text()
+             ,"jpeg places the JPEG and removes the PNG")
+-  status ,output = run__Man_In_Grey(program ,gate ,TEST__DPATH / "composer_no-picture" / "bio.py" ,work__dpath)
++  status ,output = run__Man_In_Grey(fpa__program ,fpa__gate ,DIRPA__TEST / "composer_no-picture" / "bio.py" ,dirpa__work)
+   check_status(log ,"none Man-In-Grey exits 0" ,status ,0 ,output)
+-  log.check(not jpg.exists() and not png.exists() and "<img" not in page__fpath.read_text() ,"none removes the picture")
++  log.check(not jpg.exists() and not png.exists() and "<img" not in fpa__page.read_text() ,"none removes the picture")
+ 
+   # check-only
+   before = snapshot(bio)
+-  status ,output = run__Man_In_Grey(program ,gate ,TEST__DPATH / "composer" / "bio.py" ,work__dpath ,"check-only")
++  status ,output = run__Man_In_Grey(fpa__program ,fpa__gate ,DIRPA__TEST / "composer" / "bio.py" ,dirpa__work ,"check-only")
+   check_status(log ,"check-only is approved by the guard" ,status ,0 ,output ,"approved: guard Emplace_Bio check passed")
+   log.check(snapshot(bio) == before ,"check-only changes nothing")
+ 
+   # journals given to the gate directly
+-  svg = (TEST__DPATH / "picture.svg").read_bytes()
++  svg = (DIRPA__TEST / "picture.svg").read_bytes()
+   list__case = (
+     ("name" ,good_page(("text" ,["x" ,[] ,"/etc/passwd"])) ,{} ,"wellformed-broken:")
+     ,("style" ,good_page(("text" ,["x" ,["blink"]])) ,{} ,"language-broken:")
+@@ -270,13 +270,13 @@ def test(repo_home):
+     ,("long" ,good_page() ,{"text__max_bytes": 10} ,"constraint-broken:")
+     ,("account" ,good_page() ,{"account": "nobody_at_all"} ,"constraint-broken:")
+   )
+-  for name ,instruction__list ,variation ,want in list__case:
+-    write_constraint(tree ,work__dpath ,variation.get("account" ,person) ,variation.get("text__max_bytes" ,8192))
++  for name ,list__instruction ,variation ,want in list__case:
++    write_constraint(dirpa__tree ,dirpa__work ,variation.get("account" ,person) ,variation.get("text__max_bytes" ,8192))
+     before = snapshot(bio)
+-    status ,output = run_gate(gate ,hand_made(definition_hash ,instruction__list))
++    status ,output = run_gate(fpa__gate ,hand_made(definition_hash ,list__instruction))
+     check_status(log ,f"{name} is refused by the {want[:-len('-broken:')]} check" ,status ,1 ,output ,want)
+     log.check(snapshot(bio) == before ,f"{name} changes nothing")
+-  write_constraint(tree ,work__dpath ,person)
++  write_constraint(dirpa__tree ,dirpa__work ,person)
+ 
+   # signal state left behind by the invoking program
+   for name ,preexec ,content in (
+@@ -284,35 +284,35 @@ def test(repo_home):
+     ,("ignored" ,leave_sigchld_ignored ,"Placed with SIGCHLD ignored.")
+   ):
+     journal = hand_made(definition_hash ,[("display_name" ,["A. Tester"]) ,("paragraph" ,[]) ,("text" ,[content ,[]])])
+-    status ,output = run_gate(gate ,journal ,preexec)
++    status ,output = run_gate(fpa__gate ,journal ,preexec)
+     check_status(log ,f"{name} is interpreted" ,status ,0 ,output ,"interpreted:")
+-    log.check(page__fpath.is_file() and content in page__fpath.read_text() ,f"{name} places the page")
++    log.check(fpa__page.is_file() and content in fpa__page.read_text() ,f"{name} places the page")
+   before = snapshot(bio)
+-  status ,output = run_gate(gate ,hand_made(definition_hash ,good_page()) ,leave_sigterm_pending)
++  status ,output = run_gate(fpa__gate ,hand_made(definition_hash ,good_page()) ,leave_sigterm_pending)
+   log.check(status == -signal.SIGTERM and "received:" not in output ,"pending ends the gate before it reads the journal"
+             ,None if status == -signal.SIGTERM else f"exit status {status}")
+   log.check(snapshot(bio) == before ,"pending changes nothing")
+ 
+   # a page made a symbolic link
+-  target = work__dpath / "elsewhere.html"
++  target = dirpa__work / "elsewhere.html"
+   target.write_text("not to be overwritten\n")
+-  page__fpath.unlink()
+-  page__fpath.symlink_to(target)
++  fpa__page.unlink()
++  fpa__page.symlink_to(target)
+   before = snapshot(bio)
+-  status ,output = run_gate(gate ,hand_made(definition_hash ,good_page()))
++  status ,output = run_gate(fpa__gate ,hand_made(definition_hash ,good_page()))
+   check_status(log ,"link is refused by the filesystem check" ,status ,1 ,output ,"filesystem-broken:")
+   log.check(snapshot(bio) == before and target.read_text() == "not to be overwritten\n" ,"link changes nothing")
+ 
+   return log.summary()
+ 
+-def clean(repo_home):
+-  work__dpath = repo_home / "tester" / "scratchpad" / TEST_NAME
+-  print(f"run clean   in {TEST__DPATH}")
+-  if work__dpath.exists():
+-    shutil.rmtree(work__dpath)
+-    print(f"  deleted   {work__dpath}")
++def clean(dirpa__repo_home):
++  dirpa__work = dirpa__repo_home / "tester" / "scratchpad" / TEST_NAME
++  print(f"run clean   in {DIRPA__TEST}")
++  if dirpa__work.exists():
++    shutil.rmtree(dirpa__work)
++    print(f"  deleted   {dirpa__work}")
+   else:
+-    print(f"  kept      {work__dpath}  (there is nothing to delete)")
++    print(f"  kept      {dirpa__work}  (there is nothing to delete)")
+   return 0
+ 
+ 
+@@ -337,8 +337,8 @@ def CLI(argv=None):
+   if not os.environ.get("REPO_HOME"):
+     print("Error: REPO_HOME is not set; enter the tester role with ./setup tester." ,file=sys.stderr)
+     return 1
+-  repo_home = Path(os.environ["REPO_HOME"]).resolve()
+-  return test(repo_home) if command == "test" else clean(repo_home)
++  dirpa__repo_home = Path(os.environ["REPO_HOME"]).resolve()
++  return test(dirpa__repo_home) if command == "test" else clean(dirpa__repo_home)
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/tester/authored/smoke/composer/config.py b/tester/authored/smoke/composer/config.py
+index 41be714..7c87b19 100644
+--- a/tester/authored/smoke/composer/config.py
++++ b/tester/authored/smoke/composer/config.py
+@@ -7,7 +7,7 @@
+ # Each file is a variable of the type file, which open writes and write reads and writes.
+ 
+ def compose(prov ,journal_iface):
+-  out = str(prov.cwd__dpath / "out")
++  out = str(prov.dirpa__cwd / "out")
+   person = prov.process_user
+   journal_iface.unlink(out ,"obsolete.conf")
+ 
+diff --git a/tester/authored/smoke/composer_create/new.py b/tester/authored/smoke/composer_create/new.py
+index 88053ee..d11f140 100644
+--- a/tester/authored/smoke/composer_create/new.py
++++ b/tester/authored/smoke/composer_create/new.py
+@@ -2,5 +2,5 @@
+ 
+ def compose(prov ,journal_iface):
+   file = journal_iface.declare("new_conf" ,"file")
+-  journal_iface.open(str(prov.cwd__dpath / "out") ,"new.conf" ,"create" ,prov.process_user ,0o600 ,file)
++  journal_iface.open(str(prov.dirpa__cwd / "out") ,"new.conf" ,"create" ,prov.process_user ,0o600 ,file)
+   journal_iface.write(file ,b"made once\n")
+diff --git a/tester/authored/smoke/composer_mode/wrong-mode.py b/tester/authored/smoke/composer_mode/wrong-mode.py
+index eb0048d..e9de087 100644
+--- a/tester/authored/smoke/composer_mode/wrong-mode.py
++++ b/tester/authored/smoke/composer_mode/wrong-mode.py
+@@ -3,5 +3,5 @@
+ 
+ def compose(prov ,journal_iface):
+   file = journal_iface.declare("file" ,"file")
+-  journal_iface.open(str(prov.cwd__dpath / "out") ,"unbound_conf" ,"overwrite" ,prov.process_user ,0o444 ,file)
++  journal_iface.open(str(prov.dirpa__cwd / "out") ,"unbound_conf" ,"overwrite" ,prov.process_user ,0o444 ,file)
+   journal_iface.write(file ,b"not to be written\n")
+diff --git a/tester/authored/smoke/composer_refused/allowed-and-not.py b/tester/authored/smoke/composer_refused/allowed-and-not.py
+index 71bd714..43e7999 100644
+--- a/tester/authored/smoke/composer_refused/allowed-and-not.py
++++ b/tester/authored/smoke/composer_refused/allowed-and-not.py
+@@ -1,7 +1,7 @@
+ # One file the constraints allow, and one they do not. The whole journal is refused.
+ 
+ def compose(prov ,journal_iface):
+-  out = str(prov.cwd__dpath / "out")
++  out = str(prov.dirpa__cwd / "out")
+   allowed = journal_iface.declare("allowed" ,"file")
+   journal_iface.open(out ,"unbound_conf" ,"replace-keep" ,prov.process_user ,0o444 ,allowed)
+   journal_iface.write(allowed ,b"this is not to be written\n")
+diff --git a/tester/authored/smoke/composer_type/wrong-type.py b/tester/authored/smoke/composer_type/wrong-type.py
+index 9e8a74c..3fda0de 100644
+--- a/tester/authored/smoke/composer_type/wrong-type.py
++++ b/tester/authored/smoke/composer_type/wrong-type.py
+@@ -3,4 +3,4 @@
+ 
+ def compose(prov ,journal_iface):
+   file = journal_iface.declare("file" ,"file")
+-  journal_iface.open(str(prov.cwd__dpath / "out") ,"unbound_conf" ,"replace-keep" ,prov.process_user ,"0444" ,file)
++  journal_iface.open(str(prov.dirpa__cwd / "out") ,"unbound_conf" ,"replace-keep" ,prov.process_user ,"0444" ,file)
+diff --git a/tester/authored/smoke/run b/tester/authored/smoke/run
+index 4811657..d218eb8 100755
+--- a/tester/authored/smoke/run
++++ b/tester/authored/smoke/run
+@@ -77,9 +77,9 @@ import cbor2
+ 
+ TEST_NAME = "smoke"
+ GATE_NAME = "Man_In_Grey__Gate·Smoke"
+-TEST__DPATH = Path(__file__).resolve().parent
++DIRPA__TEST = Path(__file__).resolve().parent
+ 
+-OUTPUT_DIR = ("out" ,"out/net" ,"out/web")
++LIST__DIRPR__OUTPUT = ("out" ,"out/net" ,"out/web")
+ 
+ # the files the constraints allow: (directory under the scratchpad, name, modes, permission)
+ ALLOWED = (
+@@ -162,9 +162,9 @@ def snapshot(root):
+     result[path.relative_to(root).as_posix()] = (path.read_bytes() ,stat.S_IMODE(st.st_mode) ,st.st_uid)
+   return result
+ 
+-def compare(log ,run_name ,work__dpath):
+-  expected = tree(TEST__DPATH / "expected" / run_name)
+-  found = {n: p for n ,p in tree(work__dpath).items() if n.startswith("out/")}
++def compare(log ,run_name ,dirpa__work):
++  expected = tree(DIRPA__TEST / "expected" / run_name)
++  found = {n: p for n ,p in tree(dirpa__work).items() if n.startswith("out/")}
+   for name in sorted(set(expected) | set(found)):
+     what = f"{run_name} {name}"
+     if name not in found:
+@@ -187,18 +187,18 @@ def limit_file_size():
+   "run in the child before Man-In-Grey starts: a file size limit, soft and hard, of 1 MiB"
+   resource.setrlimit(resource.RLIMIT_FSIZE ,(1 << 20 ,1 << 20))
+ 
+-def run__Man_In_Grey(program ,path ,work__dpath ,*option ,preexec=None):
+-  gate = program.parent.parent / "Man_In_Grey__Gate" / GATE_NAME
+-  command = [str(program) ,"orchestrate" ,str(path) ,"gate" ,str(gate) ,*option]
+-  result = subprocess.run(command ,cwd=work__dpath ,capture_output=True ,text=True ,preexec_fn=preexec)
++def run__Man_In_Grey(fpa__program ,path ,dirpa__work ,*option ,preexec=None):
++  fpa__gate = fpa__program.parent.parent / "Man_In_Grey__Gate" / GATE_NAME
++  command = [str(fpa__program) ,"orchestrate" ,str(path) ,"gate" ,str(fpa__gate) ,*option]
++  result = subprocess.run(command ,cwd=dirpa__work ,capture_output=True ,text=True ,preexec_fn=preexec)
+   return result.returncode ,(result.stdout + result.stderr).strip()
+ 
+-def run_gate(gate ,journal_bytes):
++def run_gate(fpa__gate ,journal_bytes):
+   "a journal given to the gate directly, with no orchestrator and descriptor 3 closed"
+-  result = subprocess.run([str(gate) ,"admit"] ,input=journal_bytes ,capture_output=True)
++  result = subprocess.run([str(fpa__gate) ,"admit"] ,input=journal_bytes ,capture_output=True)
+   return result.returncode ,(result.stdout + result.stderr).decode("utf-8" ,"replace").strip()
+ 
+-def hand_made(definition_hash ,variable ,instruction__list ,result=None ,version=4):
++def hand_made(definition_hash ,variable ,list__instruction ,result=None ,version=4):
+   "a journal of the Smoke language, made as data and encoded, with no journal interface to check it"
+   return cbor2.dumps({
+     "version": version
+@@ -207,7 +207,7 @@ def hand_made(definition_hash ,variable ,instruction__list ,result=None ,version
+     ,"meta": {}
+     ,"list__variable": variable
+     ,"result": result
+-    ,"list__instruction": [{"operation": o ,"list__argument": a} for o ,a in instruction__list]
++    ,"list__instruction": [{"operation": o ,"list__argument": a} for o ,a in list__instruction]
+   } ,canonical=True)
+ 
+ def check_status(log ,what ,status ,want ,output ,want_text=None):
+@@ -222,35 +222,35 @@ def check_status(log ,what ,status ,want ,output ,want_text=None):
+     log.note(output)
+   return passed
+ 
+-def make_tree(consumer ,tree):
++def make_tree(dirpa__consumer ,dirpa__tree):
+   """
+   A copy of the promoted Man_In_Grey/ and Man_In_Grey__Gate/, side by side, in
+   tree. The gate refuses a guard in a directory other accounts can write,
+   so tree and the directory holding it are made writable by the owner alone.
+   """
+-  tree.mkdir(parents=True)
+-  for each in (tree.parent ,tree):
++  dirpa__tree.mkdir(parents=True)
++  for each in (dirpa__tree.parent ,dirpa__tree):
+     os.chmod(each ,0o755)
+   for name in ("Man_In_Grey" ,"Man_In_Grey__Gate"):
+-    (tree / name).mkdir()
+-    os.chmod(tree / name ,0o755)
+-    for source in sorted((consumer / name).iterdir()):
++    (dirpa__tree / name).mkdir()
++    os.chmod(dirpa__tree / name ,0o755)
++    for source in sorted((dirpa__consumer / name).iterdir()):
+       if source.is_file():
+-        shutil.copy2(source ,tree / name / source.name)
++        shutil.copy2(source ,dirpa__tree / name / source.name)
+ 
+-def put_constraint(guard__fpath ,constraint):
++def put_constraint(fpa__guard ,constraint):
+   "replace the predicates between the guard's constraint marks with constraint"
+-  list__line = guard__fpath.read_text(encoding="utf-8").splitlines()
++  list__line = fpa__guard.read_text(encoding="utf-8").splitlines()
+   begin ,end = list__line.index("# constraints begin") ,list__line.index("# constraints end")
+   text = "\n".join(list__line[:begin + 1] + ["" ,constraint.strip("\n") ,""] + list__line[end:]) + "\n"
+-  guard__fpath.unlink()
+-  guard__fpath.write_text(text ,encoding="utf-8")
+-  os.chmod(guard__fpath ,0o644)
++  fpa__guard.unlink()
++  fpa__guard.write_text(text ,encoding="utf-8")
++  os.chmod(fpa__guard ,0o644)
+ 
+-def write_constraint(tree ,work__dpath):
++def write_constraint(dirpa__tree ,dirpa__work):
+   "the test's constraints in its copy of Smoke·Guard.py, allowing the files in ALLOWED to the person running the test"
+   person = getpass.getuser()
+-  allowed = {(str(work__dpath / d) ,n): (m ,int(p ,8)) for d ,n ,m ,p in ALLOWED}
++  allowed = {(str(dirpa__work / d) ,n): (m ,int(p ,8)) for d ,n ,m ,p in ALLOWED}
+   text = (
+     "# written by the smoke test\n\n"
+     f"PERSON = {person!r}\n"
+@@ -264,109 +264,109 @@ def write_constraint(tree ,work__dpath):
+     "  entry = ALLOWED.get((directory ,name))\n"
+     "  return entry is not None and \"unlink\" in entry[0]\n"
+   )
+-  put_constraint(tree / "Man_In_Grey" / "Smoke·Guard.py" ,text)
+-
+-def test(repo_home):
+-  consumer = repo_home / "consumer"
+-  work__dpath = (repo_home / "tester" / "scratchpad" / TEST_NAME).resolve()
+-  tree = work__dpath / "tree"
+-  program = tree / "Man_In_Grey" / "Man-In-Grey"
+-  gate = tree / "Man_In_Grey__Gate" / GATE_NAME
+-  config = TEST__DPATH / "composer" / "config.py"
+-  print(f"run test   in {TEST__DPATH}")
+-  print(f"  program  {program}")
+-  print(f"  writes   {work__dpath}")
++  put_constraint(dirpa__tree / "Man_In_Grey" / "Smoke·Guard.py" ,text)
++
++def test(dirpa__repo_home):
++  dirpa__consumer = dirpa__repo_home / "consumer"
++  dirpa__work = (dirpa__repo_home / "tester" / "scratchpad" / TEST_NAME).resolve()
++  dirpa__tree = dirpa__work / "tree"
++  fpa__program = dirpa__tree / "Man_In_Grey" / "Man-In-Grey"
++  fpa__gate = dirpa__tree / "Man_In_Grey__Gate" / GATE_NAME
++  config = DIRPA__TEST / "composer" / "config.py"
++  print(f"run test   in {DIRPA__TEST}")
++  print(f"  program  {fpa__program}")
++  print(f"  writes   {dirpa__work}")
+   log = Log()
+ 
+-  promoted = os.access(consumer / "Man_In_Grey" / "Man-In-Grey" ,os.X_OK)
++  promoted = os.access(dirpa__consumer / "Man_In_Grey" / "Man-In-Grey" ,os.X_OK)
+   if not log.check(promoted ,"Man-In-Grey is promoted"
+                    ,None if promoted else f"the developer promotes Man-In-Grey and {GATE_NAME} first"):
+     return log.summary()
+ 
+-  if work__dpath.exists():
+-    shutil.rmtree(work__dpath)
+-  for rel in OUTPUT_DIR:
+-    (work__dpath / rel).mkdir(parents=True)
+-  make_tree(consumer ,tree)
+-  write_constraint(tree ,work__dpath)
+-  (work__dpath / "out" / "obsolete.conf").write_text("to be unlinked\n")
+-  out = work__dpath / "out"
++  if dirpa__work.exists():
++    shutil.rmtree(dirpa__work)
++  for rel in LIST__DIRPR__OUTPUT:
++    (dirpa__work / rel).mkdir(parents=True)
++  make_tree(dirpa__consumer ,dirpa__tree)
++  write_constraint(dirpa__tree ,dirpa__work)
++  (dirpa__work / "out" / "obsolete.conf").write_text("to be unlinked\n")
++  out = dirpa__work / "out"
+ 
+   # the hand-made journals use the copy's definition, so it is imported once the copy exists
+-  sys.path.insert(0 ,str(tree / "Man_In_Grey"))
++  sys.path.insert(0 ,str(dirpa__tree / "Man_In_Grey"))
+   import importlib ,Language
+   language_module = importlib.import_module("Smoke·Language")
+   definition_hash = Language.Definition(language_module.NAME ,language_module.DEFINITION).hash
+ 
+   # run_1 and run_2
+   for run_name in ("run_1" ,"run_2"):
+-    status ,output = run__Man_In_Grey(program ,config ,work__dpath)
++    status ,output = run__Man_In_Grey(fpa__program ,config ,dirpa__work)
+     if check_status(log ,f"{run_name} Man-In-Grey exits 0" ,status ,0 ,output):
+-      compare(log ,run_name ,work__dpath)
++      compare(log ,run_name ,dirpa__work)
+       if run_name == "run_1":
+-        want = "result: summary {'open_count': 3, 'unlink_count': 1}"
++        want = "result: summary {'count_of__open': 3, 'count_of__unlink': 1}"
+         log.check(want in output ,"run_1 result is the summary" ,None if want in output else f"the output does not say {want!r}")
+     else:
+       log.note(f"{run_name}: the files were not compared, since Man-In-Grey failed")
+       return log.summary()
+ 
+   # create: once, then refused
+-  status ,output = run__Man_In_Grey(program ,TEST__DPATH / "composer_create" / "new.py" ,work__dpath)
++  status ,output = run__Man_In_Grey(fpa__program ,DIRPA__TEST / "composer_create" / "new.py" ,dirpa__work)
+   check_status(log ,"create Man-In-Grey exits 0" ,status ,0 ,output)
+   new = out / "new.conf"
+   log.check(new.is_file() and new.read_text() == "made once\n" and stat.S_IMODE(new.stat().st_mode) == 0o600
+             ,"create out/new.conf" ,None if new.is_file() else "not written")
+   before = snapshot(out)
+-  status ,output = run__Man_In_Grey(program ,TEST__DPATH / "composer_create" / "new.py" ,work__dpath)
++  status ,output = run__Man_In_Grey(fpa__program ,DIRPA__TEST / "composer_create" / "new.py" ,dirpa__work)
+   check_status(log ,"create again is refused by the filesystem check" ,status ,1 ,output ,"filesystem-broken:")
+   log.check(snapshot(out) == before ,"create again changes nothing")
+ 
+   # a journal the constraints refuse
+   before = snapshot(out)
+-  status ,output = run__Man_In_Grey(program ,TEST__DPATH / "composer_refused" / "allowed-and-not.py" ,work__dpath)
++  status ,output = run__Man_In_Grey(fpa__program ,DIRPA__TEST / "composer_refused" / "allowed-and-not.py" ,dirpa__work)
+   check_status(log ,"refused is refused by the constraint check" ,status ,1 ,output ,"constraint-broken:")
+   log.check(snapshot(out) == before ,"refused changes nothing, the allowed file included")
+ 
+   # a literal of the wrong type, refused in the composer
+   before = snapshot(out)
+-  status ,output = run__Man_In_Grey(program ,TEST__DPATH / "composer_type" / "wrong-type.py" ,work__dpath)
++  status ,output = run__Man_In_Grey(fpa__program ,DIRPA__TEST / "composer_type" / "wrong-type.py" ,dirpa__work)
+   check_status(log ,"type fails in the composer" ,status ,2 ,output ,"wrong-type.py: @0 open argument 4: the literal is str, not integer")
+   log.check(snapshot(out) == before ,"type changes nothing")
+ 
+   # a mode the language does not have, refused by the guard
+   before = snapshot(out)
+-  status ,output = run__Man_In_Grey(program ,TEST__DPATH / "composer_mode" / "wrong-mode.py" ,work__dpath)
++  status ,output = run__Man_In_Grey(fpa__program ,DIRPA__TEST / "composer_mode" / "wrong-mode.py" ,dirpa__work)
+   check_status(log ,"mode is refused by the language check" ,status ,1 ,output ,"language-broken: @0 open: mode 'overwrite'")
+   log.check(snapshot(out) == before ,"mode changes nothing")
+ 
+   # a composer directory
+-  status ,output = run__Man_In_Grey(program ,TEST__DPATH / "composer" ,work__dpath)
++  status ,output = run__Man_In_Grey(fpa__program ,DIRPA__TEST / "composer" ,dirpa__work)
+   check_status(log ,"directory is refused by the orchestrator" ,status ,2 ,output ,"runs one composer, given as a file")
+ 
+   # a composer other accounts can write
+-  writable = work__dpath / "composer_writable"
++  writable = dirpa__work / "composer_writable"
+   writable.mkdir()
+   shutil.copy(config ,writable / "config.py")
+   os.chmod(writable / "config.py" ,0o664)
+   before = snapshot(out)
+-  status ,output = run__Man_In_Grey(program ,writable / "config.py" ,work__dpath)
++  status ,output = run__Man_In_Grey(fpa__program ,writable / "config.py" ,dirpa__work)
+   check_status(log ,"writable composer is refused by the orchestrator" ,status ,2 ,output ,"writable by group or other accounts")
+   log.check(snapshot(out) == before ,"writable changes nothing")
+ 
+   # check-only
+   before = snapshot(out)
+-  status ,output = run__Man_In_Grey(program ,config ,work__dpath ,"check-only")
++  status ,output = run__Man_In_Grey(fpa__program ,config ,dirpa__work ,"check-only")
+   check_status(log ,"check-only is approved by the guard" ,status ,0 ,output ,"approved: guard Smoke check passed")
+   log.check(snapshot(out) == before ,"check-only changes nothing")
+ 
+   # a resource limit the gate cannot raise
+   before = snapshot(out)
+-  status ,output = run__Man_In_Grey(program ,config ,work__dpath ,preexec=limit_file_size)
++  status ,output = run__Man_In_Grey(fpa__program ,config ,dirpa__work ,preexec=limit_file_size)
+   check_status(log ,"limit is refused by the gate" ,status ,2 ,output ,"the file size (bytes) limit is 1048576")
+   log.check(snapshot(out) == before ,"limit changes nothing")
+ 
+   # an interpreter that exits 0 without its verdict line
+-  interpreter = tree / "Man_In_Grey" / "Smoke·Interpreter.py"
++  interpreter = dirpa__tree / "Man_In_Grey" / "Smoke·Interpreter.py"
+   text = interpreter.read_text(encoding="utf-8")
+   verdict_line = '  sys.stdout.write("interpreter Smoke journal played\\n")\n'
+   if verdict_line not in text:
+@@ -374,7 +374,7 @@ def test(repo_home):
+   interpreter.unlink()
+   interpreter.write_text(text.replace(verdict_line ,"  pass\n") ,encoding="utf-8")
+   os.chmod(interpreter ,0o644)
+-  status ,output = run__Man_In_Grey(program ,config ,work__dpath)
++  status ,output = run__Man_In_Grey(fpa__program ,config ,dirpa__work)
+   check_status(log ,"silent is reported failed by the gate" ,status ,2 ,output ,"without writing the one line 'interpreter Smoke journal played'")
+   interpreter.unlink()
+   interpreter.write_text(text ,encoding="utf-8")
+@@ -400,22 +400,22 @@ def test(repo_home):
+   )
+   for name ,journal_bytes ,want_status ,want_text in list__case:
+     before = snapshot(out)
+-    status ,output = run_gate(gate ,journal_bytes)
++    status ,output = run_gate(fpa__gate ,journal_bytes)
+     check_status(log ,f"{name} is refused" ,status ,want_status ,output ,want_text)
+     log.check(snapshot(out) == before ,f"{name} changes nothing")
+-  status ,output = run_gate(gate ,hand_made(definition_hash ,[["s" ,"summary"]] ,[("summary" ,[["variable" ,"s"]])] ,result="s"))
++  status ,output = run_gate(fpa__gate ,hand_made(definition_hash ,[["s" ,"summary"]] ,[("summary" ,[["variable" ,"s"]])] ,result="s"))
+   check_status(log ,"discarded is played, its result discarded" ,status ,0 ,output ,"result-discarded:")
+ 
+   return log.summary()
+ 
+-def clean(repo_home):
+-  work__dpath = repo_home / "tester" / "scratchpad" / TEST_NAME
+-  print(f"run clean   in {TEST__DPATH}")
+-  if work__dpath.exists():
+-    shutil.rmtree(work__dpath)
+-    print(f"  deleted   {work__dpath}")
++def clean(dirpa__repo_home):
++  dirpa__work = dirpa__repo_home / "tester" / "scratchpad" / TEST_NAME
++  print(f"run clean   in {DIRPA__TEST}")
++  if dirpa__work.exists():
++    shutil.rmtree(dirpa__work)
++    print(f"  deleted   {dirpa__work}")
+   else:
+-    print(f"  kept      {work__dpath}  (there is nothing to delete)")
++    print(f"  kept      {dirpa__work}  (there is nothing to delete)")
+   return 0
+ 
+ 
+@@ -440,8 +440,8 @@ def CLI(argv=None):
+   if not os.environ.get("REPO_HOME"):
+     print("Error: REPO_HOME is not set; enter the tester role with ./setup tester." ,file=sys.stderr)
+     return 1
+-  repo_home = Path(os.environ["REPO_HOME"]).resolve()
+-  return test(repo_home) if command == "test" else clean(repo_home)
++  dirpa__repo_home = Path(os.environ["REPO_HOME"]).resolve()
++  return test(dirpa__repo_home) if command == "test" else clean(dirpa__repo_home)
+ 
+ 
+ if __name__ == "__main__":

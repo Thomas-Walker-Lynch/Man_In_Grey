@@ -77,9 +77,9 @@ import cbor2
 
 TEST_NAME = "smoke"
 GATE_NAME = "Man_In_Grey__Gate·Smoke"
-TEST__DPATH = Path(__file__).resolve().parent
+DIRPA__TEST = Path(__file__).resolve().parent
 
-OUTPUT_DIR = ("out" ,"out/net" ,"out/web")
+LIST__DIRPR__OUTPUT = ("out" ,"out/net" ,"out/web")
 
 # the files the constraints allow: (directory under the scratchpad, name, modes, permission)
 ALLOWED = (
@@ -162,9 +162,9 @@ def snapshot(root):
     result[path.relative_to(root).as_posix()] = (path.read_bytes() ,stat.S_IMODE(st.st_mode) ,st.st_uid)
   return result
 
-def compare(log ,run_name ,work__dpath):
-  expected = tree(TEST__DPATH / "expected" / run_name)
-  found = {n: p for n ,p in tree(work__dpath).items() if n.startswith("out/")}
+def compare(log ,run_name ,dirpa__work):
+  expected = tree(DIRPA__TEST / "expected" / run_name)
+  found = {n: p for n ,p in tree(dirpa__work).items() if n.startswith("out/")}
   for name in sorted(set(expected) | set(found)):
     what = f"{run_name} {name}"
     if name not in found:
@@ -187,18 +187,18 @@ def limit_file_size():
   "run in the child before Man-In-Grey starts: a file size limit, soft and hard, of 1 MiB"
   resource.setrlimit(resource.RLIMIT_FSIZE ,(1 << 20 ,1 << 20))
 
-def run__Man_In_Grey(program ,path ,work__dpath ,*option ,preexec=None):
-  gate = program.parent.parent / "Man_In_Grey__Gate" / GATE_NAME
-  command = [str(program) ,"orchestrate" ,str(path) ,"gate" ,str(gate) ,*option]
-  result = subprocess.run(command ,cwd=work__dpath ,capture_output=True ,text=True ,preexec_fn=preexec)
+def run__Man_In_Grey(fpa__program ,path ,dirpa__work ,*option ,preexec=None):
+  fpa__gate = fpa__program.parent.parent / "Man_In_Grey__Gate" / GATE_NAME
+  command = [str(fpa__program) ,"orchestrate" ,str(path) ,"gate" ,str(fpa__gate) ,*option]
+  result = subprocess.run(command ,cwd=dirpa__work ,capture_output=True ,text=True ,preexec_fn=preexec)
   return result.returncode ,(result.stdout + result.stderr).strip()
 
-def run_gate(gate ,journal_bytes):
+def run_gate(fpa__gate ,journal_bytes):
   "a journal given to the gate directly, with no orchestrator and descriptor 3 closed"
-  result = subprocess.run([str(gate) ,"admit"] ,input=journal_bytes ,capture_output=True)
+  result = subprocess.run([str(fpa__gate) ,"admit"] ,input=journal_bytes ,capture_output=True)
   return result.returncode ,(result.stdout + result.stderr).decode("utf-8" ,"replace").strip()
 
-def hand_made(definition_hash ,variable ,instruction__list ,result=None ,version=4):
+def hand_made(definition_hash ,variable ,list__instruction ,result=None ,version=4):
   "a journal of the Smoke language, made as data and encoded, with no journal interface to check it"
   return cbor2.dumps({
     "version": version
@@ -207,7 +207,7 @@ def hand_made(definition_hash ,variable ,instruction__list ,result=None ,version
     ,"meta": {}
     ,"list__variable": variable
     ,"result": result
-    ,"list__instruction": [{"operation": o ,"list__argument": a} for o ,a in instruction__list]
+    ,"list__instruction": [{"operation": o ,"list__argument": a} for o ,a in list__instruction]
   } ,canonical=True)
 
 def check_status(log ,what ,status ,want ,output ,want_text=None):
@@ -222,35 +222,35 @@ def check_status(log ,what ,status ,want ,output ,want_text=None):
     log.note(output)
   return passed
 
-def make_tree(consumer ,tree):
+def make_tree(dirpa__consumer ,dirpa__tree):
   """
   A copy of the promoted Man_In_Grey/ and Man_In_Grey__Gate/, side by side, in
   tree. The gate refuses a guard in a directory other accounts can write,
   so tree and the directory holding it are made writable by the owner alone.
   """
-  tree.mkdir(parents=True)
-  for each in (tree.parent ,tree):
+  dirpa__tree.mkdir(parents=True)
+  for each in (dirpa__tree.parent ,dirpa__tree):
     os.chmod(each ,0o755)
   for name in ("Man_In_Grey" ,"Man_In_Grey__Gate"):
-    (tree / name).mkdir()
-    os.chmod(tree / name ,0o755)
-    for source in sorted((consumer / name).iterdir()):
+    (dirpa__tree / name).mkdir()
+    os.chmod(dirpa__tree / name ,0o755)
+    for source in sorted((dirpa__consumer / name).iterdir()):
       if source.is_file():
-        shutil.copy2(source ,tree / name / source.name)
+        shutil.copy2(source ,dirpa__tree / name / source.name)
 
-def put_constraint(guard__fpath ,constraint):
+def put_constraint(fpa__guard ,constraint):
   "replace the predicates between the guard's constraint marks with constraint"
-  list__line = guard__fpath.read_text(encoding="utf-8").splitlines()
+  list__line = fpa__guard.read_text(encoding="utf-8").splitlines()
   begin ,end = list__line.index("# constraints begin") ,list__line.index("# constraints end")
   text = "\n".join(list__line[:begin + 1] + ["" ,constraint.strip("\n") ,""] + list__line[end:]) + "\n"
-  guard__fpath.unlink()
-  guard__fpath.write_text(text ,encoding="utf-8")
-  os.chmod(guard__fpath ,0o644)
+  fpa__guard.unlink()
+  fpa__guard.write_text(text ,encoding="utf-8")
+  os.chmod(fpa__guard ,0o644)
 
-def write_constraint(tree ,work__dpath):
+def write_constraint(dirpa__tree ,dirpa__work):
   "the test's constraints in its copy of Smoke·Guard.py, allowing the files in ALLOWED to the person running the test"
   person = getpass.getuser()
-  allowed = {(str(work__dpath / d) ,n): (m ,int(p ,8)) for d ,n ,m ,p in ALLOWED}
+  allowed = {(str(dirpa__work / d) ,n): (m ,int(p ,8)) for d ,n ,m ,p in ALLOWED}
   text = (
     "# written by the smoke test\n\n"
     f"PERSON = {person!r}\n"
@@ -264,109 +264,109 @@ def write_constraint(tree ,work__dpath):
     "  entry = ALLOWED.get((directory ,name))\n"
     "  return entry is not None and \"unlink\" in entry[0]\n"
   )
-  put_constraint(tree / "Man_In_Grey" / "Smoke·Guard.py" ,text)
+  put_constraint(dirpa__tree / "Man_In_Grey" / "Smoke·Guard.py" ,text)
 
-def test(repo_home):
-  consumer = repo_home / "consumer"
-  work__dpath = (repo_home / "tester" / "scratchpad" / TEST_NAME).resolve()
-  tree = work__dpath / "tree"
-  program = tree / "Man_In_Grey" / "Man-In-Grey"
-  gate = tree / "Man_In_Grey__Gate" / GATE_NAME
-  config = TEST__DPATH / "composer" / "config.py"
-  print(f"run test   in {TEST__DPATH}")
-  print(f"  program  {program}")
-  print(f"  writes   {work__dpath}")
+def test(dirpa__repo_home):
+  dirpa__consumer = dirpa__repo_home / "consumer"
+  dirpa__work = (dirpa__repo_home / "tester" / "scratchpad" / TEST_NAME).resolve()
+  dirpa__tree = dirpa__work / "tree"
+  fpa__program = dirpa__tree / "Man_In_Grey" / "Man-In-Grey"
+  fpa__gate = dirpa__tree / "Man_In_Grey__Gate" / GATE_NAME
+  config = DIRPA__TEST / "composer" / "config.py"
+  print(f"run test   in {DIRPA__TEST}")
+  print(f"  program  {fpa__program}")
+  print(f"  writes   {dirpa__work}")
   log = Log()
 
-  promoted = os.access(consumer / "Man_In_Grey" / "Man-In-Grey" ,os.X_OK)
+  promoted = os.access(dirpa__consumer / "Man_In_Grey" / "Man-In-Grey" ,os.X_OK)
   if not log.check(promoted ,"Man-In-Grey is promoted"
                    ,None if promoted else f"the developer promotes Man-In-Grey and {GATE_NAME} first"):
     return log.summary()
 
-  if work__dpath.exists():
-    shutil.rmtree(work__dpath)
-  for rel in OUTPUT_DIR:
-    (work__dpath / rel).mkdir(parents=True)
-  make_tree(consumer ,tree)
-  write_constraint(tree ,work__dpath)
-  (work__dpath / "out" / "obsolete.conf").write_text("to be unlinked\n")
-  out = work__dpath / "out"
+  if dirpa__work.exists():
+    shutil.rmtree(dirpa__work)
+  for rel in LIST__DIRPR__OUTPUT:
+    (dirpa__work / rel).mkdir(parents=True)
+  make_tree(dirpa__consumer ,dirpa__tree)
+  write_constraint(dirpa__tree ,dirpa__work)
+  (dirpa__work / "out" / "obsolete.conf").write_text("to be unlinked\n")
+  out = dirpa__work / "out"
 
   # the hand-made journals use the copy's definition, so it is imported once the copy exists
-  sys.path.insert(0 ,str(tree / "Man_In_Grey"))
+  sys.path.insert(0 ,str(dirpa__tree / "Man_In_Grey"))
   import importlib ,Language
   language_module = importlib.import_module("Smoke·Language")
   definition_hash = Language.Definition(language_module.NAME ,language_module.DEFINITION).hash
 
   # run_1 and run_2
   for run_name in ("run_1" ,"run_2"):
-    status ,output = run__Man_In_Grey(program ,config ,work__dpath)
+    status ,output = run__Man_In_Grey(fpa__program ,config ,dirpa__work)
     if check_status(log ,f"{run_name} Man-In-Grey exits 0" ,status ,0 ,output):
-      compare(log ,run_name ,work__dpath)
+      compare(log ,run_name ,dirpa__work)
       if run_name == "run_1":
-        want = "result: summary {'open_count': 3, 'unlink_count': 1}"
+        want = "result: summary {'count_of__open': 3, 'count_of__unlink': 1}"
         log.check(want in output ,"run_1 result is the summary" ,None if want in output else f"the output does not say {want!r}")
     else:
       log.note(f"{run_name}: the files were not compared, since Man-In-Grey failed")
       return log.summary()
 
   # create: once, then refused
-  status ,output = run__Man_In_Grey(program ,TEST__DPATH / "composer_create" / "new.py" ,work__dpath)
+  status ,output = run__Man_In_Grey(fpa__program ,DIRPA__TEST / "composer_create" / "new.py" ,dirpa__work)
   check_status(log ,"create Man-In-Grey exits 0" ,status ,0 ,output)
   new = out / "new.conf"
   log.check(new.is_file() and new.read_text() == "made once\n" and stat.S_IMODE(new.stat().st_mode) == 0o600
             ,"create out/new.conf" ,None if new.is_file() else "not written")
   before = snapshot(out)
-  status ,output = run__Man_In_Grey(program ,TEST__DPATH / "composer_create" / "new.py" ,work__dpath)
+  status ,output = run__Man_In_Grey(fpa__program ,DIRPA__TEST / "composer_create" / "new.py" ,dirpa__work)
   check_status(log ,"create again is refused by the filesystem check" ,status ,1 ,output ,"filesystem-broken:")
   log.check(snapshot(out) == before ,"create again changes nothing")
 
   # a journal the constraints refuse
   before = snapshot(out)
-  status ,output = run__Man_In_Grey(program ,TEST__DPATH / "composer_refused" / "allowed-and-not.py" ,work__dpath)
+  status ,output = run__Man_In_Grey(fpa__program ,DIRPA__TEST / "composer_refused" / "allowed-and-not.py" ,dirpa__work)
   check_status(log ,"refused is refused by the constraint check" ,status ,1 ,output ,"constraint-broken:")
   log.check(snapshot(out) == before ,"refused changes nothing, the allowed file included")
 
   # a literal of the wrong type, refused in the composer
   before = snapshot(out)
-  status ,output = run__Man_In_Grey(program ,TEST__DPATH / "composer_type" / "wrong-type.py" ,work__dpath)
+  status ,output = run__Man_In_Grey(fpa__program ,DIRPA__TEST / "composer_type" / "wrong-type.py" ,dirpa__work)
   check_status(log ,"type fails in the composer" ,status ,2 ,output ,"wrong-type.py: @0 open argument 4: the literal is str, not integer")
   log.check(snapshot(out) == before ,"type changes nothing")
 
   # a mode the language does not have, refused by the guard
   before = snapshot(out)
-  status ,output = run__Man_In_Grey(program ,TEST__DPATH / "composer_mode" / "wrong-mode.py" ,work__dpath)
+  status ,output = run__Man_In_Grey(fpa__program ,DIRPA__TEST / "composer_mode" / "wrong-mode.py" ,dirpa__work)
   check_status(log ,"mode is refused by the language check" ,status ,1 ,output ,"language-broken: @0 open: mode 'overwrite'")
   log.check(snapshot(out) == before ,"mode changes nothing")
 
   # a composer directory
-  status ,output = run__Man_In_Grey(program ,TEST__DPATH / "composer" ,work__dpath)
+  status ,output = run__Man_In_Grey(fpa__program ,DIRPA__TEST / "composer" ,dirpa__work)
   check_status(log ,"directory is refused by the orchestrator" ,status ,2 ,output ,"runs one composer, given as a file")
 
   # a composer other accounts can write
-  writable = work__dpath / "composer_writable"
+  writable = dirpa__work / "composer_writable"
   writable.mkdir()
   shutil.copy(config ,writable / "config.py")
   os.chmod(writable / "config.py" ,0o664)
   before = snapshot(out)
-  status ,output = run__Man_In_Grey(program ,writable / "config.py" ,work__dpath)
+  status ,output = run__Man_In_Grey(fpa__program ,writable / "config.py" ,dirpa__work)
   check_status(log ,"writable composer is refused by the orchestrator" ,status ,2 ,output ,"writable by group or other accounts")
   log.check(snapshot(out) == before ,"writable changes nothing")
 
   # check-only
   before = snapshot(out)
-  status ,output = run__Man_In_Grey(program ,config ,work__dpath ,"check-only")
+  status ,output = run__Man_In_Grey(fpa__program ,config ,dirpa__work ,"check-only")
   check_status(log ,"check-only is approved by the guard" ,status ,0 ,output ,"approved: guard Smoke check passed")
   log.check(snapshot(out) == before ,"check-only changes nothing")
 
   # a resource limit the gate cannot raise
   before = snapshot(out)
-  status ,output = run__Man_In_Grey(program ,config ,work__dpath ,preexec=limit_file_size)
+  status ,output = run__Man_In_Grey(fpa__program ,config ,dirpa__work ,preexec=limit_file_size)
   check_status(log ,"limit is refused by the gate" ,status ,2 ,output ,"the file size (bytes) limit is 1048576")
   log.check(snapshot(out) == before ,"limit changes nothing")
 
   # an interpreter that exits 0 without its verdict line
-  interpreter = tree / "Man_In_Grey" / "Smoke·Interpreter.py"
+  interpreter = dirpa__tree / "Man_In_Grey" / "Smoke·Interpreter.py"
   text = interpreter.read_text(encoding="utf-8")
   verdict_line = '  sys.stdout.write("interpreter Smoke journal played\\n")\n'
   if verdict_line not in text:
@@ -374,7 +374,7 @@ def test(repo_home):
   interpreter.unlink()
   interpreter.write_text(text.replace(verdict_line ,"  pass\n") ,encoding="utf-8")
   os.chmod(interpreter ,0o644)
-  status ,output = run__Man_In_Grey(program ,config ,work__dpath)
+  status ,output = run__Man_In_Grey(fpa__program ,config ,dirpa__work)
   check_status(log ,"silent is reported failed by the gate" ,status ,2 ,output ,"without writing the one line 'interpreter Smoke journal played'")
   interpreter.unlink()
   interpreter.write_text(text ,encoding="utf-8")
@@ -400,22 +400,22 @@ def test(repo_home):
   )
   for name ,journal_bytes ,want_status ,want_text in list__case:
     before = snapshot(out)
-    status ,output = run_gate(gate ,journal_bytes)
+    status ,output = run_gate(fpa__gate ,journal_bytes)
     check_status(log ,f"{name} is refused" ,status ,want_status ,output ,want_text)
     log.check(snapshot(out) == before ,f"{name} changes nothing")
-  status ,output = run_gate(gate ,hand_made(definition_hash ,[["s" ,"summary"]] ,[("summary" ,[["variable" ,"s"]])] ,result="s"))
+  status ,output = run_gate(fpa__gate ,hand_made(definition_hash ,[["s" ,"summary"]] ,[("summary" ,[["variable" ,"s"]])] ,result="s"))
   check_status(log ,"discarded is played, its result discarded" ,status ,0 ,output ,"result-discarded:")
 
   return log.summary()
 
-def clean(repo_home):
-  work__dpath = repo_home / "tester" / "scratchpad" / TEST_NAME
-  print(f"run clean   in {TEST__DPATH}")
-  if work__dpath.exists():
-    shutil.rmtree(work__dpath)
-    print(f"  deleted   {work__dpath}")
+def clean(dirpa__repo_home):
+  dirpa__work = dirpa__repo_home / "tester" / "scratchpad" / TEST_NAME
+  print(f"run clean   in {DIRPA__TEST}")
+  if dirpa__work.exists():
+    shutil.rmtree(dirpa__work)
+    print(f"  deleted   {dirpa__work}")
   else:
-    print(f"  kept      {work__dpath}  (there is nothing to delete)")
+    print(f"  kept      {dirpa__work}  (there is nothing to delete)")
   return 0
 
 
@@ -440,8 +440,8 @@ def CLI(argv=None):
   if not os.environ.get("REPO_HOME"):
     print("Error: REPO_HOME is not set; enter the tester role with ./setup tester." ,file=sys.stderr)
     return 1
-  repo_home = Path(os.environ["REPO_HOME"]).resolve()
-  return test(repo_home) if command == "test" else clean(repo_home)
+  dirpa__repo_home = Path(os.environ["REPO_HOME"]).resolve()
+  return test(dirpa__repo_home) if command == "test" else clean(dirpa__repo_home)
 
 
 if __name__ == "__main__":

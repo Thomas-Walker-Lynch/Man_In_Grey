@@ -11,7 +11,7 @@ owned by the web server's account, places the page.
 
 A journal names no file. The file names come from the user name of
 account A, which the gate gives the interpreter, and the directory comes
-from page_directory() at the top of the guard. The interpreter writes the
+from dirp__page() at the top of the guard. The interpreter writes the
 HTML itself, from a fixed form, and escapes every text it is given, so
 nothing a person gives becomes markup. Decoration travels out of band, as a
 list of styles beside each run of text, and each style becomes one fixed
@@ -31,7 +31,7 @@ LIST__CHECK:
                twice, and no control character in any text
   constraint   the predicates at the top of the guard, Emplace_Bio·Guard.py:
                is__allowed_account, is__allowed_text_size and
-               is__allowed_picture_size, and page_directory(), where the
+               is__allowed_picture_size, and dirp__page(), where the
                pages go
   content      the picture is a PNG or a JPEG
   filesystem   the page directory, and the files the page can occupy
@@ -110,19 +110,19 @@ def check_language(list__instruction_view ,data ,constraint ,gate_invoking_accou
   list__problem = []
   count = {"display_name": 0 ,"paragraph": 0 ,"text": 0 ,"picture": 0}
   in_paragraph = False
-  run_count = 0
+  count_of__run = 0
   for view in list__instruction_view:
     index ,name = view.index ,view.operation
     value = [argument.value for argument in view.list__argument]
     count[name] += 1
     if name == "paragraph":
-      if in_paragraph and run_count == 0:
+      if in_paragraph and count_of__run == 0:
         list__problem.append(f"@{index} paragraph: the paragraph before it holds no text")
-      in_paragraph ,run_count = True ,0
+      in_paragraph ,count_of__run = True ,0
     elif name == "text":
       if not in_paragraph:
         list__problem.append(f"@{index} text: no paragraph has been started")
-      run_count += 1
+      count_of__run += 1
       for problem in (content_problem(value[0]) ,style_problem(value[1])):
         if problem: list__problem.append(f"@{index} text: {problem}")
     elif name == "display_name":
@@ -134,15 +134,15 @@ def check_language(list__instruction_view ,data ,constraint ,gate_invoking_accou
     list__problem.append(f"the journal gives the display name {count['display_name']} times; it is given once")
   if count["paragraph"] == 0:
     list__problem.append("the journal has no paragraph")
-  elif run_count == 0:
+  elif count_of__run == 0:
     list__problem.append("the last paragraph holds no text")
   if count["picture"] > 1:
     list__problem.append(f"the journal gives {count['picture']} pictures; it gives at most one")
   return list__problem
 
-def page_directory__problem(directory):
+def dirp__page__problem(directory):
   if not isinstance(directory ,str) or not directory.startswith("/") or os.path.normpath(directory) != directory:
-    return f"page_directory() gives {clean(repr(directory))}, not an absolute directory in normal form"
+    return f"dirp__page() gives {clean(repr(directory))}, not an absolute directory in normal form"
   return None
 
 def check_constraint(list__instruction_view ,data ,constraint ,gate_invoking_account):
@@ -150,7 +150,7 @@ def check_constraint(list__instruction_view ,data ,constraint ,gate_invoking_acc
   if constraint.is__allowed_account(gate_invoking_account) is not True:
     return [f"gate invoking account {clean(repr(gate_invoking_account))} is not allowed to give journals to this gate"]
   list__problem = []
-  problem = page_directory__problem(constraint.page_directory())
+  problem = dirp__page__problem(constraint.dirp__page())
   if problem: list__problem.append(problem)
   text_bytes = 0
   for view in list__instruction_view:
@@ -178,7 +178,7 @@ def check_filesystem(list__instruction_view ,data ,constraint ,gate_invoking_acc
   list__problem = []
   if has__control(gate_invoking_account) or gate_invoking_account.startswith("."):
     return [f"the account name {clean(repr(gate_invoking_account))} cannot name a page"]
-  directory = constraint.page_directory()
+  directory = constraint.dirp__page()
   if not os.path.isdir(directory):
     return [f"{directory} is not a directory"]
   if os.path.realpath(directory) != directory:

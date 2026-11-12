@@ -7,4 +7,4 @@ def compose(prov ,journal_iface):
   journal_iface.display_name("A. Tester")
   journal_iface.paragraph()
   journal_iface.text("Now with a JPEG." ,[])
-  journal_iface.picture((Path(prov.composer_dir__dpath).parent / "picture.jpg").read_bytes())
+  journal_iface.picture((Path(prov.dirpa__composer).parent / "picture.jpg").read_bytes())

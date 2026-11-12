@@ -71,8 +71,8 @@
 
 int Man_In_Grey__Gate·Gate·run(
   const char *language
-  ,const char *guard_relative
-  ,const char *interpreter_relative
+  ,const char *fpr__guard
+  ,const char *fpr__interpreter
   ,int argc
   ,char **argv
 );
@@ -104,7 +104,7 @@ int Man_In_Grey__Gate·Gate·run(
   #define PYTHON "/usr/bin/python3"
   #define JOURNAL_MAX ((size_t)16 << 20)
   #define OUTPUT_LINE__MAX 4096
-  #define OUTPUT_LINE_COUNT__MAX 2000
+  #define COUNT_OF__OUTPUT_LINE__MAX 2000
   #define VERDICT_MAX 512
   #define RESULT_MAX ((size_t)16 << 20)
   #define RESULT_FD 3
@@ -248,7 +248,7 @@ int Man_In_Grey__Gate·Gate·run(
      as the hard limit allows, or past it when account B is root; the gate
      refuses when a limit stays too low. */
   Local void settle_limits(void){
-    const Limit limit__list[] = {
+    const Limit list__limit[] = {
       {RLIMIT_FSIZE ,"file size (bytes)" ,RLIM_INFINITY}
       ,{RLIMIT_CPU ,"CPU time (seconds)" ,RLIM_INFINITY}
       ,{RLIMIT_AS ,"address space (bytes)" ,(rlim_t)1 << 30}
@@ -256,8 +256,8 @@ int Man_In_Grey__Gate·Gate·run(
       ,{RLIMIT_STACK ,"stack size (bytes)" ,(rlim_t)8 << 20}
       ,{RLIMIT_NOFILE ,"open files" ,64}
     };
-    for(size_t i = 0; i < sizeof limit__list / sizeof limit__list[0]; ++i){
-      const Limit *limit = &limit__list[i];
+    for(size_t i = 0; i < sizeof list__limit / sizeof list__limit[0]; ++i){
+      const Limit *limit = &list__limit[i];
       struct rlimit r;
       if( getrlimit(limit->resource ,&r) != 0 ) die("cannot read the %s limit: %s" ,limit->name ,strerror(errno));
       if( r.rlim_cur >= limit->need ) continue;
@@ -286,7 +286,7 @@ int Man_In_Grey__Gate·Gate·run(
   }
 
   // a language name: not empty, no space, no control character
-  Local bool name_is_valid(const char *name){
+  Local bool is__valid_name(const char *name){
     if( !*name ) return false;
     for(const unsigned char *p = (const unsigned char *)name; *p; ++p)
       if( *p <= 0x20 || *p == 0x7F ) return false;
@@ -298,7 +298,7 @@ int Man_In_Grey__Gate·Gate·run(
 
   /* true when the line is UTF-8 holding no control character: none of C0,
      DEL or C1, no overlong form, no surrogate */
-  Local bool line_is_clean(const unsigned char *s ,size_t n){
+  Local bool is__clean_line(const unsigned char *s ,size_t n){
     size_t i = 0;
     while( i < n ){
       unsigned c = s[i];
@@ -335,24 +335,24 @@ int Man_In_Grey__Gate·Gate·run(
 
   typedef struct{
     const char *source;      // "guard" or "interpreter"
-    bool stdout_is_verdict;  // standard output is kept as the verdict, not shown
+    bool is__stdout_verdict;  // standard output is kept as the verdict, not shown
     bool has__result;         // given a descriptor 3, whose bytes are kept as its result
     char verdict[VERDICT_MAX];
     size_t verdict_length;
     unsigned char *result;
     size_t result_length;
     size_t result_size;
-    size_t line_count;
+    size_t count_of__line;
     const char *broken;      // the rule broken, or NULL
   } Child;
 
   Local void finish_line(Child *child ,Stream *stream){
     if( child->broken ) return;
-    if( !line_is_clean((unsigned char *)stream->line ,stream->length) ){
+    if( !is__clean_line((unsigned char *)stream->line ,stream->length) ){
       child->broken = "a line that is not UTF-8 or holds a control character";
       return;
     }
-    if( ++child->line_count > OUTPUT_LINE_COUNT__MAX ){
+    if( ++child->count_of__line > COUNT_OF__OUTPUT_LINE__MAX ){
       child->broken = "more lines than the gate accepts";
       return;
     }
@@ -430,41 +430,41 @@ int Man_In_Grey__Gate·Gate·run(
     if( input_length == 0 ){ close(in_fd); in_fd = -1; }
 
     while( (out_stream.fd >= 0 || err_stream.fd >= 0 || res_fd >= 0) && !child->broken ){
-      struct pollfd poll__list[4];
+      struct pollfd list__poll[4];
       int count = 0 ,in_at = -1 ,out_at = -1 ,err_at = -1 ,res_at = -1;
-      if( in_fd >= 0 ){ poll__list[count] = (struct pollfd){.fd = in_fd ,.events = POLLOUT}; in_at = count++; }
-      if( res_fd >= 0 ){ poll__list[count] = (struct pollfd){.fd = res_fd ,.events = POLLIN}; res_at = count++; }
-      if( out_stream.fd >= 0 ){ poll__list[count] = (struct pollfd){.fd = out_stream.fd ,.events = POLLIN}; out_at = count++; }
-      if( err_stream.fd >= 0 ){ poll__list[count] = (struct pollfd){.fd = err_stream.fd ,.events = POLLIN}; err_at = count++; }
-      if( poll(poll__list ,count ,-1) < 0 ){
+      if( in_fd >= 0 ){ list__poll[count] = (struct pollfd){.fd = in_fd ,.events = POLLOUT}; in_at = count++; }
+      if( res_fd >= 0 ){ list__poll[count] = (struct pollfd){.fd = res_fd ,.events = POLLIN}; res_at = count++; }
+      if( out_stream.fd >= 0 ){ list__poll[count] = (struct pollfd){.fd = out_stream.fd ,.events = POLLIN}; out_at = count++; }
+      if( err_stream.fd >= 0 ){ list__poll[count] = (struct pollfd){.fd = err_stream.fd ,.events = POLLIN}; err_at = count++; }
+      if( poll(list__poll ,count ,-1) < 0 ){
         if( errno == EINTR ) continue;
         die("poll: %s" ,strerror(errno));
       }
-      if( in_at >= 0 && poll__list[in_at].revents ){
+      if( in_at >= 0 && list__poll[in_at].revents ){
         ssize_t n = write(in_fd ,input + written ,input_length - written);
         if( n > 0 ) written += (size_t)n;
         if( (n < 0 && errno != EAGAIN && errno != EINTR) || written == input_length ){ close(in_fd); in_fd = -1; }
       }
-      if( res_at >= 0 && poll__list[res_at].revents ){
+      if( res_at >= 0 && list__poll[res_at].revents ){
         char buffer[4096];
         ssize_t n = read(res_fd ,buffer ,sizeof buffer);
         if( n > 0 ) take_result(child ,buffer ,(size_t)n);
         else if( n == 0 || (errno != EAGAIN && errno != EINTR) ){ close(res_fd); res_fd = -1; }
       }
-      Stream *stream__list[2] = {&out_stream ,&err_stream};
-      int at__list[2] = {out_at ,err_at};
+      Stream *list__stream[2] = {&out_stream ,&err_stream};
+      int list__at[2] = {out_at ,err_at};
       for(int k = 0; k < 2; ++k){
-        Stream *stream = stream__list[k];
-        if( at__list[k] < 0 || !poll__list[at__list[k]].revents ) continue;
+        Stream *stream = list__stream[k];
+        if( list__at[k] < 0 || !list__poll[list__at[k]].revents ) continue;
         char buffer[4096];
         ssize_t n = read(stream->fd ,buffer ,sizeof buffer);
         if( n < 0 && (errno == EAGAIN || errno == EINTR) ) continue;
         if( n <= 0 ){
-          if( stream->length > 0 && !(stream == &out_stream && child->stdout_is_verdict) ) finish_line(child ,stream);
+          if( stream->length > 0 && !(stream == &out_stream && child->is__stdout_verdict) ) finish_line(child ,stream);
           close(stream->fd); stream->fd = -1;
           continue;
         }
-        if( stream == &out_stream && child->stdout_is_verdict ) take_verdict(child ,buffer ,(size_t)n);
+        if( stream == &out_stream && child->is__stdout_verdict ) take_verdict(child ,buffer ,(size_t)n);
         else take(child ,stream ,buffer ,(size_t)n);
       }
     }
@@ -510,7 +510,7 @@ int Man_In_Grey__Gate·Gate·run(
     return gr ? gr->gr_name : "unknown";
   }
 
-  Local void print_flags(const char *guard_relative ,const char *interpreter_relative){
+  Local void print_flags(const char *fpr__guard ,const char *fpr__interpreter){
     printf("real.uid=%ld\n" ,(long)getuid());
     printf("real.user-name=%s\n" ,user_name(getuid()));
     printf("real.gid=%ld\n" ,(long)getgid());
@@ -523,8 +523,8 @@ int Man_In_Grey__Gate·Gate·run(
     printf("gid-differ=%d\n" ,getgid() != getegid() ? 1 : 0);
     printf("language=%s\n" ,Language);
     char resolved[PATH_MAX];
-    printf("guard.path=%s\n" ,resolve(guard_relative ,resolved) ? resolved : "(missing)");
-    printf("interpreter.path=%s\n" ,resolve(interpreter_relative ,resolved) ? resolved : "(missing)");
+    printf("guard.path=%s\n" ,resolve(fpr__guard ,resolved) ? resolved : "(missing)");
+    printf("interpreter.path=%s\n" ,resolve(fpr__interpreter ,resolved) ? resolved : "(missing)");
   }
 
   // ------------------------------------------------------------------------------
@@ -602,8 +602,8 @@ int Man_In_Grey__Gate·Gate·run(
 
   int Man_In_Grey__Gate·Gate·run(
     const char *language
-    ,const char *guard_relative
-    ,const char *interpreter_relative
+    ,const char *fpr__guard
+    ,const char *fpr__interpreter
     ,int argc
     ,char **argv
   ){
@@ -614,7 +614,7 @@ int Man_In_Grey__Gate·Gate·run(
       return 0;
     }
     if( !strcmp(argv[1] ,"flags") && argc == 2 ){
-      print_flags(guard_relative ,interpreter_relative);
+      print_flags(fpr__guard ,fpr__interpreter);
       return 0;
     }
     if( strcmp(argv[1] ,"admit") ){
@@ -633,12 +633,12 @@ int Man_In_Grey__Gate·Gate·run(
     settle_descriptors();
     settle_limits();
 
-    if( !name_is_valid(language) ) die("the language name compiled into this gate is empty or holds a space or control character");
-    char guard_path[PATH_MAX] ,interpreter_path[PATH_MAX];
-    if( !resolve(guard_relative ,guard_path) ) die("the guard is missing: %s" ,guard_relative);
-    if( !resolve(interpreter_relative ,interpreter_path) ) die("the interpreter is missing: %s" ,interpreter_relative);
-    check_trusted_owner(guard_path);
-    check_trusted_owner(interpreter_path);
+    if( !is__valid_name(language) ) die("the language name compiled into this gate is empty or holds a space or control character");
+    char fpa__guard[PATH_MAX] ,fpa__interpreter[PATH_MAX];
+    if( !resolve(fpr__guard ,fpa__guard) ) die("the guard is missing: %s" ,fpr__guard);
+    if( !resolve(fpr__interpreter ,fpa__interpreter) ) die("the interpreter is missing: %s" ,fpr__interpreter);
+    check_trusted_owner(fpa__guard);
+    check_trusted_owner(fpa__interpreter);
 
     uid_t real_uid = getuid();
     gid_t real_gid = getgid();
@@ -670,9 +670,9 @@ int Man_In_Grey__Gate·Gate·run(
 
     // the guard
     char *guard_argument[] = {
-      (char *)PYTHON ,(char *)"-E" ,(char *)"-s" ,(char *)"-B" ,guard_path ,(char *)"check" ,NULL
+      (char *)PYTHON ,(char *)"-E" ,(char *)"-s" ,(char *)"-B" ,fpa__guard ,(char *)"check" ,NULL
     };
-    Child guard = {.source = "guard" ,.stdout_is_verdict = true};
+    Child guard = {.source = "guard" ,.is__stdout_verdict = true};
     int status = run_child(&guard ,guard_argument ,journal ,journal_length);
     if( guard.broken ){
       say("refused" ,"the guard broke the gate's rules: %s" ,guard.broken);
@@ -704,10 +704,10 @@ int Man_In_Grey__Gate·Gate·run(
 
     // the interpreter
     char *interpreter_argument[] = {
-      (char *)PYTHON ,(char *)"-E" ,(char *)"-s" ,(char *)"-B" ,interpreter_path ,(char *)"execute" ,NULL
+      (char *)PYTHON ,(char *)"-E" ,(char *)"-s" ,(char *)"-B" ,fpa__interpreter ,(char *)"execute" ,NULL
     };
-    Child interpreter = {.source = "interpreter" ,.stdout_is_verdict = true ,.has__result = true};
-    say("interpreting" ,"%s" ,interpreter_path);
+    Child interpreter = {.source = "interpreter" ,.is__stdout_verdict = true ,.has__result = true};
+    say("interpreting" ,"%s" ,fpa__interpreter);
     status = run_child(&interpreter ,interpreter_argument ,journal ,journal_length);
     if( interpreter.broken ){
       say("failed" ,"the interpreter broke the gate's rules: %s; what it had done stays done" ,interpreter.broken);

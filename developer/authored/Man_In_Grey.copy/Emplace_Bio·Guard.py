@@ -50,15 +50,15 @@ def is__allowed_account(user_name):
   "True when the account, the gate's real uid, can have a page"
   return False
 
-def is__allowed_text_size(byte_count):
-  "True when the display name and the text together can be byte_count bytes of UTF-8"
-  return byte_count <= 8192
+def is__allowed_text_size(count_of__byte):
+  "True when the display name and the text together can be count_of__byte bytes of UTF-8"
+  return count_of__byte <= 8192
 
-def is__allowed_picture_size(byte_count):
-  "True when the picture can be byte_count bytes"
-  return byte_count <= 1 << 20
+def is__allowed_picture_size(count_of__byte):
+  "True when the picture can be count_of__byte bytes"
+  return count_of__byte <= 1 << 20
 
-def page_directory():
+def dirp__page():
   "the absolute directory the pages are placed in, owned by the gate owner account"
   return "/srv/http/bio"
 
@@ -75,7 +75,7 @@ from pathlib import Path
 LANGUAGE = "Emplace_Bio"
 VERSION = "4"
 
-HERE__DPATH = Path(__file__).resolve().parent
+DIRPA__HERE = Path(__file__).resolve().parent
 MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Guard·LibraryConstraint.py" ,"Emplace_Bio·Language.py" ,"Emplace_Bio·GuardCheck.py" ,"Emplace_Bio·Guard.py")
 
 
@@ -98,7 +98,7 @@ if __name__ == "__main__" and sys.argv[1:] == ["check"]:
   say("name" ,LANGUAGE)
   say("version" ,VERSION)
 
-for each in [HERE__DPATH] + [HERE__DPATH / m for m in MODULE]:
+for each in [DIRPA__HERE] + [DIRPA__HERE / m for m in MODULE]:
   problem = trusted_owner__problem(each)
   if problem:
     say("refused-to-start" ,problem)

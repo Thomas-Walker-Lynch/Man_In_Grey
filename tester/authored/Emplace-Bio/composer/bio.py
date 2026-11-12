@@ -16,4 +16,4 @@ def compose(prov ,journal_iface):
     journal_iface.paragraph()
     for content ,style in paragraph:
       journal_iface.text(content ,style)
-  journal_iface.picture((Path(prov.composer_dir__dpath).parent / "picture.png").read_bytes())
+  journal_iface.picture((Path(prov.dirpa__composer).parent / "picture.png").read_bytes())

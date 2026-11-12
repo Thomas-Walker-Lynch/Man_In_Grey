@@ -49,10 +49,10 @@ sys.dont_write_bytecode = True
 import grp ,pwd ,shutil ,stat ,subprocess
 from pathlib import Path
 
-HERE__DPATH = Path(__file__).resolve().parent          # .../Man_In_Grey
-SOURCE__DPATH = HERE__DPATH.parent                       # holds Man_In_Grey/ and Man_In_Grey__Gate/
-PROGRAM__DNAME = "Man_In_Grey"
-GATE__DNAME = "Man_In_Grey__Gate"
+DIRPA__HERE = Path(__file__).resolve().parent          # .../Man_In_Grey
+DIRPA__SOURCE = DIRPA__HERE.parent                       # holds Man_In_Grey/ and Man_In_Grey__Gate/
+DIRN__PROGRAM = "Man_In_Grey"
+DIRN__GATE = "Man_In_Grey__Gate"
 
 
 class Refused(Exception):
@@ -129,10 +129,10 @@ def install_text(text ,target ,mode):
   os.chmod(tmp ,mode)
   os.rename(tmp ,target)
 
-def gate_flag(gate__fpath):
-  result = subprocess.run([str(gate__fpath) ,"flags"] ,capture_output=True ,text=True ,env={"PATH": "/usr/bin:/bin"})
+def gate_flag(fpa__gate):
+  result = subprocess.run([str(fpa__gate) ,"flags"] ,capture_output=True ,text=True ,env={"PATH": "/usr/bin:/bin"})
   if result.returncode != 0:
-    raise Refused(f"{gate__fpath} did not report its flags")
+    raise Refused(f"{fpa__gate} did not report its flags")
   return result.stdout ,dict(line.split("=" ,1) for line in result.stdout.splitlines() if "=" in line)
 
 
@@ -148,8 +148,8 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
   if os.geteuid() != 0:
     raise Refused("install-gate is run by root; a person without root's rights runs Man-In-Grey install, which asks for root's password")
   if "/" in gate or gate in ("" ,"." ,".."):
-    raise Refused(f"{gate!r} is to be the file name of a gate in {SOURCE__DPATH / GATE__DNAME}")
-  source_gate = SOURCE__DPATH / GATE__DNAME / gate
+    raise Refused(f"{gate!r} is to be the file name of a gate in {DIRPA__SOURCE / DIRN__GATE}")
+  source_gate = DIRPA__SOURCE / DIRN__GATE / gate
   if not source_gate.is_file() or source_gate.is_symlink():
     raise Refused(f"there is no gate {source_gate}")
   try:
@@ -185,13 +185,13 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
   if nosuid(target):
     raise Refused(f"{target} is on a file system mounted nosuid, where the kernel ignores the setuid bit")
 
-  program__dpath ,gate__dpath = target / PROGRAM__DNAME ,target / GATE__DNAME
-  make_directory(program__dpath)
-  make_directory(gate__dpath)
+  dirp__program ,dirp__gate = target / DIRN__PROGRAM ,target / DIRN__GATE
+  make_directory(dirp__program)
+  make_directory(dirp__gate)
 
   # the constraints of the guards installed already, to keep
   kept = {}
-  for installed in sorted(program__dpath.glob("*·Guard.py")):
+  for installed in sorted(dirp__program.glob("*·Guard.py")):
     if installed.is_file() and not installed.is_symlink():
       try:
         kept[installed.name] = constraint_of(installed.read_text(encoding="utf-8") ,installed)
@@ -199,31 +199,31 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
         say(f"{problem}; it holds no constraints to keep")
 
   # Man_In_Grey/: every regular file, a guard with its kept constraints
-  for source in sorted((SOURCE__DPATH / PROGRAM__DNAME).iterdir()):
+  for source in sorted((DIRPA__SOURCE / DIRN__PROGRAM).iterdir()):
     st = os.lstat(source)
     if not stat.S_ISREG(st.st_mode):
       continue
-    destination = program__dpath / source.name
+    destination = dirp__program / source.name
     mode = 0o755 if st.st_mode & stat.S_IXUSR else 0o644
     if source.name in kept:
       install_text(with_constraint(source.read_text(encoding="utf-8") ,source ,kept[source.name]) ,destination ,mode)
       say(f"kept the constraints of {destination}")
     else:
       install_file(source ,destination ,mode)
-  say(f"installed {program__dpath}/")
+  say(f"installed {dirp__program}/")
 
   # the gate, owned by root until it is complete
-  installed_gate = gate__dpath / gate
+  installed_gate = dirp__gate / gate
   install_file(source_gate ,installed_gate ,0o755)
   _ ,flag = gate_flag(installed_gate)
   language = flag.get("language" ,"")
-  guard_path = Path(flag.get("guard.path" ,""))
-  if not language or guard_path.parent != program__dpath:
-    raise Refused(f"{installed_gate} does not find its guard in {program__dpath}")
+  fpa__guard = Path(flag.get("guard.path" ,""))
+  if not language or fpa__guard.parent != dirp__program:
+    raise Refused(f"{installed_gate} does not find its guard in {dirp__program}")
 
   if given_constraints is not None:
-    install_text(with_constraint(guard_path.read_text(encoding="utf-8") ,guard_path ,given_text) ,guard_path ,0o644)
-    say(f"put the constraints of {given_constraints} in {guard_path}")
+    install_text(with_constraint(fpa__guard.read_text(encoding="utf-8") ,fpa__guard ,given_text) ,fpa__guard ,0o644)
+    say(f"put the constraints of {given_constraints} in {fpa__guard}")
 
   # chown clears the setuid and setgid bits, so the mode is set after it
   os.chown(installed_gate ,account.pw_uid ,gid)
@@ -231,13 +231,13 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
   os.chmod(installed_gate ,mode)
   say(f"installed {installed_gate}, owner {owner}:{grp.getgrgid(gid).gr_name}, mode {mode:o}")
 
-  problem = root_chain__problem(program__dpath)
+  problem = root_chain__problem(dirp__program)
   if problem:
     raise Refused(problem)
   text ,_ = gate_flag(installed_gate)
   say("its flags, as seen by root:")
   sys.stdout.write(text)
-  say(f"run it as: {program__dpath / 'Man-In-Grey'} orchestrate <composer> gate {installed_gate}")
+  say(f"run it as: {dirp__program / 'Man-In-Grey'} orchestrate <composer> gate {installed_gate}")
   return 0
 
 

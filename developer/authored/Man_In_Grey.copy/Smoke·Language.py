@@ -29,7 +29,7 @@ DEFINITION = {
     ,["permission" ,"integer"]
     ,["file" ,"handle"]
     ,["content" ,"bytes"]
-    ,["summary" ,["dictionary" ,["open_count" ,"integer"] ,["unlink_count" ,"integer"]]]
+    ,["summary" ,["dictionary" ,["count_of__open" ,"integer"] ,["count_of__unlink" ,"integer"]]]
   ]
   ,"list__format": [
     ["format__open" ,["in" ,"directory"] ,["in" ,"file_name"] ,["in" ,"mode"] ,["in" ,"account_name"] ,["in" ,"permission"] ,["out" ,"file"]]

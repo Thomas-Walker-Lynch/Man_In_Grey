@@ -40,7 +40,7 @@ class LibraryInstruction:
   def __init__(self ,constraint ,gate_invoking_account ,log):
     self._log = log
     self._opened = []   # by handle: {dirfd ,fd ,tmp ,directory ,name ,mode ,owner ,permission}
-    self._unlink_count = 0
+    self._count_of__unlink = 0
 
   def open(self ,directory ,file_name ,mode ,account_name ,permission ,file):
     handle = len(self._opened)
@@ -67,10 +67,10 @@ class LibraryInstruction:
         self._log("unlinked" ,f"{directory}/{file_name}")
     finally:
       os.close(dirfd)
-    self._unlink_count += 1
+    self._count_of__unlink += 1
 
   def summary(self ,summary):
-    summary.append({"open_count": len(self._opened) ,"unlink_count": self._unlink_count})
+    summary.append({"count_of__open": len(self._opened) ,"count_of__unlink": self._count_of__unlink})
 
   def finish(self):
     for record in self._opened:

@@ -7,7 +7,7 @@
 # Each file is a variable of the type file, which open writes and write reads and writes.
 
 def compose(prov ,journal_iface):
-  out = str(prov.cwd__dpath / "out")
+  out = str(prov.dirpa__cwd / "out")
   person = prov.process_user
   journal_iface.unlink(out ,"obsolete.conf")
 

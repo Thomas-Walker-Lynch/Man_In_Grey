@@ -8,7 +8,7 @@ Emplace_Bio·Language.py, given each instruction's arguments by
 position. They build the page up; finish() writes it from a fixed form, and
 escapes every text it is given, so nothing a person gives becomes markup.
 The page's file names come from the user name of account A, and its
-directory from page_directory() among the guard's constraints.
+directory from dirp__page() among the guard's constraints.
 """
 
 import html ,os ,stat ,urllib.parse
@@ -93,7 +93,7 @@ class LibraryInstruction:
 
   def finish(self):
     log ,user_name = self._log ,self._user_name
-    directory = self._constraint.page_directory()
+    directory = self._constraint.dirp__page()
     picture = self._picture
     picture_name = user_name + picture_extension(picture) if picture is not None else None
     page_name = user_name + ".html"

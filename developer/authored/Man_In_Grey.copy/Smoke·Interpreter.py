@@ -43,7 +43,7 @@ sys.dont_write_bytecode = True
 import stat
 from pathlib import Path
 
-HERE__DPATH = Path(__file__).resolve().parent
+DIRPA__HERE = Path(__file__).resolve().parent
 MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Interpreter.py" ,"Guard·LibraryConstraint.py" ,"Smoke·Language.py" ,"Smoke·GuardCheck.py" ,"Smoke·LibraryInstruction.py" ,"Smoke·Guard.py" ,"Smoke·Interpreter.py")
 
 
@@ -62,7 +62,7 @@ def trusted_owner__problem(path):
 def say(tag ,message):
   print(f"{tag}: {message}" ,file=sys.stderr)
 
-for each in [HERE__DPATH] + [HERE__DPATH / m for m in MODULE]:
+for each in [DIRPA__HERE] + [DIRPA__HERE / m for m in MODULE]:
   problem = trusted_owner__problem(each)
   if problem:
     say("refused-to-start" ,problem)

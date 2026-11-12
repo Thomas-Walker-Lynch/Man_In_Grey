@@ -221,7 +221,7 @@
                 ,["permission" ,"integer"]
                 ,["file" ,"handle"]
                 ,["content" ,"bytes"]
-                ,["summary" ,["dictionary" ,["open_count" ,"integer"] ,["unlink_count" ,"integer"]]]
+                ,["summary" ,["dictionary" ,["count_of__open" ,"integer"] ,["count_of__unlink" ,"integer"]]]
               ]
               ,"list__format": [
                 ["format__open" ,["in" ,"directory"] ,["in" ,"file_name"] ,["in" ,"mode"] ,["in" ,"account_name"] ,["in" ,"permission"] ,["out" ,"file"]]
@@ -721,13 +721,13 @@
             This composer writes in the example language; <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a> shows a whole one. <RT·code>compose</RT·code> is given <RT·code>prov</RT·code>, which says where the composer is:
           </p>
           <RT·dictionary key="Field of prov" definition="Meaning">
-            <RT·entry key="implied__fname">
+            <RT·entry key="filen__implied">
               The composer's own file name less <RT·code>.py</RT·code>, for a composer named for the file it writes.
             </RT·entry>
             <RT·entry key="process_user">
               The name of account A.
             </RT·entry>
-            <RT·entry key="composer__abs_fpath, composer_dir__dpath, cwd__dpath">
+            <RT·entry key="fpa__composer, dirpa__composer, dirpa__cwd">
               The composer's absolute path, the directory holding it, and the working directory of the run.
             </RT·entry>
           </RT·dictionary>
@@ -886,7 +886,7 @@
             No instruction writes a variable, so every argument of a journal in this language is a literal, and the journal has no result.
           </p>
           <p>
-            No instruction names a file. The page's file names come from the user name of the real uid, which the kernel gives the guard and the interpreter, so a person can write only his own page. The directory comes from <RT·code>page_directory()</RT·code> among the guard's constraints, which the administrator writes. A journal describes the whole page: a run that gives no picture removes the picture an earlier run placed.
+            No instruction names a file. The page's file names come from the user name of the real uid, which the kernel gives the guard and the interpreter, so a person can write only his own page. The directory comes from <RT·code>dirp__page()</RT·code> among the guard's constraints, which the administrator writes. A journal describes the whole page: a run that gives no picture removes the picture an earlier run placed.
           </p>
           <p>
             Decoration travels out of band. A run's styles are a list beside its text, not marks in it, and the interpreter turns each style into one fixed tag with no attribute: <RT·code>&lt;strong&gt;</RT·code>, <RT·code>&lt;em&gt;</RT·code>, <RT·code>&lt;u&gt;</RT·code> and <RT·code>&lt;s&gt;</RT·code>, nested in that order. It writes the rest of the page from a fixed form, and escapes every text it is given, so nothing a person gives becomes markup. There is nothing to sanitize: an attribute such as <RT·code>onload</RT·code>, or a <RT·code>&lt;script&gt;</RT·code> element, cannot be expressed in the language.
@@ -916,7 +916,7 @@
                 journal_iface.paragraph()
                 for content ,style in paragraph:
                   journal_iface.text(content ,style)
-              journal_iface.picture((Path(prov.composer_dir__dpath).parent / "picture.jpg").read_bytes())
+              journal_iface.picture((Path(prov.dirpa__composer).parent / "picture.jpg").read_bytes())
           </RT·code>
           <p>
             A composer could as well read a file in a notation its author likes, such as <RT·code>*emphasis*</RT·code>, and turn it into runs. That conversion runs with the person's own uid, so a mistake in it stays on his side; the gate only ever receives runs and style names.
@@ -932,17 +932,17 @@
             def is__allowed_account(user_name):
               return user_name in ("Thomas" ,"Alice")
 
-            def is__allowed_text_size(byte_count):
-              return byte_count &lt;= 8192
+            def is__allowed_text_size(count_of__byte):
+              return count_of__byte &lt;= 8192
 
-            def is__allowed_picture_size(byte_count):
-              return byte_count &lt;= 1 &lt;&lt; 20
+            def is__allowed_picture_size(count_of__byte):
+              return count_of__byte &lt;= 1 &lt;&lt; 20
 
-            def page_directory():
+            def dirp__page():
               return "/srv/http/bio"
           </RT·code>
           <p>
-            One set of constraints serves every account, since the page's name follows from the account. <RT·code>is__allowed_text_size</RT·code> is given the bytes of the display name and text together. <RT·code>page_directory</RT·code> is not a predicate: the guard checks that it gives an absolute directory, and the interpreter places the pages there. To give a page to every member of a group instead:
+            One set of constraints serves every account, since the page's name follows from the account. <RT·code>is__allowed_text_size</RT·code> is given the bytes of the display name and text together. <RT·code>dirp__page</RT·code> is not a predicate: the guard checks that it gives an absolute directory, and the interpreter places the pages there. To give a page to every member of a group instead:
           </p>
           <RT·code>
             def is__allowed_account(user_name):
@@ -960,7 +960,7 @@
               One display name; at most one picture; text only within a paragraph, and no paragraph without text; every style one of the four, none twice; no control character in any text.
             </RT·entry>
             <RT·entry key="constraint">
-              <RT·code>is__allowed_account</RT·code> allows account A; <RT·code>is__allowed_text_size</RT·code> and <RT·code>is__allowed_picture_size</RT·code> allow the text and the picture; <RT·code>page_directory()</RT·code> gives an absolute directory.
+              <RT·code>is__allowed_account</RT·code> allows account A; <RT·code>is__allowed_text_size</RT·code> and <RT·code>is__allowed_picture_size</RT·code> allow the text and the picture; <RT·code>dirp__page()</RT·code> gives an absolute directory.
             </RT·entry>
             <RT·entry key="content">
               The picture begins with the signature of a PNG or a JPEG file. SVG is refused on purpose: it is a document that can hold script, and run it when opened by itself.

@@ -56,7 +56,7 @@ import Journal·Interface
 
 # The promoted layout: this file in Man_In_Grey/, beside Man_In_Grey__Gate/.
 # The same layout is staged in developer/scratchpad/made/ and promoted to consumer/.
-HERE__DPATH = Path(__file__).resolve().parent
+DIRPA__HERE = Path(__file__).resolve().parent
 
 FLAG = ("print" ,"compose-only" ,"check-only")
 VALUE = ("gate" ,)
@@ -75,22 +75,22 @@ class Provenance:
   Where a composer is. Given to compose().
   """
   __slots__ = (
-    "composer__abs_fpath"
-    ,"composer_dir__dpath"
-    ,"implied__fname"
+    "fpa__composer"
+    ,"dirpa__composer"
+    ,"filen__implied"
     ,"process_user"
-    ,"cwd__dpath"
+    ,"dirpa__cwd"
   )
 
-  def __init__(self ,composer_path):
-    self.composer__abs_fpath = composer_path
-    self.composer_dir__dpath = composer_path.parent
-    name = composer_path.name
+  def __init__(self ,fpa__composer):
+    self.fpa__composer = fpa__composer
+    self.dirpa__composer = fpa__composer.parent
+    name = fpa__composer.name
     if name.endswith(".py"):
       name = name[:-3]
-    self.implied__fname = name
+    self.filen__implied = name
     self.process_user = gate_invoking_account__name()
-    self.cwd__dpath = Path.cwd().resolve()
+    self.dirpa__cwd = Path.cwd().resolve()
 
 
 # --------------------------------------------------------------------------------
@@ -137,13 +137,13 @@ def composer_provenance(path):
 # --------------------------------------------------------------------------------
 # the gate's language
 
-def gate_flag(gate_path):
+def gate_flag(fpa__gate):
   """The gate's flags as a dict. Raises RuntimeError."""
-  if not os.access(gate_path ,os.X_OK):
-    raise RuntimeError(f"the gate {gate_path} is missing; in the developer role, build and promote it")
-  result = subprocess.run([str(gate_path) ,"flags"] ,capture_output=True ,text=True)
+  if not os.access(fpa__gate ,os.X_OK):
+    raise RuntimeError(f"the gate {fpa__gate} is missing; in the developer role, build and promote it")
+  result = subprocess.run([str(fpa__gate) ,"flags"] ,capture_output=True ,text=True)
   if result.returncode != 0:
-    raise RuntimeError(f"the gate {gate_path} did not report its flags")
+    raise RuntimeError(f"the gate {fpa__gate} did not report its flags")
   return dict(line.split("=" ,1) for line in result.stdout.splitlines() if "=" in line)
 
 def language_definition(name):
@@ -155,7 +155,7 @@ def language_definition(name):
     raise RuntimeError(f"the gate names the language {name!r}, which names no definition")
   # a language is named by its namespace, so the name is the module's prefix
   module = name + "·Language"
-  if not (HERE__DPATH / f"{module}.py").is_file():
+  if not (DIRPA__HERE / f"{module}.py").is_file():
     raise RuntimeError(f"the gate's language is {name}, and {module}.py is not beside {Path(__file__).name}")
   definition_module = importlib.import_module(module)
   if getattr(definition_module ,"NAME" ,None) != name:
@@ -173,9 +173,9 @@ def compose(prov ,language_definition):
   """Run the composer into a journal. Raises RuntimeError naming the composer when it fails."""
   journal = Journal·Interface.JournalComposed(language_definition)
   journal_iface = Journal·Interface.JournalInterface(journal)
-  name = prov.composer__abs_fpath.name
+  name = prov.fpa__composer.name
   try:
-    env = runpy.run_path(str(prov.composer__abs_fpath))
+    env = runpy.run_path(str(prov.fpa__composer))
     function = env.get("compose")
     if not callable(function):
       raise RuntimeError("defines no compose(prov ,journal_iface)")
@@ -191,13 +191,13 @@ def compose(prov ,language_definition):
     "composed_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%SZ")
     ,"process_user": gate_invoking_account__name()
     ,"host": os.uname().nodename
-    ,"composer": str(prov.composer__abs_fpath)
+    ,"composer": str(prov.fpa__composer)
   }
   return journal
 
 RESULT_FD = 3
 
-def admit(gate_path ,journal_bytes ,check_only=False):
+def admit(fpa__gate ,journal_bytes ,check_only=False):
   """
   Invoke the gate with the journal on its standard input, and descriptor 3
   open to receive the result. The gate's standard output and standard error
@@ -207,7 +207,7 @@ def admit(gate_path ,journal_bytes ,check_only=False):
   An application that is its own orchestrator calls this function with the
   journal it made.
   """
-  command = [str(gate_path) ,"admit"] + (["check-only"] if check_only else [])
+  command = [str(fpa__gate) ,"admit"] + (["check-only"] if check_only else [])
   read_fd ,write_fd = os.pipe()
   try:
     gate = subprocess.Popen(command ,stdin=subprocess.PIPE ,close_fds=False
@@ -249,9 +249,9 @@ def orchestrate(path ,gate ,flag):
   if not gate:
     print("error: orchestrate is given the gate to invoke, as gate <file>" ,file=sys.stderr)
     return 2
-  gate_path = Path(gate).absolute()
+  fpa__gate = Path(gate).absolute()
   try:
-    journal = compose(composer_provenance(path) ,language_definition(gate_flag(gate_path).get("language")))
+    journal = compose(composer_provenance(path) ,language_definition(gate_flag(fpa__gate).get("language")))
   except (OSError ,RuntimeError) as error:
     print(f"error: {error}" ,file=sys.stderr)
     return 2
@@ -260,7 +260,7 @@ def orchestrate(path ,gate ,flag):
   if "compose-only" in flag:
     return 0
   sys.stdout.flush()
-  status ,result = admit(gate_path ,journal.encode() ,"check-only" in flag)
+  status ,result = admit(fpa__gate ,journal.encode() ,"check-only" in flag)
   if result and not print_result(result):
     return 2
   return status
@@ -287,7 +287,7 @@ def install(list__argument):
   for i ,word in enumerate(list__argument[:-1]):
     if word == "constraints":
       list__argument[i + 1] = str(Path(list__argument[i + 1]).absolute())
-  command = [str(HERE__DPATH / "install-gate") ,"install" ,*list__argument]
+  command = [str(DIRPA__HERE / "install-gate") ,"install" ,*list__argument]
   if os.geteuid() != 0:
     print("install-gate is run by root; su asks for root's password" ,file=sys.stderr)
     command = ["su" ,"root" ,"-c" ,shlex.join(command)]

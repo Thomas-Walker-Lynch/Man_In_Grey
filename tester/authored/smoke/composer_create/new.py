@@ -2,5 +2,5 @@
 
 def compose(prov ,journal_iface):
   file = journal_iface.declare("new_conf" ,"file")
-  journal_iface.open(str(prov.cwd__dpath / "out") ,"new.conf" ,"create" ,prov.process_user ,0o600 ,file)
+  journal_iface.open(str(prov.dirpa__cwd / "out") ,"new.conf" ,"create" ,prov.process_user ,0o600 ,file)
   journal_iface.write(file ,b"made once\n")
