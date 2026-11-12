@@ -3,11 +3,11 @@
 """
 run
 
-The emplace_bio test of Man_In_Grey's example language. It copies the
-promoted Man_In_Grey, from $REPO_HOME/consumer, into its scratchpad
+The Emplace-Bio test of Man-In-Grey's example language. It copies the
+promoted Man-In-Grey, from $REPO_HOME/consumer, into its scratchpad
 directory, puts constraints of its own at the top of the copy's
-EmplaceBio·Guard.py, placing pages in its scratchpad, and runs that copy
-through the emplace_bio gate, not setuid. It checks:
+Emplace_Bio·Guard.py, placing pages in its scratchpad, and runs that copy
+through the Emplace_Bio gate, not setuid. It checks:
 
   page       orchestrate composer/bio.py: <user_name>.html is compared with
              expected/page.html, every text in it escaped, every style one tag,
@@ -44,8 +44,8 @@ which survives exec:
 A refused run is to leave every file as it was.
 
 The test reads consumer/ and writes only in its scratchpad directory,
-$REPO_HOME/tester/scratchpad/emplace_bio, where it runs its copy of
-Man_In_Grey from tree/.
+$REPO_HOME/tester/scratchpad/Emplace-Bio, where it runs its copy of
+Man-In-Grey from tree/.
 
 Usage: run <command>
   help | -h | --help   print this message (also printed when given no arguments)
@@ -59,9 +59,9 @@ from pathlib import Path
 
 import cbor2
 
-TEST_NAME = "emplace_bio"
+TEST_NAME = "Emplace-Bio"
 TEST_DPATH = Path(__file__).resolve().parent
-GATE_NAME = "Man_In_Grey_gate·emplace_bio"
+GATE_NAME = "Man_In_Grey__Gate·Emplace_Bio"
 
 
 # --------------------------------------------------------------------------------
@@ -116,14 +116,14 @@ def check_status(log ,what ,status ,want ,output ,want_text=None):
 
 def make_tree(consumer ,tree):
   """
-  A copy of the promoted Man_In_Grey/ and Man_In_Grey_gate/, side by side, in
+  A copy of the promoted Man_In_Grey/ and Man_In_Grey__Gate/, side by side, in
   tree. The gate refuses a guard in a directory other accounts can write,
   so tree and the directory holding it are made writable by the owner alone.
   """
   tree.mkdir(parents=True)
   for each in (tree.parent ,tree):
     os.chmod(each ,0o755)
-  for name in ("Man_In_Grey" ,"Man_In_Grey_gate"):
+  for name in ("Man_In_Grey" ,"Man_In_Grey__Gate"):
     (tree / name).mkdir()
     os.chmod(tree / name ,0o755)
     for source in sorted((consumer / name).iterdir()):
@@ -140,9 +140,9 @@ def put_constraint(guard_fpath ,constraint):
   os.chmod(guard_fpath ,0o644)
 
 def write_constraint(tree ,work_dpath ,account ,text_max_bytes=8192):
-  "the test's constraints in its copy of EmplaceBio·Guard.py, giving account a page in work_dpath/bio"
+  "the test's constraints in its copy of Emplace_Bio·Guard.py, giving account a page in work_dpath/bio"
   text = (
-    "# written by the emplace_bio test\n\n"
+    "# written by the Emplace-Bio test\n\n"
     "def is_allowed_account(user_name):\n"
     f"  return user_name == {account!r}\n\n"
     "def is_allowed_text_size(byte_count):\n"
@@ -152,7 +152,7 @@ def write_constraint(tree ,work_dpath ,account ,text_max_bytes=8192):
     "def page_directory():\n"
     f"  return {str(work_dpath / 'bio')!r}\n"
   )
-  put_constraint(tree / "Man_In_Grey" / "EmplaceBio·Guard.py" ,text)
+  put_constraint(tree / "Man_In_Grey" / "Emplace_Bio·Guard.py" ,text)
 
 def run_Man_In_Grey(program ,gate ,path ,work_dpath ,*option):
   command = [str(program) ,"orchestrate" ,str(path) ,"gate" ,str(gate) ,*option]
@@ -183,13 +183,13 @@ def leave_sigterm_pending():
 
 def hand_made(definition_hash ,instruction_list):
   """
-  A journal of the emplace_bio language holding the instructions given as
+  A journal of the Emplace_Bio language holding the instructions given as
   (operation ,[value ...]), every value a literal, made as data and encoded,
   with no journal interface to check it.
   """
   return cbor2.dumps({
     "version": 4
-    ,"instruction_language": "emplace_bio"
+    ,"instruction_language": "Emplace_Bio"
     ,"definition_hash": definition_hash
     ,"meta": {}
     ,"list_variable": []
@@ -204,17 +204,17 @@ def test(repo_home):
   consumer = repo_home / "consumer"
   work_dpath = (repo_home / "tester" / "scratchpad" / TEST_NAME).resolve()
   tree = work_dpath / "tree"
-  program = tree / "Man_In_Grey" / "Man_In_Grey"
-  gate = tree / "Man_In_Grey_gate" / GATE_NAME
+  program = tree / "Man_In_Grey" / "Man-In-Grey"
+  gate = tree / "Man_In_Grey__Gate" / GATE_NAME
   print(f"run test   in {TEST_DPATH}")
   print(f"  program  {program}")
   print(f"  gate     {gate}")
   print(f"  writes   {work_dpath}")
   log = Log()
 
-  promoted = os.access(consumer / "Man_In_Grey" / "Man_In_Grey" ,os.X_OK) and os.access(consumer / "Man_In_Grey_gate" / GATE_NAME ,os.X_OK)
-  if not log.check(promoted ,"Man_In_Grey and the emplace_bio gate are promoted"
-                   ,None if promoted else f"the developer promotes Man_In_Grey and {GATE_NAME} first"):
+  promoted = os.access(consumer / "Man_In_Grey" / "Man-In-Grey" ,os.X_OK) and os.access(consumer / "Man_In_Grey__Gate" / GATE_NAME ,os.X_OK)
+  if not log.check(promoted ,"Man-In-Grey and the Emplace_Bio gate are promoted"
+                   ,None if promoted else f"the developer promotes Man-In-Grey and {GATE_NAME} first"):
     return log.summary()
 
   if work_dpath.exists():
@@ -224,7 +224,7 @@ def test(repo_home):
   # the journals the test makes by hand carry the hash of the copy's definition, so it is imported once the copy exists
   sys.path.insert(0 ,str(tree / "Man_In_Grey"))
   import importlib ,Language
-  language_module = importlib.import_module("EmplaceBio·Language")
+  language_module = importlib.import_module("Emplace_Bio·Language")
   definition_hash = Language.Definition(language_module.NAME ,language_module.DEFINITION).hash
   person = getpass.getuser()
   write_constraint(tree ,work_dpath ,person)
@@ -233,7 +233,7 @@ def test(repo_home):
 
   # page
   status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer" / "bio.py" ,work_dpath)
-  if not check_status(log ,"page Man_In_Grey exits 0" ,status ,0 ,output):
+  if not check_status(log ,"page Man-In-Grey exits 0" ,status ,0 ,output):
     return log.summary()
   expected = (TEST_DPATH / "expected" / "page.html").read_text(encoding="utf-8").replace("USER_NAME" ,urllib.parse.quote(person))
   found = page_fpath.read_text(encoding="utf-8") if page_fpath.is_file() else None
@@ -246,17 +246,17 @@ def test(repo_home):
 
   # jpeg, then no picture
   status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer_jpeg" / "bio.py" ,work_dpath)
-  check_status(log ,"jpeg Man_In_Grey exits 0" ,status ,0 ,output)
+  check_status(log ,"jpeg Man-In-Grey exits 0" ,status ,0 ,output)
   log.check(jpg.is_file() and not png.exists() and f'src="{urllib.parse.quote(person)}.jpg"' in page_fpath.read_text()
             ,"jpeg places the JPEG and removes the PNG")
   status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer_no_picture" / "bio.py" ,work_dpath)
-  check_status(log ,"none Man_In_Grey exits 0" ,status ,0 ,output)
+  check_status(log ,"none Man-In-Grey exits 0" ,status ,0 ,output)
   log.check(not jpg.exists() and not png.exists() and "<img" not in page_fpath.read_text() ,"none removes the picture")
 
   # check_only
   before = snapshot(bio)
   status ,output = run_Man_In_Grey(program ,gate ,TEST_DPATH / "composer" / "bio.py" ,work_dpath ,"check_only")
-  check_status(log ,"check_only is approved by the guard" ,status ,0 ,output ,"approved: guard emplace_bio check passed")
+  check_status(log ,"check_only is approved by the guard" ,status ,0 ,output ,"approved: guard Emplace_Bio check passed")
   log.check(snapshot(bio) == before ,"check_only changes nothing")
 
   # journals given to the gate directly

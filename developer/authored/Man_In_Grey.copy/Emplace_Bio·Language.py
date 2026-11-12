@@ -1,6 +1,6 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-EmplaceBio·Language - the language definition of emplace_bio, a bio page.
+Emplace_Bio·Language - the language definition of Emplace_Bio, a bio page.
 
 Data only; see Language.py for its form. The composer's journal interface,
 the guard and the interpreter all read it, and a journal carries its hash.
@@ -15,7 +15,7 @@ No instruction produces a value, so every argument is a literal, and a
 journal of this language has no result.
 """
 
-NAME = "emplace_bio"
+NAME = "Emplace_Bio"
 
 DEFINITION = {
   "list_type": [

@@ -3,11 +3,11 @@
 """
 run
 
-The smoke test of Man_In_Grey, run through the smoke language. It copies
-the promoted Man_In_Grey, from $REPO_HOME/consumer, into its scratchpad
+The smoke test of Man-In-Grey, run through the Smoke language. It copies
+the promoted Man-In-Grey, from $REPO_HOME/consumer, into its scratchpad
 directory, puts constraints of its own at the top of the copy's
 Smoke·Guard.py, allowing the files it expects, and runs that copy through
-the smoke language's gate, not setuid. The smoke language is not for use
+the Smoke language's gate, not setuid. The Smoke language is not for use
 on a system; it is here to exercise the gate, the guard and the
 interpreter. It checks:
 
@@ -61,7 +61,7 @@ YYYYMMDDTHHMMSSZ. Content, mode and owner are compared too.
 
 The test reads consumer/ and writes only in its scratchpad directory,
 $REPO_HOME/tester/scratchpad/smoke, where it runs its copy of
-Man_In_Grey from tree/.
+Man-In-Grey from tree/.
 
 Usage: run <command>
   help | -h | --help   print this message (also printed when given no arguments)
@@ -76,7 +76,7 @@ from pathlib import Path
 import cbor2
 
 TEST_NAME = "smoke"
-GATE_NAME = "Man_In_Grey_gate·smoke"
+GATE_NAME = "Man_In_Grey__Gate·Smoke"
 TEST_DPATH = Path(__file__).resolve().parent
 
 OUTPUT_DIR = ("out" ,"out/net" ,"out/web")
@@ -184,11 +184,11 @@ def compare(log ,run_name ,work_dpath):
     log.check(not problem ,what ,"; ".join(problem) or None)
 
 def limit_file_size():
-  "run in the child before Man_In_Grey starts: a file size limit, soft and hard, of 1 MiB"
+  "run in the child before Man-In-Grey starts: a file size limit, soft and hard, of 1 MiB"
   resource.setrlimit(resource.RLIMIT_FSIZE ,(1 << 20 ,1 << 20))
 
 def run_Man_In_Grey(program ,path ,work_dpath ,*option ,preexec=None):
-  gate = program.parent.parent / "Man_In_Grey_gate" / GATE_NAME
+  gate = program.parent.parent / "Man_In_Grey__Gate" / GATE_NAME
   command = [str(program) ,"orchestrate" ,str(path) ,"gate" ,str(gate) ,*option]
   result = subprocess.run(command ,cwd=work_dpath ,capture_output=True ,text=True ,preexec_fn=preexec)
   return result.returncode ,(result.stdout + result.stderr).strip()
@@ -199,10 +199,10 @@ def run_gate(gate ,journal_bytes):
   return result.returncode ,(result.stdout + result.stderr).decode("utf-8" ,"replace").strip()
 
 def hand_made(definition_hash ,variable ,instruction_list ,result=None ,version=4):
-  "a journal of the smoke language, made as data and encoded, with no journal interface to check it"
+  "a journal of the Smoke language, made as data and encoded, with no journal interface to check it"
   return cbor2.dumps({
     "version": version
-    ,"instruction_language": "smoke"
+    ,"instruction_language": "Smoke"
     ,"definition_hash": definition_hash
     ,"meta": {}
     ,"list_variable": variable
@@ -224,14 +224,14 @@ def check_status(log ,what ,status ,want ,output ,want_text=None):
 
 def make_tree(consumer ,tree):
   """
-  A copy of the promoted Man_In_Grey/ and Man_In_Grey_gate/, side by side, in
+  A copy of the promoted Man_In_Grey/ and Man_In_Grey__Gate/, side by side, in
   tree. The gate refuses a guard in a directory other accounts can write,
   so tree and the directory holding it are made writable by the owner alone.
   """
   tree.mkdir(parents=True)
   for each in (tree.parent ,tree):
     os.chmod(each ,0o755)
-  for name in ("Man_In_Grey" ,"Man_In_Grey_gate"):
+  for name in ("Man_In_Grey" ,"Man_In_Grey__Gate"):
     (tree / name).mkdir()
     os.chmod(tree / name ,0o755)
     for source in sorted((consumer / name).iterdir()):
@@ -270,17 +270,17 @@ def test(repo_home):
   consumer = repo_home / "consumer"
   work_dpath = (repo_home / "tester" / "scratchpad" / TEST_NAME).resolve()
   tree = work_dpath / "tree"
-  program = tree / "Man_In_Grey" / "Man_In_Grey"
-  gate = tree / "Man_In_Grey_gate" / GATE_NAME
+  program = tree / "Man_In_Grey" / "Man-In-Grey"
+  gate = tree / "Man_In_Grey__Gate" / GATE_NAME
   config = TEST_DPATH / "composer" / "config.py"
   print(f"run test   in {TEST_DPATH}")
   print(f"  program  {program}")
   print(f"  writes   {work_dpath}")
   log = Log()
 
-  promoted = os.access(consumer / "Man_In_Grey" / "Man_In_Grey" ,os.X_OK)
-  if not log.check(promoted ,"Man_In_Grey is promoted"
-                   ,None if promoted else f"the developer promotes Man_In_Grey and {GATE_NAME} first"):
+  promoted = os.access(consumer / "Man_In_Grey" / "Man-In-Grey" ,os.X_OK)
+  if not log.check(promoted ,"Man-In-Grey is promoted"
+                   ,None if promoted else f"the developer promotes Man-In-Grey and {GATE_NAME} first"):
     return log.summary()
 
   if work_dpath.exists():
@@ -301,18 +301,18 @@ def test(repo_home):
   # run_1 and run_2
   for run_name in ("run_1" ,"run_2"):
     status ,output = run_Man_In_Grey(program ,config ,work_dpath)
-    if check_status(log ,f"{run_name} Man_In_Grey exits 0" ,status ,0 ,output):
+    if check_status(log ,f"{run_name} Man-In-Grey exits 0" ,status ,0 ,output):
       compare(log ,run_name ,work_dpath)
       if run_name == "run_1":
         want = "result: summary {'open_count': 3, 'unlink_count': 1}"
         log.check(want in output ,"run_1 result is the summary" ,None if want in output else f"the output does not say {want!r}")
     else:
-      log.note(f"{run_name}: the files were not compared, since Man_In_Grey failed")
+      log.note(f"{run_name}: the files were not compared, since Man-In-Grey failed")
       return log.summary()
 
   # create: once, then refused
   status ,output = run_Man_In_Grey(program ,TEST_DPATH / "composer_create" / "new.py" ,work_dpath)
-  check_status(log ,"create Man_In_Grey exits 0" ,status ,0 ,output)
+  check_status(log ,"create Man-In-Grey exits 0" ,status ,0 ,output)
   new = out / "new.conf"
   log.check(new.is_file() and new.read_text() == "made once\n" and stat.S_IMODE(new.stat().st_mode) == 0o600
             ,"create out/new.conf" ,None if new.is_file() else "not written")
@@ -356,7 +356,7 @@ def test(repo_home):
   # check_only
   before = snapshot(out)
   status ,output = run_Man_In_Grey(program ,config ,work_dpath ,"check_only")
-  check_status(log ,"check_only is approved by the guard" ,status ,0 ,output ,"approved: guard smoke check passed")
+  check_status(log ,"check_only is approved by the guard" ,status ,0 ,output ,"approved: guard Smoke check passed")
   log.check(snapshot(out) == before ,"check_only changes nothing")
 
   # a resource limit the gate cannot raise
@@ -368,14 +368,14 @@ def test(repo_home):
   # an interpreter that exits 0 without its verdict line
   interpreter = tree / "Man_In_Grey" / "Smoke·Interpreter.py"
   text = interpreter.read_text(encoding="utf-8")
-  verdict_line = '  sys.stdout.write("interpreter smoke journal played\\n")\n'
+  verdict_line = '  sys.stdout.write("interpreter Smoke journal played\\n")\n'
   if verdict_line not in text:
     log.check(False ,"silent finds the verdict line to remove" ,"Smoke·Interpreter.py has changed")
   interpreter.unlink()
   interpreter.write_text(text.replace(verdict_line ,"  pass\n") ,encoding="utf-8")
   os.chmod(interpreter ,0o644)
   status ,output = run_Man_In_Grey(program ,config ,work_dpath)
-  check_status(log ,"silent is reported failed by the gate" ,status ,2 ,output ,"without writing the one line 'interpreter smoke journal played'")
+  check_status(log ,"silent is reported failed by the gate" ,status ,2 ,output ,"without writing the one line 'interpreter Smoke journal played'")
   interpreter.unlink()
   interpreter.write_text(text ,encoding="utf-8")
   os.chmod(interpreter ,0o644)

@@ -1,7 +1,7 @@
 #!/usr/bin/env -S python3 -B
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-Man_In_Grey
+Man-In-Grey
 
 The orchestrator. It runs a composer, which declares variables and places
 instructions into a journal, and invokes a gate with the journal on its
@@ -15,9 +15,9 @@ A composer is a Python file defining compose(prov ,journal_iface). prov
 describes where the composer is; journal_iface has a function for each
 instruction of the gate's instruction language, and declare and result. The
 orchestrator learns the language from the gate's flags, and loads the
-definition named for it: emplace_bio from EmplaceBio·Language.py.
+definition named for it: Emplace_Bio from Emplace_Bio·Language.py.
 
-Usage: Man_In_Grey <command> ...
+Usage: Man-In-Grey <command> ...
   help | -h                  print this message (also printed when given no arguments)
   orchestrate <composer> gate <file> [option ...]
                              <composer> is a composer file; <file> is the gate to
@@ -54,7 +54,7 @@ import Language
 import Journal
 import Journal·Interface
 
-# The promoted layout: this file in Man_In_Grey/, beside Man_In_Grey_gate/.
+# The promoted layout: this file in Man_In_Grey/, beside Man_In_Grey__Gate/.
 # The same layout is staged in developer/scratchpad/made/ and promoted to consumer/.
 HERE_DPATH = Path(__file__).resolve().parent
 
@@ -128,7 +128,7 @@ def composer_provenance(path):
   if path.is_symlink():
     raise RuntimeError(f"{path} is a symbolic link")
   if path.is_dir():
-    raise RuntimeError(f"{path} is a directory; this version of Man_In_Grey runs one composer, given as a file")
+    raise RuntimeError(f"{path} is a directory; this version of Man-In-Grey runs one composer, given as a file")
   if not stat.S_ISREG(path.lstat().st_mode):
     raise RuntimeError(f"{path} is not a composer file")
   return Provenance(path)
@@ -148,12 +148,13 @@ def gate_flag(gate_path):
 
 def language_definition(name):
   """
-  The definition of an instruction language: emplace_bio's is in
-  EmplaceBio·Language.py, beside this file. Raises RuntimeError.
+  The definition of an instruction language: Emplace_Bio's is in
+  Emplace_Bio·Language.py, beside this file. Raises RuntimeError.
   """
-  if not re.fullmatch(r"[a-z][a-z0-9_]*" ,name or ""):
+  if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*" ,name or ""):
     raise RuntimeError(f"the gate names the language {name!r}, which names no definition")
-  module = "".join(part.capitalize() for part in name.split("_")) + "·Language"
+  # a language is named by its namespace, so the name is the module's prefix
+  module = name + "·Language"
   if not (HERE_DPATH / f"{module}.py").is_file():
     raise RuntimeError(f"the gate's language is {name}, and {module}.py is not beside {Path(__file__).name}")
   definition_module = importlib.import_module(module)

@@ -1,10 +1,10 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-EmplaceBio·LibraryInstruction - the implementation of the emplace_bio instructions.
+Emplace_Bio·LibraryInstruction - the implementation of the Emplace_Bio instructions.
 
 The interpreter makes one LibraryInstruction for each journal and calls its
 functions, one for each operation specifier of the definition,
-EmplaceBio·Language.py, given each instruction's arguments by
+Emplace_Bio·Language.py, given each instruction's arguments by
 position. They build the page up; finish() writes it from a fixed form, and
 escapes every text it is given, so nothing a person gives becomes markup.
 The page's file names come from the user name of account A, and its
@@ -13,7 +13,7 @@ directory from page_directory() among the guard's constraints.
 
 import html ,os ,stat ,urllib.parse
 
-from EmplaceBio·GuardCheck import STYLE ,picture_extension ,list_page_name
+from Emplace_Bio·GuardCheck import STYLE ,picture_extension ,list_page_name
 
 PAGE_PERMISSION = 0o644
 

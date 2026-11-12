@@ -1,10 +1,10 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-Language - what a Man_In_Grey instruction language is, and how its definition is checked.
+Language - what a Man-In-Grey instruction language is, and how its definition is checked.
 
 This module defines no language. An instruction language is defined by its
 application developer as data: a map of four sections, written as a literal
-value in a module of its own, such as EmplaceBio·Language.py. Account A
+value in a module of its own, such as Emplace_Bio·Language.py. Account A
 cannot change it. The guard, the interpreter and the journal interface all
 read the same definition, and a journal carries the hash of the definition
 it was composed against.
@@ -172,7 +172,7 @@ def list_problem_language(data):
       if type(operation) is not str or not operation.isidentifier() or keyword.iskeyword(operation) or operation.startswith("_"):
         list_problem.append(f"map_instruction: {operation!r} is not an operation specifier; it is a Python function name not beginning with _"); continue
       if operation in LIST_OPERATION_RESERVED:
-        list_problem.append(f"map_instruction: {operation!r} is kept by Man_In_Grey; the kept names are {', '.join(LIST_OPERATION_RESERVED)}")
+        list_problem.append(f"map_instruction: {operation!r} is kept by Man-In-Grey; the kept names are {', '.join(LIST_OPERATION_RESERVED)}")
       if format_name not in set_format_name:
         list_problem.append(f"map_instruction: {operation} has the format {format_name!r}, which is not declared")
   return list_problem

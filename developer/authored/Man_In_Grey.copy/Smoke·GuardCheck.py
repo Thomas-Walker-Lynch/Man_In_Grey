@@ -1,6 +1,6 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-Smoke·GuardCheck - the guard's checks of the smoke instruction language, the tester's smoke test.
+Smoke·GuardCheck - the guard's checks of the Smoke instruction language, the tester's smoke test.
 
 It exists to exercise the gate, the guard library and the interpreter
 library, and is not for use on a system: its constraints can say where a

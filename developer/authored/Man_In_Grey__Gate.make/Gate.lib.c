@@ -1,8 +1,8 @@
 /*
-  Man_In_Grey_gate·Gate - the gate of a Man_In_Grey instruction language.
+  Man_In_Grey__Gate·Gate - the gate of a Man-In-Grey instruction language.
 
   A gate is a program of its own, made from this module by a three-line
-  *.CLI.c whose main calls Man_In_Grey_gate·Gate·run with three things fixed
+  *.CLI.c whose main calls Man_In_Grey__Gate·Gate·run with three things fixed
   at compile time: the name of the instruction language, the guard's path and
   the interpreter's path, the two paths relative to the gate itself. The
   gate invoking account can name neither program; who invokes a gate cannot
@@ -66,10 +66,10 @@
   the gate, guard or interpreter could not run, or broke the gate's rules.
 */
 
-#ifndef Man_In_Grey_gate·Gate·ONCE
-#define Man_In_Grey_gate·Gate·ONCE
+#ifndef Man_In_Grey__Gate·Gate·ONCE
+#define Man_In_Grey__Gate·Gate·ONCE
 
-int Man_In_Grey_gate·Gate·run(
+int Man_In_Grey__Gate·Gate·run(
   const char *language
   ,const char *guard_relative
   ,const char *interpreter_relative
@@ -77,7 +77,7 @@ int Man_In_Grey_gate·Gate·run(
   ,char **argv
 );
 
-#ifdef Man_In_Grey_gate·Gate
+#ifdef Man_In_Grey__Gate·Gate
 
   #include <dirent.h>
   #include <errno.h>
@@ -600,7 +600,7 @@ int Man_In_Grey_gate·Gate·run(
     return journal;
   }
 
-  int Man_In_Grey_gate·Gate·run(
+  int Man_In_Grey__Gate·Gate·run(
     const char *language
     ,const char *guard_relative
     ,const char *interpreter_relative
@@ -657,7 +657,7 @@ int Man_In_Grey_gate·Gate·run(
     if( chdir("/") != 0 ) die("cannot change directory to /");
     signal(SIGPIPE ,SIG_IGN);
 
-    openlog("Man_In_Grey_gate" ,LOG_PID ,LOG_AUTHPRIV);
+    openlog("Man-In-Grey_Gate" ,LOG_PID ,LOG_AUTHPRIV);
     Logging = true;
 
     size_t journal_length;
@@ -742,5 +742,5 @@ int Man_In_Grey_gate·Gate·run(
     return 0;
   }
 
-#endif // Man_In_Grey_gate·Gate
-#endif // Man_In_Grey_gate·Gate·ONCE
+#endif // Man_In_Grey__Gate·Gate
+#endif // Man_In_Grey__Gate·Gate·ONCE

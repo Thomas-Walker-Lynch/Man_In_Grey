@@ -1,6 +1,6 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-Journal - the data form of a Man_In_Grey journal, independent of any instruction language.
+Journal - the data form of a Man-In-Grey journal, independent of any instruction language.
 
 A journal is a CBOR map of seven entries:
 
@@ -75,7 +75,7 @@ def decode(journal_bytes):
   if type(data) is not dict:
     raise JournalError("the journal is not a map")
   if data.get("version") != JOURNAL_VERSION:
-    raise JournalError(f"journal version {clean(repr(data.get('version')))}; this Man_In_Grey reads version {JOURNAL_VERSION}")
+    raise JournalError(f"journal version {clean(repr(data.get('version')))}; this Man-In-Grey reads version {JOURNAL_VERSION}")
   if set(data) != set(LIST_ENTRY):
     raise JournalError(f"the journal has the entries {clean(sorted(map(str ,data)))}; it is to have exactly {list(LIST_ENTRY)}")
   if type(data["instruction_language"]) is not str or type(data["definition_hash"]) is not str:

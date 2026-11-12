@@ -65,7 +65,8 @@ include tool/build_component/project.mk
 #--------------------------------------------------------------------------------
 # derived variables
 
-LIBRARY_NAME     := $(subst -,_,$(LIBRARY_NAME))
+# the demoted form of the name: each _ doubled first, then each - made _
+LIBRARY_NAME     := $(subst -,_,$(subst _,__,$(LIBRARY_NAME)))
 LIBRARY_FILE     := $(LIBRARY_DIR)/lib$(LIBRARY_NAME).a
 
 # source discovery (single dir)

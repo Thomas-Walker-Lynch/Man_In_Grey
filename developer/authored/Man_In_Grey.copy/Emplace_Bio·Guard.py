@@ -1,19 +1,19 @@
 #!/usr/bin/env -S python3 -B
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-EmplaceBio·Guard - the guard of the emplace_bio instruction language.
+Emplace_Bio·Guard - the guard of the Emplace_Bio instruction language.
 
-Started by the gate Man_In_Grey_gate·emplace_bio, with the gate's real and
+Started by the gate Man_In_Grey__Gate·Emplace_Bio, with the gate's real and
 effective ids, and with the journal on standard input. It checks the
 journal: first with the well-formed guard, against the language definition
-in EmplaceBio·Language.py, then with the language's own checks in
-EmplaceBio·GuardCheck.py, the constraints among them. It says what it found on
+in Emplace_Bio·Language.py, then with the language's own checks in
+Emplace_Bio·GuardCheck.py, the constraints among them. It says what it found on
 standard error, one line per finding, as <tag>: <message>; the first two
 lines are name: and version:.
 
 When every check passes, it writes one line to standard output,
 
-  guard emplace_bio check passed
+  guard Emplace_Bio check passed
 
 and exits 0. That line and that status together are the only verdict the
 gate admits a journal on.
@@ -25,7 +25,7 @@ Before it imports anything, it checks that its modules and their directory
 are owned by root or by the effective uid's account, and writable by no
 other account. A module runs code when it is imported.
 
-Usage: EmplaceBio·Guard <command>
+Usage: Emplace_Bio·Guard <command>
   help | -h   print this message (also printed when given no arguments)
   check       check the journal on standard input
 
@@ -38,7 +38,7 @@ Exit status: 0 when every check passed, 1 when a check refused the journal,
 # written by whoever installs the gate, between the two marks below, and
 # install_gate can put them in from a file and keeps them when it installs
 # the guard again. A predicate allows only by answering True. As promoted
-# with Man_In_Grey, is_allowed_account refuses every account.
+# with Man-In-Grey, is_allowed_account refuses every account.
 #
 # They are called only after the modules below are checked and imported, so
 # they can call Guard·LibraryConstraint, the library of predicates that recur,
@@ -72,11 +72,11 @@ sys.dont_write_bytecode = True
 import stat
 from pathlib import Path
 
-LANGUAGE = "emplace_bio"
+LANGUAGE = "Emplace_Bio"
 VERSION = "4"
 
 HERE_DPATH = Path(__file__).resolve().parent
-MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Guard·LibraryConstraint.py" ,"EmplaceBio·Language.py" ,"EmplaceBio·GuardCheck.py" ,"EmplaceBio·Guard.py")
+MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Guard·LibraryConstraint.py" ,"Emplace_Bio·Language.py" ,"Emplace_Bio·GuardCheck.py" ,"Emplace_Bio·Guard.py")
 
 
 def trusted_owner_problem(path):
@@ -109,8 +109,8 @@ try:
   import Journal
   import Guard
   import Guard·LibraryConstraint   # for the constraints at the top, which call it by name
-  import EmplaceBio·Language as language_module
-  import EmplaceBio·GuardCheck as guard_check
+  import Emplace_Bio·Language as language_module
+  import Emplace_Bio·GuardCheck as guard_check
 except ImportError as error:
   say("cannot_start" ,str(error))
   sys.exit(2)
@@ -148,7 +148,7 @@ def CLI(argv=None):
   argv = sys.argv[1:] if argv is None else argv
   if not argv or argv[0] in ("help" ,"-h" ,"--help"): return print_help()
   if argv != ["check"]:
-    say("usage" ,f"unknown command {Journal.clean(repr(' '.join(argv)))}; run EmplaceBio·Guard with no arguments for its usage")
+    say("usage" ,f"unknown command {Journal.clean(repr(' '.join(argv)))}; run Emplace_Bio·Guard with no arguments for its usage")
     return 2
   return check()
 

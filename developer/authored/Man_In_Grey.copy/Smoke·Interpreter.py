@@ -1,9 +1,9 @@
 #!/usr/bin/env -S python3 -B
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-Smoke·Interpreter - the interpreter of the smoke instruction language.
+Smoke·Interpreter - the interpreter of the Smoke instruction language.
 
-Started by the gate Man_In_Grey_gate·smoke, with the gate's real and
+Started by the gate Man_In_Grey__Gate·Smoke, with the gate's real and
 effective ids, and with the journal on standard input, once the guard has
 passed the journal. It executes the journal's instructions, and writes to
 standard error, as <tag>: <message>, a line for each lasting change it
@@ -15,7 +15,7 @@ the journal declares one, to descriptor 3, which the gate gives it: a CBOR
 map of the result's type name and value. Then it writes one line to
 standard output,
 
-  interpreter smoke journal played
+  interpreter Smoke journal played
 
 and exits 0. The gate takes the journal as played on that line and that
 status together, and on nothing else.
@@ -113,7 +113,7 @@ def execute():
     except OSError as error:
       log("cannot_return_result" ,f"descriptor {RESULT_FD}: {error.strerror}")
       return 2
-  sys.stdout.write("interpreter smoke journal played\n")
+  sys.stdout.write("interpreter Smoke journal played\n")
   return 0
 
 

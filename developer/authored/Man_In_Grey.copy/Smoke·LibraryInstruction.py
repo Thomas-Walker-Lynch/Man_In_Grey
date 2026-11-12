@@ -1,6 +1,6 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-Smoke·LibraryInstruction - the implementation of the smoke instructions.
+Smoke·LibraryInstruction - the implementation of the Smoke instructions.
 
 The interpreter makes one LibraryInstruction for each journal and calls its
 functions, one for each operation specifier of the definition,
@@ -33,7 +33,7 @@ class LibraryInstruction:
   writes the file's handle, a number standing for the open file, to its box;
   write appends to the file the handle stands for; finish() puts every opened
   file in place, each in one step; release() closes what is open and removes
-  every temporary file not put in place. The smoke language needs nothing
+  every temporary file not put in place. The Smoke language needs nothing
   from its guard's constraints to execute.
   """
 

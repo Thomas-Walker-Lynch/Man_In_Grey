@@ -1,12 +1,12 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-Guard - the general guard of Man_In_Grey.
+Guard - the general guard of Man-In-Grey.
 
 The guard decides whether a journal can be executed. check() decodes the
 journal and makes the checks in order, stopping at the first that finds
 problems:
 
-  wellformed   the well-formed guard, Man_In_Grey's own: the journal against
+  wellformed   the well-formed guard, Man-In-Grey's own: the journal against
                the language definition, by Guard·WellFormed.is_well_formed_journal
   ...          the language's own checks, in the order its LIST_CHECK gives them:
                what a definition cannot say, such as an order the
@@ -17,7 +17,7 @@ Every finding is given to report as a tag and a message: <check>_broken for
 each problem, check_passed for each check that found none.
 
 This module is a library. An instruction language's guard program calls
-check() and writes the verdict; see EmplaceBio·Guard.py.
+check() and writes the verdict; see Emplace_Bio·Guard.py.
 """
 
 import os ,pwd

@@ -1,9 +1,9 @@
 #!/usr/bin/env -S python3 -B
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-EmplaceBio·Interpreter - the interpreter of the emplace_bio instruction language.
+Emplace_Bio·Interpreter - the interpreter of the Emplace_Bio instruction language.
 
-Started by the gate Man_In_Grey_gate·emplace_bio, with the gate's real and
+Started by the gate Man_In_Grey__Gate·Emplace_Bio, with the gate's real and
 effective ids, and with the journal on standard input, once the guard has
 passed the journal. It executes the journal's instructions, and writes to
 standard error, as <tag>: <message>, a line for each lasting change it
@@ -15,7 +15,7 @@ the journal declares one, to descriptor 3, which the gate gives it: a CBOR
 map of the result's type name and value. Then it writes one line to
 standard output,
 
-  interpreter emplace_bio journal played
+  interpreter Emplace_Bio journal played
 
 and exits 0. The gate takes the journal as played on that line and that
 status together, and on nothing else.
@@ -23,13 +23,13 @@ status together, and on nothing else.
 It checks again that the journal is well formed before executing it. It
 does not check the constraints; that is the guard's work, and the gate
 starts the interpreter only on the guard's verdict. It imports the guard,
-EmplaceBio·Guard.py, for what execution needs from the constraints at its top.
+Emplace_Bio·Guard.py, for what execution needs from the constraints at its top.
 
 Before it imports anything, it checks that its modules and their directory
 are owned by root or by the effective uid's account, and writable by no
 other account.
 
-Usage: EmplaceBio·Interpreter <command>
+Usage: Emplace_Bio·Interpreter <command>
   help | -h   print this message (also printed when given no arguments)
   execute     execute the journal on standard input
 
@@ -44,7 +44,7 @@ import stat
 from pathlib import Path
 
 HERE_DPATH = Path(__file__).resolve().parent
-MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Interpreter.py" ,"Guard·LibraryConstraint.py" ,"EmplaceBio·Language.py" ,"EmplaceBio·GuardCheck.py" ,"EmplaceBio·LibraryInstruction.py" ,"EmplaceBio·Guard.py" ,"EmplaceBio·Interpreter.py")
+MODULE = ("Language.py" ,"Journal.py" ,"Guard·WellFormed.py" ,"Guard.py" ,"Interpreter.py" ,"Guard·LibraryConstraint.py" ,"Emplace_Bio·Language.py" ,"Emplace_Bio·GuardCheck.py" ,"Emplace_Bio·LibraryInstruction.py" ,"Emplace_Bio·Guard.py" ,"Emplace_Bio·Interpreter.py")
 
 
 def trusted_owner_problem(path):
@@ -73,9 +73,9 @@ try:
   import Journal
   import Guard
   import Interpreter
-  import EmplaceBio·Language as language_module
-  import EmplaceBio·LibraryInstruction as library_instruction
-  import EmplaceBio·Guard as guard_program
+  import Emplace_Bio·Language as language_module
+  import Emplace_Bio·LibraryInstruction as library_instruction
+  import Emplace_Bio·Guard as guard_program
 except ImportError as error:
   say("cannot_start" ,str(error))
   sys.exit(2)
@@ -113,7 +113,7 @@ def execute():
     except OSError as error:
       log("cannot_return_result" ,f"descriptor {RESULT_FD}: {error.strerror}")
       return 2
-  sys.stdout.write("interpreter emplace_bio journal played\n")
+  sys.stdout.write("interpreter Emplace_Bio journal played\n")
   return 0
 
 
@@ -128,7 +128,7 @@ def CLI(argv=None):
   argv = sys.argv[1:] if argv is None else argv
   if not argv or argv[0] in ("help" ,"-h" ,"--help"): return print_help()
   if argv != ["execute"]:
-    say("usage" ,f"unknown command {Journal.clean(repr(' '.join(argv)))}; run EmplaceBio·Interpreter with no arguments for its usage")
+    say("usage" ,f"unknown command {Journal.clean(repr(' '.join(argv)))}; run Emplace_Bio·Interpreter with no arguments for its usage")
     return 2
   return execute()
 

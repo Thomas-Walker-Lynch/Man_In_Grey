@@ -1,14 +1,14 @@
 #!/usr/bin/python3 -I
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-install_gate - install a Man_In_Grey gate, setuid to the account that is to own it.
+install_gate - install a Man-In-Grey gate, setuid to the account that is to own it.
 
-Run by root, by the Man_In_Grey administrator, who installs an application.
-A person without root's rights runs it through Man_In_Grey install, which
+Run by root, by the Man-In-Grey administrator, who installs an application.
+A person without root's rights runs it through Man-In-Grey install, which
 asks su for root's password.
 
 It copies Man_In_Grey/, the directory beside this program, and the one gate
-named from Man_In_Grey_gate/ into a directory of root's, side by side, as
+named from Man_In_Grey__Gate/ into a directory of root's, side by side, as
 the gate's compiled paths expect. Every file and directory it installs is
 owned by root and writable by no other account, except the gate, which is
 given to the owner account and the group, and made setuid and setgid: mode
@@ -32,12 +32,12 @@ the kernel ignores the setuid and setgid bits.
 Usage: install_gate <command> ...
   help | -h      print this message (also printed when given no arguments)
   install <gate> owner <account> [group <group>] into <directory> [constraints <file>]
-                 <gate> is a gate's file name in Man_In_Grey_gate/, such as
-                 Man_In_Grey_gate·emplace_bio; <file> is a Python file holding
+                 <gate> is a gate's file name in Man_In_Grey__Gate/, such as
+                 Man_In_Grey__Gate·Emplace_Bio; <file> is a Python file holding
                  the guard's predicates
 
 Example, run by root from consumer/Man_In_Grey/:
-  ./install_gate install Man_In_Grey_gate·emplace_bio owner http into /usr/local/lib/Man_In_Grey constraints bio_constraint.py
+  ./install_gate install Man_In_Grey__Gate·Emplace_Bio owner http into /usr/local/lib/Man-In-Grey constraints bio_constraint.py
 
 Exit status: 0 when the gate was installed, 1 when the installation was
 refused, 2 when it was given wrong arguments.
@@ -50,9 +50,9 @@ import grp ,pwd ,shutil ,stat ,subprocess
 from pathlib import Path
 
 HERE_DPATH = Path(__file__).resolve().parent          # .../Man_In_Grey
-SOURCE_DPATH = HERE_DPATH.parent                       # holds Man_In_Grey/ and Man_In_Grey_gate/
+SOURCE_DPATH = HERE_DPATH.parent                       # holds Man_In_Grey/ and Man_In_Grey__Gate/
 PROGRAM_DNAME = "Man_In_Grey"
-GATE_DNAME = "Man_In_Grey_gate"
+GATE_DNAME = "Man_In_Grey__Gate"
 
 
 class Refused(Exception):
@@ -146,7 +146,7 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
   setgid. Raises Refused.
   """
   if os.geteuid() != 0:
-    raise Refused("install_gate is run by root; a person without root's rights runs Man_In_Grey install, which asks for root's password")
+    raise Refused("install_gate is run by root; a person without root's rights runs Man-In-Grey install, which asks for root's password")
   if "/" in gate or gate in ("" ,"." ,".."):
     raise Refused(f"{gate!r} is to be the file name of a gate in {SOURCE_DPATH / GATE_DNAME}")
   source_gate = SOURCE_DPATH / GATE_DNAME / gate
@@ -237,7 +237,7 @@ def install(gate ,owner ,directory ,constraints=None ,group=None):
   text ,_ = gate_flag(installed_gate)
   say("its flags, as seen by root:")
   sys.stdout.write(text)
-  say(f"run it as: {program_dpath / 'Man_In_Grey'} orchestrate <composer> gate {installed_gate}")
+  say(f"run it as: {program_dpath / 'Man-In-Grey'} orchestrate <composer> gate {installed_gate}")
   return 0
 
 

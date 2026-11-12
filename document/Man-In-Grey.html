@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>Man_In_Grey</title>
+    <title>Man-In-Grey</title>
     <script>
       {
         let dirpr_library = null;
@@ -24,7 +24,7 @@
     <RT·article>
 
       <RT·title
-        title="Man_In_Grey"
+        title="Man-In-Grey"
         author="Thomas Walker Lynch"
         date="2026-11-10"
         copyright="2026 Reasoning Technology">
@@ -35,19 +35,19 @@
       <RT·section id="sec-purpose">
         <RT·name>Purpose</RT·name>
         <p>
-          The Man_In_Grey tools were created to facilitate the controlled generation and installation of system configuration files, such as the files under <RT·code>/etc</RT·code>. These tools can be used, for example, to complete unprivileged account builds that require system configuration file changes, and to support programs that run from unprivileged accounts but, as a normal part of their operation, require configuration file changes.
+          The Man-In-Grey tools were created to facilitate the controlled generation and installation of system configuration files, such as the files under <RT·code>/etc</RT·code>. These tools can be used, for example, to complete unprivileged account builds that require system configuration file changes, and to support programs that run from unprivileged accounts but, as a normal part of their operation, require configuration file changes.
         </p>
         <p>
-          With the Man_In_Grey approach, an application running with the real and effective uid of account A composes a journal, and that journal is given to a program called the <RT·term>gate</RT·term>. The <RT·term>gate</RT·term> is owned by account B and setuid, so that when invoked it runs with the effective uid of account B. Internally the <RT·term>gate</RT·term> first invokes a program called the <RT·term>guard</RT·term> to approve the journal. If approved the gate invokes another program called the <RT·term>interpreter</RT·term>, which plays the journal.  
+          With the Man-In-Grey approach, an application running with the real and effective uid of account A composes a journal, and that journal is given to a program called the <RT·term>gate</RT·term>. The <RT·term>gate</RT·term> is owned by account B and setuid, so that when invoked it runs with the effective uid of account B. Internally the <RT·term>gate</RT·term> first invokes a program called the <RT·term>guard</RT·term> to approve the journal. If approved the gate invokes another program called the <RT·term>interpreter</RT·term>, which plays the journal.  
         </p>
         <p>
-          An application making use of Man_In_Grey can provide its own composer, guard, and interpreter. Consequently, each application that makes use of Man_In_Grey can have a different instruction language for the journal. Man_In_Grey merely provides the scaffolding.
+          An application making use of Man-In-Grey can provide its own composer, guard, and interpreter. Consequently, each application that makes use of Man-In-Grey can have a different instruction language for the journal. Man-In-Grey merely provides the scaffolding.
         </p>
         <p>
-          This document is both the design of Man_In_Grey and the user manual, as Man_In_Grey is a programmer's tool.
+          This document is both the design of Man-In-Grey and the user manual, as Man-In-Grey is a programmer's tool.
         </p>
         <p>
-           All programs in Man_In_Grey are written with lead-in 'CLI' functions whose only job is to parse arguments and to format return values. Each CLI will call one or more functions to do the actual work. In this manner programs can be included as modules so as to reuse their helper functions, or to gain access to the main work functions.
+           All programs in Man-In-Grey are written with lead-in 'CLI' functions whose only job is to parse arguments and to format return values. Each CLI will call one or more functions to do the actual work. In this manner programs can be included as modules so as to reuse their helper functions, or to gain access to the main work functions.
         </p>
 
       </RT·section>
@@ -56,13 +56,13 @@
         <RT·name>Term</RT·name>
         <RT·dictionary key="Term" definition="Meaning">
           <RT·entry key="application">
-            An <RT·term>application</RT·term>, as referred to in this manual, is any program that uses the Man_In_Grey tool.
+            An <RT·term>application</RT·term>, as referred to in this manual, is any program that uses the Man-In-Grey tool.
           </RT·entry>
           <RT·entry key="composer">
             A Python file defining <RT·code>compose(prov ,journal_iface)</RT·code>, a function the orchestrator calls to declare variables and place instructions into the journal. In this version a journal is made by one composer.
           </RT·entry>
           <RT·entry key="orchestrator">
-            The program <RT·code>Man_In_Grey orchestrate</RT·code>. It is given a composer file, runs the composer, invokes a gate with the journal on its standard input, and prints the result the gate hands back. An application can act as its own orchestrator, placing instructions through the journal interface and invoking the gate itself.
+            The program <RT·code>Man-In-Grey orchestrate</RT·code>. It is given a composer file, runs the composer, invokes a gate with the journal on its standard input, and prints the result the gate hands back. An application can act as its own orchestrator, placing instructions through the journal interface and invoking the gate itself.
           </RT·entry>
           <RT·entry key="journal">
             The variables a composer declares and the instructions it places, in order, encoded as binary data in CBOR. See <a href="#sec-journal"><RT·Counter·read snapshot="sec-journal" key="counter count"></RT·Counter·read></a>.
@@ -86,13 +86,13 @@
             The direction and type of each argument of an instruction, by position. Several operations can share one format.
           </RT·entry>
           <RT·entry key="guard check module">
-            A language's module of the checks its guard makes after the well-formed guard, such as <RT·code>EmplaceBio·GuardCheck.py</RT·code>.
+            A language's module of the checks its guard makes after the well-formed guard, such as <RT·code>Emplace_Bio·GuardCheck.py</RT·code>.
           </RT·entry>
           <RT·entry key="instruction library">
-            A language's module holding <RT·code>LibraryInstruction</RT·code>, the implementation of its instructions, such as <RT·code>EmplaceBio·LibraryInstruction.py</RT·code>.
+            A language's module holding <RT·code>LibraryInstruction</RT·code>, the implementation of its instructions, such as <RT·code>Emplace_Bio·LibraryInstruction.py</RT·code>.
           </RT·entry>
           <RT·entry key="well-formed guard">
-            Man_In_Grey's own check of a journal against the language definition, the first check every guard makes. See <a href="#sec-wellformed"><RT·Counter·read snapshot="sec-wellformed" key="counter count"></RT·Counter·read></a>.
+            Man-In-Grey's own check of a journal against the language definition, the first check every guard makes. See <a href="#sec-wellformed"><RT·Counter·read snapshot="sec-wellformed" key="counter count"></RT·Counter·read></a>.
           </RT·entry>
           <RT·entry key="gate">
             A compiled program that is invoked with a journal on its standard input, runs the guard on it, and when the guard approves the journal, runs the interpreter on it.
@@ -124,16 +124,16 @@
         <RT·section id="sec-band">
           <RT·name>Out-of-band signaling</RT·name>
           <p>
-            Man_In_Grey provides an alternative to templates. In template systems an output file, such as a configuration file, is generated by a blank filling program. With Man_In_Grey the output file is written by interpreting a journal, and the journal is written by a composer.
+            Man-In-Grey provides an alternative to templates. In template systems an output file, such as a configuration file, is generated by a blank filling program. With Man-In-Grey the output file is written by interpreting a journal, and the journal is written by a composer.
           </p>
           <p>
             There are problems with the method of filling in templates, for one it mixes data and control together: the content to be written, and the marks that say where to substitute. Thus templating is a form of <RT·term>in-band signaling</RT·term>. With in-band signaling, a content string can be identical to a control string, so data and control can alias, and there is no tight way to design the aliasing out. The typical workaround is to disallow control strings in the data, and to write each disallowed character as an <RT·term>escape sequence</RT·term>, where the escape is then itself control. Each level of nesting multiplies the escapes: an f-string that explains how to write f-strings escapes its braces has twice the number of escapes as the base f-string, and a document about this f-string escapes them again, to have 4 times the number, etc.
           </p>
           <p>
-            Man_In_Grey signals out of band. A composer is a program, so the logic that forms the output is code, with loops, conditions and lookups, rather than marks embedded in the output. Each instruction in the journal is then length delineated, so a scanner never has to examine content to find structure. A journal could even carry another journal as data, and no escaping would be required.
+            Man-In-Grey signals out of band. A composer is a program, so the logic that forms the output is code, with loops, conditions and lookups, rather than marks embedded in the output. Each instruction in the journal is then length delineated, so a scanner never has to examine content to find structure. A journal could even carry another journal as data, and no escaping would be required.
           </p>
           <p>
-            Note that Man_In_Grey replaces the template, but not the payload. Whatever limitations the payload has, it continues to have. For example if the payload is HTML, HTML requires escapes on a <RT·code>&lt;</RT·code> in its text, Man In Grey has no say about this, rather the HTML interpreter does. However, no additional escapes will be required beyond what the HTML interpreter demands.
+            Note that Man-In-Grey replaces the template, but not the payload. Whatever limitations the payload has, it continues to have. For example if the payload is HTML, HTML requires escapes on a <RT·code>&lt;</RT·code> in its text, Man-In-Grey has no say about this, rather the HTML interpreter does. However, no additional escapes will be required beyond what the HTML interpreter demands.
           </p>
         </RT·section>
 
@@ -149,7 +149,7 @@
             A process inherits both uids from the process that invoked it, unless the program file it runs has its <RT·code>setuid</RT·code> permission bit set. In which case, the kernel then takes the effective uid from the file's owner instead, while the real uid remains inherited as before. A process therefore gets its effective uid in one of two ways: from the process that invoked it, or from the owner of a setuid program file. (Groups work the same way, with a real gid, an effective gid and a <RT·code>setgid</RT·code> bit, beside the supplementary groups, which are inherited unchanged.)
           </p>
           <p>
-            By convention, the gate is the only program of Man_In_Grey that can optionally be given the setuid bit. When the gate is not setuid, it inherits its effective and real uids from the program that invoked it. When it is setuid, it inherits its real uid from the program that invoked it, and it inherits its effective uid from its file owner. Thus, the gate process has reliable information directly from the kernel on who invoked it, as that is its real uid. It also has reliable information directly from the kernel on who owned its executable file, as that becomes its effective uid.
+            By convention, the gate is the only program of Man-In-Grey that can optionally be given the setuid bit. When the gate is not setuid, it inherits its effective and real uids from the program that invoked it. When it is setuid, it inherits its real uid from the program that invoked it, and it inherits its effective uid from its file owner. Thus, the gate process has reliable information directly from the kernel on who invoked it, as that is its real uid. It also has reliable information directly from the kernel on who owned its executable file, as that becomes its effective uid.
           </p>
 
           <p>
@@ -163,7 +163,7 @@
             An instruction language is defined by the application developer and is built into the application. He writes it as data, its language definition, <a href="#sec-definition"><RT·Counter·read snapshot="sec-definition" key="counter count"></RT·Counter·read></a>, and both sides of the account divide read the same definition. On the A side, the composer writes in the language by calling functions on the journal interface, one function per instruction, made from the definition. On the B side, the guard checks the journal first against the definition, then against what a definition cannot say, the constraints among it.
           </p>
           <p>
-            The instruction language is not specific to Man_In_Grey. An application that mounts home directories has a language of mount and unmount; one that manages accounts has a language for making and deleting them. Each gate starts the guard and the interpreter of one instruction language, and they refuse a journal written in another language. These coherency checks are due to the journal carrying the name of its language and the hash of its definition, and due to syntax checking of the constituent instructions passing.
+            The instruction language is not specific to Man-In-Grey. An application that mounts home directories has a language of mount and unmount; one that manages accounts has a language for making and deleting them. Each gate starts the guard and the interpreter of one instruction language, and they refuse a journal written in another language. These coherency checks are due to the journal carrying the name of its language and the hash of its definition, and due to syntax checking of the constituent instructions passing.
           </p>
           <p>
             A language can be made as narrow as its application. The narrower it is, the less a journal can say, and the less the guard has to rule out. The example language, <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>, can name no file at all: what it writes, and where, is partially compiled in, and partially derived from the name of the invoking user account.
@@ -177,13 +177,13 @@
       <RT·section id="sec-data">
         <RT·name>Journal form</RT·name>
         <p>
-          Every journal has the same form, whatever its instruction language: declarations, then the instruction list. The form is Man_In_Grey's own, a generic language; an instruction language is a set of instruction formats written within it, as an instruction set is defined within an assembler's syntax.
+          Every journal has the same form, whatever its instruction language: declarations, then the instruction list. The form is Man-In-Grey's own, a generic language; an instruction language is a set of instruction formats written within it, as an instruction set is defined within an assembler's syntax.
         </p>
 
         <RT·section id="sec-definition">
           <RT·name>Language definition</RT·name>
           <p>
-            A language definition is a map of four sections, written by the application developer as a literal value in a module of its own, such as <RT·code>EmplaceBio·Language.py</RT·code>, beside the module's <RT·code>NAME</RT·code>. It is data, not code. The guard, the interpreter and the journal interface all read the same definition, and the guard's copy is installed with the guard, owned by root, so account A cannot change it.
+            A language definition is a map of four sections, written by the application developer as a literal value in a module of its own, such as <RT·code>Emplace_Bio·Language.py</RT·code>, beside the module's <RT·code>NAME</RT·code>. It is data, not code. The guard, the interpreter and the journal interface all read the same definition, and the guard's copy is installed with the guard, owned by root, so account A cannot change it.
           </p>
           <RT·dictionary key="Section" definition="Meaning">
             <RT·entry key="list_type">
@@ -242,7 +242,7 @@
             <RT·code>open</RT·code> writes the handle of the file it opens to its last argument; <RT·code>write</RT·code> reads and writes its file, as it changes the file; <RT·code>summary</RT·code> writes counts, which a journal can make its result.
           </p>
           <p>
-            A definition has a well-formed check of its own, <RT·code>is_well_formed_language</RT·code>, in <RT·code>Language.py</RT·code>, made when the guard and the interpreter start and when the journal interface is made: every head a known type, every name declared once, every type used declared before, every format named in the operation map declared, and every operation specifier a Python function name not beginning with <RT·code>_</RT·code>. The names <RT·code>declare</RT·code>, <RT·code>result</RT·code>, <RT·code>finish</RT·code> and <RT·code>release</RT·code> are kept by Man_In_Grey and refused as operation specifiers. The definition's hash is the SHA-256 of its canonical CBOR encoding.
+            A definition has a well-formed check of its own, <RT·code>is_well_formed_language</RT·code>, in <RT·code>Language.py</RT·code>, made when the guard and the interpreter start and when the journal interface is made: every head a known type, every name declared once, every type used declared before, every format named in the operation map declared, and every operation specifier a Python function name not beginning with <RT·code>_</RT·code>. The names <RT·code>declare</RT·code>, <RT·code>result</RT·code>, <RT·code>finish</RT·code> and <RT·code>release</RT·code> are kept by Man-In-Grey and refused as operation specifiers. The definition's hash is the SHA-256 of its canonical CBOR encoding.
           </p>
         </RT·section>
 
@@ -256,7 +256,7 @@
               The version of the journal's form, now 4. A guard or interpreter refuses a journal of another version.
             </RT·entry>
             <RT·entry key="instruction_language">
-              The name of the instruction language the journal is written in, such as <RT·code>emplace_bio</RT·code>. A guard and an interpreter refuse a journal in a language other than their own.
+              The name of the instruction language the journal is written in, such as <RT·code>Emplace_Bio</RT·code>. A guard and an interpreter refuse a journal in a language other than their own.
             </RT·entry>
             <RT·entry key="definition_hash">
               The hash of the language definition the journal was composed against. A guard refuses a journal whose hash differs from its own definition's, which tells a person whose copy of the definition is out of date why, in place of a puzzling refusal of some instruction.
@@ -295,7 +295,7 @@
             {"operation": "text", "list_argument": [["literal", "software"], ["literal", ["emphasis"]]]}
           </RT·code>
           <p>
-            Since arguments are given by position, the well-formed guard requires exactly the number an instruction's format takes: a <RT·code>text</RT·code> instruction carrying a third argument is refused, whatever that argument says. A journal of the smoke language, in which one instruction writes a variable that later instructions read, with a byte string written as <RT·code>b"..."</RT·code>, as JSON has none:
+            Since arguments are given by position, the well-formed guard requires exactly the number an instruction's format takes: a <RT·code>text</RT·code> instruction carrying a third argument is refused, whatever that argument says. A journal of the Smoke language, in which one instruction writes a variable that later instructions read, with a byte string written as <RT·code>b"..."</RT·code>, as JSON has none:
           </p>
           <RT·code>
             "list_variable": [["unbound_conf", "file"], ["summary", "summary"]]
@@ -348,7 +348,7 @@
         <RT·section id="sec-result">
           <RT·name>Result</RT·name>
           <p>
-            Man_In_Grey is a function interface: account A gives a journal and can be given a value back. A journal that names a result has the value of that variable handed back when it is played. The interpreter writes the result to its descriptor 3 as a CBOR map, <RT·code>{"type": &lt;type name&gt; ,"value": &lt;value&gt;}</RT·code>, then writes its verdict line. The gate reads descriptor 3 as it reads the interpreter's other output, up to 16 MiB, never examines it, and only once it takes the journal as played forwards it unchanged to its own descriptor 3. A journal that is refused, or whose play fails, gives no result.
+            Man-In-Grey is a function interface: account A gives a journal and can be given a value back. A journal that names a result has the value of that variable handed back when it is played. The interpreter writes the result to its descriptor 3 as a CBOR map, <RT·code>{"type": &lt;type name&gt; ,"value": &lt;value&gt;}</RT·code>, then writes its verdict line. The gate reads descriptor 3 as it reads the interpreter's other output, up to 16 MiB, never examines it, and only once it takes the journal as played forwards it unchanged to its own descriptor 3. A journal that is refused, or whose play fails, gives no result.
           </p>
           <p>
             The invoking program opens descriptor 3 to receive the result. When it leaves descriptor 3 closed, the gate opens <RT·code>/dev/null</RT·code> there, and logs that it discarded the result. Whoever receives a result decodes it and checks it, as the gate cannot: the type name says which of the definition's result types it is.
@@ -362,18 +362,18 @@
         <RT·section id="sec-orchestrator">
           <RT·name>Orchestrator</RT·name>
           <p>
-            The orchestrator is a utility program provided with Man_In_Grey. The orchestrator calls a composer program, then sends the resulting journal to a gate program, and prints the result the gate hands back. Like all processes, when the orchestrator program runs, it has a real and effective uid. When the orchestrator is run from a shell, these are both inherited from the shell, and are typically pointing to the login user. In any case, the composer that it invokes will then run with the same effective and real uids as the orchestrator. When the gate executable file has its setuid bit set, when the gate is invoke by the orchestrator, the gate will inherit its real uid from the orchestrator, and will take its effective uid from the gate's executable file owner.
+            The orchestrator is a utility program provided with Man-In-Grey. The orchestrator calls a composer program, then sends the resulting journal to a gate program, and prints the result the gate hands back. Like all processes, when the orchestrator program runs, it has a real and effective uid. When the orchestrator is run from a shell, these are both inherited from the shell, and are typically pointing to the login user. In any case, the composer that it invokes will then run with the same effective and real uids as the orchestrator. When the gate executable file has its setuid bit set, when the gate is invoke by the orchestrator, the gate will inherit its real uid from the orchestrator, and will take its effective uid from the gate's executable file owner.
           </p>
 
           <p>
             The orchestrator is given a composer file. It runs the file, and calls one function in it, <RT·code>compose(prov ,journal_iface)</RT·code>. The file can define other functions as helpers of it, but the orchestrator calls none of them. Running several composers into one journal would need a way for each to keep variables of its own and to share others, which this version does not have; see <a href="#sec-scope"><RT·Counter·read snapshot="sec-scope" key="counter count"></RT·Counter·read></a>.          </p>
 
           <p>
-            An application making use of Man_In_Grey can bypass the orchestrator and call the composers and gate on its own. When this happens the gate's real ID will be that of the application. For a setuid gate, its effective uid still comes from its file owner. Such an application makes a <RT·code>Journal·Interface.JournalComposed</RT·code> and its <RT·code>Journal·Interface.JournalInterface</RT·code> from the definition, places instructions however it likes, and calls <RT·code>Man_In_Grey.admit(gate ,journal_bytes)</RT·code>, the orchestrator's work function, which invokes the gate with descriptor 3 open and returns the gate's exit status and the result.
+            An application making use of Man-In-Grey can bypass the orchestrator and call the composers and gate on its own. When this happens the gate's real ID will be that of the application. For a setuid gate, its effective uid still comes from its file owner. Such an application makes a <RT·code>Journal·Interface.JournalComposed</RT·code> and its <RT·code>Journal·Interface.JournalInterface</RT·code> from the definition, places instructions however it likes, and calls <RT·code>Man_In_Grey.admit(gate ,journal_bytes)</RT·code>, the orchestrator's work function, which invokes the gate with descriptor 3 open and returns the gate's exit status and the result.
           </p>
 
           <p>
-            It is possible that the application is designed such that the executable file for the gate does not have its setuid bit set; or that it does have its setuid set, but the gate owner is the same as that of the orchestrator or that of the direct calling application. In such a case, the execution thread will keep the same real and effective uids the entire time it runs. In this mode the Man_In_Grey can not achieve anything the application could not have achieved on its own, but it still might be a convenient expression of the desired functionality. For example, as an alternative to template filling without effective uid changes.
+            It is possible that the application is designed such that the executable file for the gate does not have its setuid bit set; or that it does have its setuid set, but the gate owner is the same as that of the orchestrator or that of the direct calling application. In such a case, the execution thread will keep the same real and effective uids the entire time it runs. In this mode the Man-In-Grey can not achieve anything the application could not have achieved on its own, but it still might be a convenient expression of the desired functionality. For example, as an alternative to template filling without effective uid changes.
           </p>
         </RT·section>
 
@@ -383,7 +383,7 @@
             The gate is compiled because Linux ignores the setuid bit on a script started with <RT·code>#!</RT·code>. Given no arguments, the gate prints its usage. Its command <RT·code>flags</RT·code> reports the gate's real and effective uid and gid with their names, whether they differ, the name of the gate's instruction language, and the paths of the guard and the interpreter.
           </p>
           <RT·code>
-            > /usr/local/lib/Man_In_Grey/Man_In_Grey_gate/Man_In_Grey_gate·emplace_bio flags
+            > /usr/local/lib/Man-In-Grey/Man_In_Grey__Gate/Man_In_Grey__Gate·Emplace_Bio flags
             real.uid=2006
             real.user_name=Thomas
             real.gid=2006
@@ -394,9 +394,9 @@
             effective.group_name=http
             uid_differ=1
             gid_differ=1
-            language=emplace_bio
-            guard.path=/usr/local/lib/Man_In_Grey/Man_In_Grey/EmplaceBio·Guard.py
-            interpreter.path=/usr/local/lib/Man_In_Grey/Man_In_Grey/EmplaceBio·Interpreter.py
+            language=Emplace_Bio
+            guard.path=/usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Guard.py
+            interpreter.path=/usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Interpreter.py
           </RT·code>
           <p>
             Here Thomas asks the example language's gate, <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>, installed setuid to the web server's account <RT·code>http</RT·code>: the real ids are his, and the effective ids are <RT·code>http</RT·code>'s.
@@ -429,14 +429,14 @@
           <RT·section>
             <RT·name>One gate per instruction language</RT·name>
             <p>
-              Man_In_Grey's general gate is the library module <RT·code>Gate.lib.c</RT·code>, whose function <RT·code>Man_In_Grey_gate·Gate·run</RT·code> takes the name of the instruction language, the guard's path and the interpreter's path, and the command line. An instruction language's gate is a <RT·code>*.CLI.c</RT·code> of three lines that calls it with the three fixed. The gate of the example language:
+              Man-In-Grey's general gate is the library module <RT·code>Gate.lib.c</RT·code>, whose function <RT·code>Man_In_Grey__Gate·Gate·run</RT·code> takes the name of the instruction language, the guard's path and the interpreter's path, and the command line. An instruction language's gate is a <RT·code>*.CLI.c</RT·code> of three lines that calls it with the three fixed. The gate of the example language:
             </p>
             <RT·code>
               #include "Gate.lib.c"
 
               int main(int argc ,char **argv){
-                return Man_In_Grey_gate·Gate·run("emplace_bio" ,"../Man_In_Grey/EmplaceBio·Guard.py"
-                                                 ,"../Man_In_Grey/EmplaceBio·Interpreter.py" ,argc ,argv);
+                return Man_In_Grey__Gate·Gate·run("Emplace_Bio" ,"../Man_In_Grey/Emplace_Bio·Guard.py"
+                                                 ,"../Man_In_Grey/Emplace_Bio·Interpreter.py" ,argc ,argv);
               }
             </RT·code>
             <p>
@@ -446,13 +446,13 @@
           <RT·section>
             <RT·name>Output rule</RT·name>
             <p>
-              Every line the guard and the interpreter write is copied to the person, marked <RT·code>guard:</RT·code> or <RT·code>interpreter:</RT·code>, and to the system log under the name <RT·code>Man_In_Grey_gate</RT·code>, beside the gate's own lines, marked <RT·code>gate:</RT·code>. The gate logs each journal's course itself, whatever the guard and the interpreter write: <RT·code>received</RT·code>, with account A, account B and the journal's size; <RT·code>isolated</RT·code>, when the gate gives up account A; then <RT·code>approved</RT·code> or <RT·code>refused</RT·code>; then <RT·code>interpreting</RT·code>; then <RT·code>interpreted</RT·code> or <RT·code>failed</RT·code>; and, for a journal with a result, <RT·code>result_forwarded</RT·code>, <RT·code>result_discarded</RT·code> when descriptor 3 was not open, or <RT·code>result_lost</RT·code> when it could not be written. A line breaks the gate's rules when it is not UTF-8, or holds a control character (C0, DEL or C1), or is longer than 4096 bytes, or is one line more than 2000; the gate then stops the program and refuses the journal. Unicode is otherwise welcome. The guard writes any control character it quotes as <RT·code>\u{XXXX}</RT·code>, and the example language's language check refuses any text that holds one.
+              Every line the guard and the interpreter write is copied to the person, marked <RT·code>guard:</RT·code> or <RT·code>interpreter:</RT·code>, and to the system log under the name <RT·code>Man_In_Grey__Gate</RT·code>, beside the gate's own lines, marked <RT·code>gate:</RT·code>. The gate logs each journal's course itself, whatever the guard and the interpreter write: <RT·code>received</RT·code>, with account A, account B and the journal's size; <RT·code>isolated</RT·code>, when the gate gives up account A; then <RT·code>approved</RT·code> or <RT·code>refused</RT·code>; then <RT·code>interpreting</RT·code>; then <RT·code>interpreted</RT·code> or <RT·code>failed</RT·code>; and, for a journal with a result, <RT·code>result_forwarded</RT·code>, <RT·code>result_discarded</RT·code> when descriptor 3 was not open, or <RT·code>result_lost</RT·code> when it could not be written. A line breaks the gate's rules when it is not UTF-8, or holds a control character (C0, DEL or C1), or is longer than 4096 bytes, or is one line more than 2000; the gate then stops the program and refuses the journal. Unicode is otherwise welcome. The guard writes any control character it quotes as <RT·code>\u{XXXX}</RT·code>, and the example language's language check refuses any text that holds one.
             </p>
           </RT·section>
           <RT·section id="sec-transport">
             <RT·name>Transport</RT·name>
             <p>
-              A journal reaches its interpreter by starting the interpreter's gate with the journal on standard input. Since a journal is data, it could travel other ways, such as over a Unix domain socket to an interpreter already running, which would learn account A through <RT·code>SO_PEERCRED</RT·code>. Man_In_Grey does not do this. It is the mechanism a program that receives requests is built with, not such a program itself.
+              A journal reaches its interpreter by starting the interpreter's gate with the journal on standard input. Since a journal is data, it could travel other ways, such as over a Unix domain socket to an interpreter already running, which would learn account A through <RT·code>SO_PEERCRED</RT·code>. Man-In-Grey does not do this. It is the mechanism a program that receives requests is built with, not such a program itself.
             </p>
           </RT·section>
         </RT·section>
@@ -466,15 +466,15 @@
             The kernel tells the gate which account invoked it, as the real uid, and the gate passes it on, so the guard knows it also. The kernel does not say which program invoked the gate. As the guard invocation is compiled into the gate, the guard can know the provenance of the journal from the point it was given to the gate, but not before that.
           </p>
           <p>
-            Two checks are needed by nearly every guard, whatever its instruction language. The first is that the journal is well formed: that it decodes, and agrees with the language definition in every declaration and argument. Man_In_Grey makes this check itself, the well-formed guard, <a href="#sec-wellformed"><RT·Counter·read snapshot="sec-wellformed" key="counter count"></RT·Counter·read></a>, from the definition, so a language writes no code for it. The second is who account A is. The gate had account A's uid from the kernel, as its real uid, and records it for the guard before giving it up, <a href="#sec-isolation-account"><RT·Counter·read snapshot="sec-isolation-account" key="counter count"></RT·Counter·read></a>; the real gid and supplementary groups the gate inherited from the invoking program stay account A's, and the guard reads them from the kernel. Account A cannot misstate any of them. A guard can therefore allow a journal from the accounts it names, or from the members of a group, as its constraints decide.
+            Two checks are needed by nearly every guard, whatever its instruction language. The first is that the journal is well formed: that it decodes, and agrees with the language definition in every declaration and argument. Man-In-Grey makes this check itself, the well-formed guard, <a href="#sec-wellformed"><RT·Counter·read snapshot="sec-wellformed" key="counter count"></RT·Counter·read></a>, from the definition, so a language writes no code for it. The second is who account A is. The gate had account A's uid from the kernel, as its real uid, and records it for the guard before giving it up, <a href="#sec-isolation-account"><RT·Counter·read snapshot="sec-isolation-account" key="counter count"></RT·Counter·read></a>; the real gid and supplementary groups the gate inherited from the invoking program stay account A's, and the guard reads them from the kernel. Account A cannot misstate any of them. A guard can therefore allow a journal from the accounts it names, or from the members of a group, as its constraints decide.
           </p>
           <p>
-            The other checks a guard makes belong to its instruction language: what a definition cannot say, such as an order the instructions are to come in or the values a literal can take, and the constraints. A language gives them as <RT·code>LIST_CHECK</RT·code>, in its guard check module, such as <RT·code>EmplaceBio·GuardCheck.py</RT·code>, a list of named checks in the order they are made, each given the instructions as the well-formed guard has resolved them, its literals' values and, for each variable, the instruction that last wrote it. The example language's four checks are in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>.
+            The other checks a guard makes belong to its instruction language: what a definition cannot say, such as an order the instructions are to come in or the values a literal can take, and the constraints. A language gives them as <RT·code>LIST_CHECK</RT·code>, in its guard check module, such as <RT·code>Emplace_Bio·GuardCheck.py</RT·code>, a list of named checks in the order they are made, each given the instructions as the well-formed guard has resolved them, its literals' values and, for each variable, the instruction that last wrote it. The example language's four checks are in <a href="#sec-example"><RT·Counter·read snapshot="sec-example" key="counter count"></RT·Counter·read></a>.
           </p>
           <RT·section id="sec-constraint">
             <RT·name>Constraint predicate</RT·name>
             <p>
-              A guard's constraints are code. The guard is a Python program, written for one application, so its constraints are Python functions written at the top of the guard itself, where they go with it, and no language for expressing constraints is needed. Each is a <RT·term>constraint predicate</RT·term>, named in the manner of <RT·code>is_allowed_account(user_name)</RT·code> or <RT·code>is_allowed_open(directory ,name ,mode ,owner ,permission)</RT·code>, and the guard refuses a journal when one does not answer <RT·code>True</RT·code>. A predicate can compare with a list, ask whether an account is in a group, or anything else Python can say. The predicates sit between the lines <RT·code># constraints begin</RT·code> and <RT·code># constraints end</RT·code>, so that <RT·code>install_gate</RT·code> can put in an administrator's and keep them when the guard is installed again. As promoted with Man_In_Grey, they refuse every account.
+              A guard's constraints are code. The guard is a Python program, written for one application, so its constraints are Python functions written at the top of the guard itself, where they go with it, and no language for expressing constraints is needed. Each is a <RT·term>constraint predicate</RT·term>, named in the manner of <RT·code>is_allowed_account(user_name)</RT·code> or <RT·code>is_allowed_open(directory ,name ,mode ,owner ,permission)</RT·code>, and the guard refuses a journal when one does not answer <RT·code>True</RT·code>. A predicate can compare with a list, ask whether an account is in a group, or anything else Python can say. The predicates sit between the lines <RT·code># constraints begin</RT·code> and <RT·code># constraints end</RT·code>, so that <RT·code>install_gate</RT·code> can put in an administrator's and keep them when the guard is installed again. As promoted with Man-In-Grey, they refuse every account.
             </p>
             <p>
               Some constraints recur from one guard to the next, and the library module <RT·code>Guard·LibraryConstraint.py</RT·code> holds them, for a guard's predicates to call:
@@ -517,7 +517,7 @@
             The gate logs when a journal is received, approved, and interpreted. The interpreter writes to standard error, as <RT·code>&lt;tag&gt;: &lt;message&gt;</RT·code>, the highlights of what it does, as its developer chooses them. Its standard output is for its verdict alone, as the guard's is: when it has played the whole journal, it writes the result to descriptor 3, when the journal names one, then exactly one line on standard output, <RT·code>interpreter &lt;language&gt; journal played</RT·code>, and exits 0. The gate takes the journal as played on that line and that status together; an interpreter that exits 0 without it, having returned early or not being the program it should be, is logged as failed. Otherwise its exit status is 1 when it stopped partway, and 2 when the journal could not be read or is not well formed.
           </p>
           <p>
-            A language gives the implementation of its instructions as a class, <RT·code>LibraryInstruction</RT·code>, in its instruction library, such as <RT·code>EmplaceBio·LibraryInstruction.py</RT·code>. An instance is made once for each journal, and holds what the instructions build up between them. For each operation specifier in the definition it has a function of that name. The interpreter finds the functions by the names the definition lists, never by a name taken from the journal, so no other function of the class, nor anything the module imports, can be reached from a journal. It gives each function the instruction's arguments by position:
+            A language gives the implementation of its instructions as a class, <RT·code>LibraryInstruction</RT·code>, in its instruction library, such as <RT·code>Emplace_Bio·LibraryInstruction.py</RT·code>. An instance is made once for each journal, and holds what the instructions build up between them. For each operation specifier in the definition it has a function of that name. The interpreter finds the functions by the names the definition lists, never by a name taken from the journal, so no other function of the class, nor anything the module imports, can be reached from a journal. It gives each function the instruction's arguments by position:
           </p>
           <RT·dictionary key="Direction" definition="What the function is given">
             <RT·entry key="in">
@@ -545,7 +545,7 @@
       <RT·section id="sec-isolation">
         <RT·name>Isolation from account A</RT·name>
         <p>
-          The aim is that a journal be played as a transaction: either all of it takes effect, or none of it does, with nothing in between. Man_In_Grey is not there yet, since an interpreter can still fail partway, as <a href="#sec-transaction"><RT·Counter·read snapshot="sec-transaction" key="counter count"></RT·Counter·read></a> discusses. But no interpreter can be transactional while account A can stop it partway, and until this design, account A could: by sending a signal to the gate, the guard or the interpreter, or by having arranged before the gate started for a signal to arrive later. This chapter explains signals, the uid that lets a setuid program give up account A, and what the gate does so that once it has the journal, account A can no longer interrupt it.
+          The aim is that a journal be played as a transaction: either all of it takes effect, or none of it does, with nothing in between. Man-In-Grey is not there yet, since an interpreter can still fail partway, as <a href="#sec-transaction"><RT·Counter·read snapshot="sec-transaction" key="counter count"></RT·Counter·read></a> discusses. But no interpreter can be transactional while account A can stop it partway, and until this design, account A could: by sending a signal to the gate, the guard or the interpreter, or by having arranged before the gate started for a signal to arrive later. This chapter explains signals, the uid that lets a setuid program give up account A, and what the gate does so that once it has the journal, account A can no longer interrupt it.
         </p>
 
         <RT·section id="sec-signal">
@@ -570,7 +570,7 @@
             A process may rearrange its uids among the ones it already holds, without privilege, but it cannot take a uid it does not hold. The call <RT·code>setreuid(real ,effective)</RT·code> may set the real uid to the current real or effective uid, and when it changes the real uid it sets the saved uid to the new effective uid. So a setuid gate may call <RT·code>setreuid(B ,B)</RT·code>, making all three of its uids account B's. It gains nothing by this, since it already acts with account B's rights; it only gives up its connection to account A, and once given up, account A cannot be taken back. Only a process with <RT·code>CAP_SETUID</RT·code>, in practice root, may set a uid it does not hold, which is how <RT·code>login</RT·code> starts a shell under the account a person signed in to.
           </p>
           <p>
-            The saved uid exists so that a setuid program can drop its rights for a while and take them back: it sets its effective uid to its real uid, does some work on the person's behalf, and returns to the saved uid. Man_In_Grey uses the same rules the other way, to drop account A for good.
+            The saved uid exists so that a setuid program can drop its rights for a while and take them back: it sets its effective uid to its real uid, does some work on the person's behalf, and returns to the saved uid. Man-In-Grey uses the same rules the other way, to drop account A for good.
           </p>
         </RT·section>
 
@@ -621,7 +621,7 @@
             The gate therefore settles its signal state first, before anything else, as it settles its descriptors and resource limits: it puts every signal's disposition back to its default, turns off the three interval timers, and clears the blocked mask. Clearing the mask delivers any signal already pending, then and there, while the gate has done nothing. A process that goes past its limit of CPU time or of file size is sent <RT·code>SIGXCPU</RT·code> or <RT·code>SIGXFSZ</RT·code>; the gate raises those limits at its start, and refuses to run when it cannot.
           </p>
           <p>
-            The test <RT·code>tester/authored/emplace_bio</RT·code> starts the gate from a process that leaves each kind behind: a timer set to send <RT·code>SIGALRM</RT·code> fifty milliseconds in, an ignored <RT·code>SIGCHLD</RT·code>, and a blocked, pending <RT·code>SIGTERM</RT·code>. With the gate settling its signals, the first two runs place the page, and the third ends at once, having changed nothing. With the settling step taken out, the timer ends the gate partway, the ignored <RT·code>SIGCHLD</RT·code> makes it refuse, and the pending <RT·code>SIGTERM</RT·code> stays blocked, unnoticed.
+            The test <RT·code>tester/authored/Emplace-Bio</RT·code> starts the gate from a process that leaves each kind behind: a timer set to send <RT·code>SIGALRM</RT·code> fifty milliseconds in, an ignored <RT·code>SIGCHLD</RT·code>, and a blocked, pending <RT·code>SIGTERM</RT·code>. With the gate settling its signals, the first two runs place the page, and the third ends at once, having changed nothing. With the settling step taken out, the timer ends the gate partway, the ignored <RT·code>SIGCHLD</RT·code> makes it refuse, and the pending <RT·code>SIGTERM</RT·code> stays blocked, unnoticed.
           </p>
         </RT·section>
 
@@ -660,39 +660,41 @@
       </RT·section>
 
       <RT·section id="sec-use">
-        <RT·name>Using Man_In_Grey</RT·name>
+        <RT·name>Using Man-In-Grey</RT·name>
 
         <RT·section>
           <RT·name>Building</RT·name>
           <p>
-            Man_In_Grey is a Harmony project with two namespaces: <RT·code>Man_In_Grey.copy</RT·code>, the Python programs, and <RT·code>Man_In_Grey_gate.make</RT·code>, the general gate, the example language's gate, and the gate of the smoke test's language. In the developer role, from its directory <RT·code>developer/</RT·code>, <RT·code>build "*"</RT·code> and <RT·code>promote write</RT·code> place them in the following layout, which is how each part finds the others:
+            Man-In-Grey is a Harmony project with two namespaces: <RT·code>Man_In_Grey.copy</RT·code>, the Python programs, and <RT·code>Man_In_Grey__Gate.make</RT·code>, the general gate, the example language's gate, and the gate of the smoke test's language. In the developer role, from its directory <RT·code>developer/</RT·code>, <RT·code>build "*"</RT·code> and <RT·code>promote write</RT·code> place them in the following layout, which is how each part finds the others:
           </p>
           <RT·code>
-            consumer/Man_In_Grey/Man_In_Grey                        the command a person runs
-            consumer/Man_In_Grey/Man_In_Grey.py                     the orchestrator
-            consumer/Man_In_Grey/install_gate                       installs a gate setuid, run by root
-            consumer/Man_In_Grey/Guard.py                           the general guard
-            consumer/Man_In_Grey/Guard·LibraryConstraint.py         predicates that recur among guards' constraints
-            consumer/Man_In_Grey/Guard·WellFormed.py                the well-formed guard: is_well_formed_journal
-            consumer/Man_In_Grey/Interpreter.py                     the general interpreter
-            consumer/Man_In_Grey/Journal.py                         the journal's data form: decode, print, the result record
-            consumer/Man_In_Grey/Journal·Interface.py               the composer's side: variables and the journal interface
-            consumer/Man_In_Grey/Language.py              the language definition: is_well_formed_language, its hash
-            consumer/Man_In_Grey/EmplaceBio·Guard.py                the example language's guard, with its constraints at its top
-            consumer/Man_In_Grey/EmplaceBio·GuardCheck.py           its checks for the guard
-            consumer/Man_In_Grey/EmplaceBio·Interpreter.py          its interpreter
-            consumer/Man_In_Grey/EmplaceBio·Language.py   its definition
-            consumer/Man_In_Grey/EmplaceBio·LibraryInstruction.py   the implementation of its instructions
-            consumer/Man_In_Grey/Smoke·...                          the same five files for the smoke test's language
-            consumer/Man_In_Grey_gate/Man_In_Grey_gate·emplace_bio  the example language's gate
-            consumer/Man_In_Grey_gate/Man_In_Grey_gate·smoke        the smoke test's gate
-            consumer/Man_In_Grey_gate/libMan_In_Grey.a              the general gate, for other gates
+            consumer/Man_In_Grey/Man-In-Grey                          the command a person runs
+            consumer/Man_In_Grey/Man_In_Grey.py                       the orchestrator
+            consumer/Man_In_Grey/install_gate                         installs a gate setuid, run by root
+            consumer/Man_In_Grey/Guard.py                             the general guard
+            consumer/Man_In_Grey/Guard·LibraryConstraint.py           predicates that recur among guards' constraints
+            consumer/Man_In_Grey/Guard·WellFormed.py                  the well-formed guard: is_well_formed_journal
+            consumer/Man_In_Grey/Interpreter.py                       the general interpreter
+            consumer/Man_In_Grey/Journal.py                           the journal's data form: decode, print, the result record
+            consumer/Man_In_Grey/Journal·Interface.py                 the composer's side: variables and the journal interface
+            consumer/Man_In_Grey/Language.py                          the language definition: is_well_formed_language, its hash
+            consumer/Man_In_Grey/Emplace_Bio·Guard.py                 the example language's guard, with its constraints at its top
+            consumer/Man_In_Grey/Emplace_Bio·GuardCheck.py            its checks for the guard
+            consumer/Man_In_Grey/Emplace_Bio·Interpreter.py           its interpreter
+            consumer/Man_In_Grey/Emplace_Bio·Language.py              its definition
+            consumer/Man_In_Grey/Emplace_Bio·LibraryInstruction.py    the implementation of its instructions
+            consumer/Man_In_Grey/Smoke·...                            the same five files for the smoke test's language
+            consumer/Man_In_Grey__Gate/Man_In_Grey__Gate·Emplace_Bio  the example language's gate
+            consumer/Man_In_Grey__Gate/Man_In_Grey__Gate·Smoke        the smoke test's gate
+            consumer/Man_In_Grey__Gate/Gate.lib.c                     the general gate's interface, for other gates
+            consumer/Man_In_Grey__Gate/Man_In_Grey__Gate.mk           the settings for building a gate on it
+            consumer/Man_In_Grey__Gate/libMan_In_Grey.a               the general gate, for other gates
           </RT·code>
           <p>
-            A module is a namespace, and the names follow from that. A file named for a namespace alone, such as <RT·code>Guard.py</RT·code>, is the namespace's main module; a file specific to it carries the namespace before a middle dot, as <RT·code>Guard·WellFormed.py</RT·code> does, and the middle dot stands for the namespace a language without nested namespaces lacks. An application's language is a namespace too, and its files parallel Man_In_Grey's own inside it: <RT·code>Guard.py</RT·code> is the general guard and <RT·code>EmplaceBio·Guard.py</RT·code> the example language's guard; <RT·code>Interpreter.py</RT·code> and <RT·code>EmplaceBio·Interpreter.py</RT·code> likewise. Within a name the broadest category comes first, so that a listing puts siblings together, and a name for a collection begins with the kind of collection, as <RT·code>LibraryInstruction</RT·code>, a library of instructions, does. A gate belongs to Man_In_Grey's gates, so its name is <RT·code>Man_In_Grey_gate·emplace_bio</RT·code>.
+            A module is a namespace, and the names follow from that. A file named for a namespace alone, such as <RT·code>Guard.py</RT·code>, is the namespace's main module; a file specific to it carries the namespace before a middle dot, as <RT·code>Guard·WellFormed.py</RT·code> does, and the middle dot stands for the namespace a language without nested namespaces lacks. An application's language is a namespace too, and its files parallel Man-In-Grey's own inside it: <RT·code>Guard.py</RT·code> is the general guard and <RT·code>Emplace_Bio·Guard.py</RT·code> the example language's guard; <RT·code>Interpreter.py</RT·code> and <RT·code>Emplace_Bio·Interpreter.py</RT·code> likewise. Within a name the broadest category comes first, so that a listing puts siblings together, and a name for a collection begins with the kind of collection, as <RT·code>LibraryInstruction</RT·code>, a library of instructions, does. A gate belongs to Man-In-Grey's gates, so its name is <RT·code>Man_In_Grey__Gate·Emplace_Bio</RT·code>.
           </p>
           <p>
-            The same layout is staged in <RT·code>developer/scratchpad/made/</RT·code>, so an experiment in the developer role of the Man_In_Grey project runs from there. Both sides need the Python package <RT·code>cbor2</RT·code>, each in its own Python. <RT·code>Man_In_Grey</RT·code>, and any program using the journal interface, runs on the first <RT·code>python3</RT·code> on <RT·code>PATH</RT·code>, which in a Harmony role is the project's linked Python when there is one; install the package into it with <RT·code>python3 -m pip install cbor2</RT·code>. The gate always starts <RT·code>/usr/bin/python3 -E -s</RT·code>, so the guard and the interpreter use neither a person's Python nor a copy installed with <RT·code>pip install --user</RT·code> into <RT·code>~/.local</RT·code>. The system Python needs the package from the distribution, installed by root: <RT·code>python-cbor2</RT·code> on Arch, <RT·code>python3-cbor2</RT·code> on Debian, and on openSUSE, which names packages for the Python they are built for, <RT·code>python313-cbor2</RT·code> for Python 3.13. To see what the interpreter will see: <RT·code>/usr/bin/python3 -E -s -c 'import cbor2; print(cbor2.__file__)'</RT·code>.
+            The same layout is staged in <RT·code>developer/scratchpad/made/</RT·code>, so an experiment in the developer role of the Man-In-Grey project runs from there. Both sides need the Python package <RT·code>cbor2</RT·code>, each in its own Python. <RT·code>Man-In-Grey</RT·code>, and any program using the journal interface, runs on the first <RT·code>python3</RT·code> on <RT·code>PATH</RT·code>, which in a Harmony role is the project's linked Python when there is one; install the package into it with <RT·code>python3 -m pip install cbor2</RT·code>. The gate always starts <RT·code>/usr/bin/python3 -E -s</RT·code>, so the guard and the interpreter use neither a person's Python nor a copy installed with <RT·code>pip install --user</RT·code> into <RT·code>~/.local</RT·code>. The system Python needs the package from the distribution, installed by root: <RT·code>python-cbor2</RT·code> on Arch, <RT·code>python3-cbor2</RT·code> on Debian, and on openSUSE, which names packages for the Python they are built for, <RT·code>python313-cbor2</RT·code> for Python 3.13. To see what the interpreter will see: <RT·code>/usr/bin/python3 -E -s -c 'import cbor2; print(cbor2.__file__)'</RT·code>.
           </p>
         </RT·section>
 
@@ -705,7 +707,7 @@
             A composer runs with the orchestrator's uids, which are normally account A's, and so with account A's rights. If another account could change a composer, that account's code would run with account A's rights, and its instructions would reach the gate in account A's name. The composer, and every directory from <RT·code>/</RT·code> down to it, is therefore to be owned by account A or by root, and writable by no other account.
           </p>
           <p>
-            This ownership protects account A, not account B, and the gate cannot enforce it. The gate is given a journal, never the program that made it, and anything it is told about the composers comes from account A. To the gate and the guard, every journal is account A's, whatever made it. Composer ownership is therefore a convention, kept by whoever installs an application's composers. Man_In_Grey's orchestrator keeps it for its own runs: before running the composer it makes the check, and it refuses a composer that is a symbolic link. An application that acts as its own orchestrator keeps the convention itself. To run a composer someone else wrote, review it and copy it into a directory of your own.
+            This ownership protects account A, not account B, and the gate cannot enforce it. The gate is given a journal, never the program that made it, and anything it is told about the composers comes from account A. To the gate and the guard, every journal is account A's, whatever made it. Composer ownership is therefore a convention, kept by whoever installs an application's composers. Man-In-Grey's orchestrator keeps it for its own runs: before running the composer it makes the check, and it refuses a composer that is a symbolic link. An application that acts as its own orchestrator keeps the convention itself. To run a composer someone else wrote, review it and copy it into a directory of your own.
           </p>
           <RT·code>
             # composer/bio.py
@@ -730,7 +732,7 @@
             </RT·entry>
           </RT·dictionary>
           <p>
-            <RT·code>Man_In_Grey orchestrate &lt;composer&gt;</RT·code> runs the composer. No option given to Man_In_Grey reaches <RT·code>compose</RT·code>; a composer's settings are written in the composer itself. The <RT·code>journal_iface</RT·code> a composer is given is that of the gate's instruction language: the orchestrator asks the gate for its flags, loads the definition named for its <RT·code>language</RT·code>, <RT·code>EmplaceBio·Language.py</RT·code> for <RT·code>emplace_bio</RT·code>, and makes the journal interface from it. It has one function for each operation specifier, given the instruction's arguments in the order of its format, and two more:
+            <RT·code>Man-In-Grey orchestrate &lt;composer&gt;</RT·code> runs the composer. No option given to Man-In-Grey reaches <RT·code>compose</RT·code>; a composer's settings are written in the composer itself. The <RT·code>journal_iface</RT·code> a composer is given is that of the gate's instruction language: the orchestrator asks the gate for its flags, loads the definition named for its <RT·code>language</RT·code>, <RT·code>Emplace_Bio·Language.py</RT·code> for <RT·code>Emplace_Bio</RT·code>, and makes the journal interface from it. It has one function for each operation specifier, given the instruction's arguments in the order of its format, and two more:
           </p>
           <RT·dictionary key="Function" definition="Meaning">
             <RT·entry key="&lt;operation&gt;(&lt;argument&gt; ...)">
@@ -744,7 +746,7 @@
             </RT·entry>
           </RT·dictionary>
           <p>
-            Each call is checked as it is made, by the pass the well-formed guard makes, so a mistake raises <RT·code>JournalError</RT·code> in the composer, naming the instruction and argument, and no journal reaches the gate. A composer of the smoke language, which opens a file, writes it, and makes a summary its result:
+            Each call is checked as it is made, by the pass the well-formed guard makes, so a mistake raises <RT·code>JournalError</RT·code> in the composer, naming the instruction and argument, and no journal reaches the gate. A composer of the Smoke language, which opens a file, writes it, and makes a summary its result:
           </p>
           <RT·code>
             def compose(prov ,journal_iface):
@@ -763,9 +765,9 @@
             A run that changes files is best preceded by two that do not. The first shows the journal while nothing has left the person's account; the second has the guard check the journal, and the gate stop before the interpreter:
           </p>
           <RT·code>
-            Man_In_Grey orchestrate composer/bio.py gate &lt;gate&gt; print compose_only
-            Man_In_Grey orchestrate composer/bio.py gate &lt;gate&gt; check_only
-            Man_In_Grey orchestrate composer/bio.py gate &lt;gate&gt;
+            Man-In-Grey orchestrate composer/bio.py gate &lt;gate&gt; print compose_only
+            Man-In-Grey orchestrate composer/bio.py gate &lt;gate&gt; check_only
+            Man-In-Grey orchestrate composer/bio.py gate &lt;gate&gt;
           </RT·code>
           <RT·dictionary key="Command or option" definition="Meaning">
             <RT·entry key="orchestrate &lt;composer&gt;">
@@ -785,43 +787,43 @@
             </RT·entry>
           </RT·dictionary>
           <p>
-            The command and its path come first, then the gate, and the options follow, as plain words; given no arguments, <RT·code>Man_In_Grey</RT·code> prints its help, and so does the gate. A journal with a result has it printed as one line, <RT·code>result: &lt;type name&gt; &lt;value&gt;</RT·code>. The exit status is 0 when the run did what it was asked; 1 when the guard refused the journal or an instruction failed to execute; and 2 when the run could not start, the composer failed or was refused, or the gate, guard or interpreter could not run or broke the gate's rules. The guard's and interpreter's lines are also in the system log; on a system with journald, <RT·code>journalctl -t Man_In_Grey_gate</RT·code> shows them.
+            The command and its path come first, then the gate, and the options follow, as plain words; given no arguments, <RT·code>Man-In-Grey</RT·code> prints its help, and so does the gate. A journal with a result has it printed as one line, <RT·code>result: &lt;type name&gt; &lt;value&gt;</RT·code>. The exit status is 0 when the run did what it was asked; 1 when the guard refused the journal or an instruction failed to execute; and 2 when the run could not start, the composer failed or was refused, or the gate, guard or interpreter could not run or broke the gate's rules. The guard's and interpreter's lines are also in the system log; on a system with journald, <RT·code>journalctl -t Man-In-Grey_Gate</RT·code> shows them.
           </p>
         </RT·section>
 
         <RT·section id="sec-install">
           <RT·name>Installing a setuid gate</RT·name>
           <p>
-            A setuid gate and everything its guard and interpreter load are to be owned by root or by account B, in directories no other account can write, and the gate, the guard and the interpreter check this on every run. A Harmony <RT·code>consumer/</RT·code> directory is owned by the person who promoted into it, so a setuid gate there refuses to run, and so does root running the gate there. Installing an instruction language's gate, guard and interpreter is therefore a step of its own, done with root's rights by the Man_In_Grey administrator, the person who installs Man_In_Grey and the applications that use it.
+            A setuid gate and everything its guard and interpreter load are to be owned by root or by account B, in directories no other account can write, and the gate, the guard and the interpreter check this on every run. A Harmony <RT·code>consumer/</RT·code> directory is owned by the person who promoted into it, so a setuid gate there refuses to run, and so does root running the gate there. Installing an instruction language's gate, guard and interpreter is therefore a step of its own, done with root's rights by the Man-In-Grey administrator, the person who installs Man-In-Grey and the applications that use it.
           </p>
           <p>
-            The installation is done by <RT·code>install_gate</RT·code>, which is promoted beside <RT·code>Man_In_Grey</RT·code> and is run by root. The administrator runs it through <RT·code>Man_In_Grey</RT·code>:
+            The installation is done by <RT·code>install_gate</RT·code>, which is promoted beside <RT·code>Man-In-Grey</RT·code> and is run by root. The administrator runs it through <RT·code>Man-In-Grey</RT·code>:
           </p>
           <RT·code>
-            consumer/Man_In_Grey/Man_In_Grey install &lt;gate&gt; owner &lt;account&gt; [group &lt;group&gt;] into &lt;directory&gt; [constraints &lt;file&gt;]
+            consumer/Man_In_Grey/Man-In-Grey install &lt;gate&gt; owner &lt;account&gt; [group &lt;group&gt;] into &lt;directory&gt; [constraints &lt;file&gt;]
           </RT·code>
           <p>
-            Run by root, <RT·code>Man_In_Grey install</RT·code> runs <RT·code>install_gate</RT·code> directly. Run by any other account, such as a developer account without <RT·code>sudo</RT·code>, it runs it through <RT·code>su</RT·code>, which asks for root's password; it first makes a constraints file's path absolute, as root's shell starts in another directory. Root can also run <RT·code>install_gate install</RT·code> itself, with the same arguments. Either way the administrator runs, with root's rights, the <RT·code>install_gate</RT·code> and the files of the tree he names, so he is to install only a tree he has reviewed.
+            Run by root, <RT·code>Man-In-Grey install</RT·code> runs <RT·code>install_gate</RT·code> directly. Run by any other account, such as a developer account without <RT·code>sudo</RT·code>, it runs it through <RT·code>su</RT·code>, which asks for root's password; it first makes a constraints file's path absolute, as root's shell starts in another directory. Root can also run <RT·code>install_gate install</RT·code> itself, with the same arguments. Either way the administrator runs, with root's rights, the <RT·code>install_gate</RT·code> and the files of the tree he names, so he is to install only a tree he has reviewed.
           </p>
           <p>
-            It copies <RT·code>Man_In_Grey/</RT·code> and the one gate named from <RT·code>Man_In_Grey_gate/</RT·code> into the directory, side by side, as the gate's compiled paths expect. Every file and directory it installs is owned by root and writable by no other account, except the gate, which it gives to account B, the owner account named, and to a group, and then makes setuid and setgid. The order matters, since changing a file's owner clears its setuid and setgid bits. The gate's mode is <RT·code>6755</RT·code>: the mode <RT·code>755</RT·code> with the setuid bit, <RT·code>4000</RT·code>, and the setgid bit, <RT·code>2000</RT·code>, added. The setgid bit gives the gate the group as its effective gid, and an interpreter makes its files with the effective gid's group: only root can give a file away, so an interpreter whose effective uid is that of an account B other than root makes files that account B owns, in that group. The group is account B's own unless <RT·code>group &lt;group&gt;</RT·code> names another, such as a group the web server reads through. When account B and the group are both root's, the setgid bit changes nothing, and the mode is <RT·code>4755</RT·code>.
+            It copies <RT·code>Man_In_Grey/</RT·code> and the one gate named from <RT·code>Man_In_Grey__Gate/</RT·code> into the directory, side by side, as the gate's compiled paths expect. Every file and directory it installs is owned by root and writable by no other account, except the gate, which it gives to account B, the owner account named, and to a group, and then makes setuid and setgid. The order matters, since changing a file's owner clears its setuid and setgid bits. The gate's mode is <RT·code>6755</RT·code>: the mode <RT·code>755</RT·code> with the setuid bit, <RT·code>4000</RT·code>, and the setgid bit, <RT·code>2000</RT·code>, added. The setgid bit gives the gate the group as its effective gid, and an interpreter makes its files with the effective gid's group: only root can give a file away, so an interpreter whose effective uid is that of an account B other than root makes files that account B owns, in that group. The group is account B's own unless <RT·code>group &lt;group&gt;</RT·code> names another, such as a group the web server reads through. When account B and the group are both root's, the setgid bit changes nothing, and the mode is <RT·code>4755</RT·code>.
           </p>
           <p>
-            With <RT·code>constraints &lt;file&gt;</RT·code>, a Python file of predicates, <RT·code>install_gate</RT·code> puts them between the constraint marks of the gate's guard. Without it, the constraints of a guard already installed are kept, so installing again brings a new guard and keeps the administrator's constraints; a first installation gets the guard's as promoted, which refuse every account. The constraints of every other installed guard are kept too. <RT·code>install_gate</RT·code> refuses a directory that is not absolute, that an account other than root owns or can write, or that is on a file system mounted <RT·code>nosuid</RT·code>, where the kernel ignores the setuid and setgid bits, as it does on removable drives and some separately mounted <RT·code>/home</RT·code> directories. It ends by printing the installed gate's flags, as root sees them: real uid and gid root's, effective uid account B's, effective gid the group's. Promotion replaces files and sets neither the owner nor the setuid bit, so the installation is redone after each promotion that changes the gate, the guard or the interpreter. The installation is a candidate for Man_In_Grey itself, once there is a language for installing programs.
+            With <RT·code>constraints &lt;file&gt;</RT·code>, a Python file of predicates, <RT·code>install_gate</RT·code> puts them between the constraint marks of the gate's guard. Without it, the constraints of a guard already installed are kept, so installing again brings a new guard and keeps the administrator's constraints; a first installation gets the guard's as promoted, which refuse every account. The constraints of every other installed guard are kept too. <RT·code>install_gate</RT·code> refuses a directory that is not absolute, that an account other than root owns or can write, or that is on a file system mounted <RT·code>nosuid</RT·code>, where the kernel ignores the setuid and setgid bits, as it does on removable drives and some separately mounted <RT·code>/home</RT·code> directories. It ends by printing the installed gate's flags, as root sees them: real uid and gid root's, effective uid account B's, effective gid the group's. Promotion replaces files and sets neither the owner nor the setuid bit, so the installation is redone after each promotion that changes the gate, the guard or the interpreter. The installation is a candidate for Man-In-Grey itself, once there is a language for installing programs.
           </p>
         </RT·section>
 
         <RT·section>
           <RT·name>Testing</RT·name>
           <p>
-            The tester's test <RT·code>tester/authored/emplace_bio</RT·code> copies the promoted Man_In_Grey into its scratchpad directory, puts constraints of its own at the top of the copy's guard, and runs the copy through the example language's gate, not setuid, so accounts A and B are the same. The gate checks ownership on every run, so the test makes its copy writable by its owner alone, and every directory from <RT·code>/</RT·code> down to the scratchpad directory is to be writable by no account but its owner too.
+            The tester's test <RT·code>tester/authored/Emplace-Bio</RT·code> copies the promoted Man-In-Grey into its scratchpad directory, puts constraints of its own at the top of the copy's guard, and runs the copy through the example language's gate, not setuid, so accounts A and B are the same. The gate checks ownership on every run, so the test makes its copy writable by its owner alone, and every directory from <RT·code>/</RT·code> down to the scratchpad directory is to be writable by no account but its owner too.
           </p>
           <p>
             It checks thirty-two things. A page with every style and with text that looks like markup is compared with <RT·code>expected/page.html</RT·code>, and its picture with the one given. A later run with a JPEG places it and removes the PNG, and a run with no picture removes the JPEG. A <RT·code>check_only</RT·code> run changes nothing. Seven journals are then made without the journal interface and given to the gate directly, as a program other than the orchestrator could: one whose text instruction carries a file name as a third argument, one with a style the language does not have, one with text before any paragraph, one with an SVG picture, one with more text than its constraints allow, one from an account they do not allow, and one for a page that has been made a symbolic link. Each is refused by the check that is to refuse it, and changes nothing. Last, the gate is started three times from a process that leaves signal state behind, as <a href="#sec-latent-signal"><RT·Counter·read snapshot="sec-latent-signal" key="counter count"></RT·Counter·read></a> describes:
           </p>
           <RT·code>
-            authored/emplace_bio/run test
-            authored/emplace_bio/run clean
+            authored/Emplace-Bio/run test
+            authored/Emplace-Bio/run clean
           </RT·code>
           <p>
             The tester's smoke test, <RT·code>authored/smoke/run test</RT·code>, exercises the gate, the guard and the interpreter through a language of its own that is not for use on a system, the language whose definition <a href="#sec-definition"><RT·Counter·read snapshot="sec-definition" key="counter count"></RT·Counter·read></a> shows. It checks forty-three things: files opened, written in parts and put in place, kept as backups and removed; the result a run hands back on descriptor 3; a file in create mode refused the second time; a journal the constraints refuse in part, refused whole; a literal of the wrong type refused in the composer, and a mode the language does not have refused by the guard; a composer directory, a composer other accounts can write, a resource limit the gate cannot raise, and an interpreter that exits 0 without its verdict line. Seven journals are then given to the gate directly: a file variable read before it is written, a literal given where the format writes, a surplus argument, a variable not declared, a journal composed against another definition, and one of version 3, each refused; and one whose result the gate discards, since the program invoking it left descriptor 3 closed.
@@ -830,9 +832,9 @@
       </RT·section>
 
       <RT·section id="sec-example">
-        <RT·name>Example: emplace_bio</RT·name>
+        <RT·name>Example: Emplace-Bio</RT·name>
         <p>
-          A host publishes a bio page for each of the accounts it allows, at <RT·code>/srv/http/bio/&lt;user_name&gt;.html</RT·code>, with the account's picture beside it. The directory belongs to the web server's account, <RT·code>http</RT·code> on Arch and <RT·code>www-data</RT·code> on Debian, so a person cannot write his page there himself. He writes a composer giving his display name, his text and his picture, and runs Man_In_Grey with the gate <RT·code>Man_In_Grey_gate·emplace_bio</RT·code>, which the administrator has installed setuid to the web server's account. The interpreter then runs with the effective uid of <RT·code>http</RT·code>, and builds the page.
+          A host publishes a bio page for each of the accounts it allows, at <RT·code>/srv/http/bio/&lt;user_name&gt;.html</RT·code>, with the account's picture beside it. The directory belongs to the web server's account, <RT·code>http</RT·code> on Arch and <RT·code>www-data</RT·code> on Debian, so a person cannot write his page there himself. He writes a composer giving his display name, his text and his picture, and runs Man-In-Grey with the gate <RT·code>Man_In_Grey__Gate·Emplace_Bio</RT·code>, which the administrator has installed setuid to the web server's account. The interpreter then runs with the effective uid of <RT·code>http</RT·code>, and builds the page.
         </p>
         <p>
           Here account B is not root, and the gate stands between two ordinary accounts. The example is made so that a reader can see each step is safe: a person can change only his own page, and only to a page made of his text and picture.
@@ -855,7 +857,7 @@
             </RT·entry>
           </RT·dictionary>
           <p>
-            Its definition, in <RT·code>EmplaceBio·Language.py</RT·code>:
+            Its definition, in <RT·code>Emplace_Bio·Language.py</RT·code>:
           </p>
           <RT·code>
             DEFINITION = {
@@ -924,7 +926,7 @@
         <RT·section>
           <RT·name>The constraints</RT·name>
           <p>
-            The administrator writes the guard's constraints in a file, here <RT·code>bio_constraint.py</RT·code>, and <RT·code>install_gate</RT·code> puts them at the top of the installed <RT·code>EmplaceBio·Guard.py</RT·code>:
+            The administrator writes the guard's constraints in a file, here <RT·code>bio_constraint.py</RT·code>, and <RT·code>install_gate</RT·code> puts them at the top of the installed <RT·code>Emplace_Bio·Guard.py</RT·code>:
           </p>
           <RT·code>
             def is_allowed_account(user_name):
@@ -1011,14 +1013,14 @@
             and installs the gate with the constraints above, from his own account, here <RT·code>ubuntu</RT·code>; <RT·code>su</RT·code> asks for root's password:
           </p>
           <RT·code>
-            consumer/Man_In_Grey/Man_In_Grey install Man_In_Grey_gate·emplace_bio owner http into /usr/local/lib/Man_In_Grey constraints bio_constraint.py
+            consumer/Man_In_Grey/Man-In-Grey install Man_In_Grey__Gate·Emplace_Bio owner http into /usr/local/lib/Man-In-Grey constraints bio_constraint.py
           </RT·code>
           <RT·code>
             install_gate is run by root; su asks for root's password
             Password:
-            install_gate: installed /usr/local/lib/Man_In_Grey/Man_In_Grey/
-            install_gate: put the constraints of /home/ubuntu/bio_constraint.py in /usr/local/lib/Man_In_Grey/Man_In_Grey/EmplaceBio·Guard.py
-            install_gate: installed /usr/local/lib/Man_In_Grey/Man_In_Grey_gate/Man_In_Grey_gate·emplace_bio, owner http:http, mode 6755
+            install_gate: installed /usr/local/lib/Man-In-Grey/Man_In_Grey/
+            install_gate: put the constraints of /home/ubuntu/bio_constraint.py in /usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Guard.py
+            install_gate: installed /usr/local/lib/Man-In-Grey/Man_In_Grey__Gate/Man_In_Grey__Gate·Emplace_Bio, owner http:http, mode 6755
             install_gate: its flags, as seen by root:
             real.uid=0
             real.user_name=root
@@ -1030,10 +1032,10 @@
             effective.group_name=http
             uid_differ=1
             gid_differ=1
-            language=emplace_bio
-            guard.path=/usr/local/lib/Man_In_Grey/Man_In_Grey/EmplaceBio·Guard.py
-            interpreter.path=/usr/local/lib/Man_In_Grey/Man_In_Grey/EmplaceBio·Interpreter.py
-            install_gate: run it as: /usr/local/lib/Man_In_Grey/Man_In_Grey/Man_In_Grey orchestrate &lt;composer&gt; gate /usr/local/lib/Man_In_Grey/Man_In_Grey_gate/Man_In_Grey_gate·emplace_bio
+            language=Emplace_Bio
+            guard.path=/usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Guard.py
+            interpreter.path=/usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Interpreter.py
+            install_gate: run it as: /usr/local/lib/Man-In-Grey/Man_In_Grey/Man-In-Grey orchestrate &lt;composer&gt; gate /usr/local/lib/Man-In-Grey/Man_In_Grey__Gate/Man_In_Grey__Gate·Emplace_Bio
           </RT·code>
           <p>
             The web server is to serve <RT·code>/srv/http/bio</RT·code> as static files, with no server-side processing, which is how it serves an <RT·code>.html</RT·code> file unless configured otherwise.
@@ -1043,28 +1045,28 @@
         <RT·section>
           <RT·name>Running</RT·name>
           <p>
-            Thomas runs the installed Man_In_Grey from his bio directory, which holds <RT·code>composer/bio.py</RT·code> and <RT·code>picture.jpg</RT·code>:
+            Thomas runs the installed Man-In-Grey from his bio directory, which holds <RT·code>composer/bio.py</RT·code> and <RT·code>picture.jpg</RT·code>:
           </p>
           <RT·code>
-            /usr/local/lib/Man_In_Grey/Man_In_Grey/Man_In_Grey orchestrate composer/bio.py gate /usr/local/lib/Man_In_Grey/Man_In_Grey_gate/Man_In_Grey_gate·emplace_bio
+            /usr/local/lib/Man-In-Grey/Man_In_Grey/Man-In-Grey orchestrate composer/bio.py gate /usr/local/lib/Man-In-Grey/Man_In_Grey__Gate/Man_In_Grey__Gate·Emplace_Bio
           </RT·code>
           <RT·code>
             gate: received: real uid 2006 (Thomas), effective uid 996 (http), journal of 1857 bytes
             gate: isolated: real uid now 996 (http); account A can no longer signal the gate
-            guard: name: emplace_bio
+            guard: name: Emplace_Bio
             guard: version: 4
-            guard: constraints: /usr/local/lib/Man_In_Grey/Man_In_Grey/EmplaceBio·Guard.py
+            guard: constraints: /usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Guard.py
             guard: journal: 0 variables, 10 instructions
             guard: check_passed: wellformed
             guard: check_passed: language
             guard: check_passed: constraint
             guard: check_passed: content
             guard: check_passed: filesystem
-            gate: approved: guard emplace_bio check passed
-            gate: interpreting: /usr/local/lib/Man_In_Grey/Man_In_Grey/EmplaceBio·Interpreter.py
+            gate: approved: guard Emplace_Bio check passed
+            gate: interpreting: /usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Interpreter.py
             interpreter: emplaced: /srv/http/bio/Thomas.jpg
             interpreter: emplaced: /srv/http/bio/Thomas.html
-            gate: interpreted: interpreter emplace_bio journal played
+            gate: interpreted: interpreter Emplace_Bio journal played
           </RT·code>
           <p>
             An account the constraints do not list is refused before anything is written:
@@ -1072,9 +1074,9 @@
           <RT·code>
             gate: received: real uid 2007 (alice), effective uid 996 (http), journal of 1855 bytes
             gate: isolated: real uid now 996 (http); account A can no longer signal the gate
-            guard: name: emplace_bio
+            guard: name: Emplace_Bio
             guard: version: 4
-            guard: constraints: /usr/local/lib/Man_In_Grey/Man_In_Grey/EmplaceBio·Guard.py
+            guard: constraints: /usr/local/lib/Man-In-Grey/Man_In_Grey/Emplace_Bio·Guard.py
             guard: journal: 0 variables, 10 instructions
             guard: check_passed: wellformed
             guard: check_passed: language
@@ -1111,7 +1113,7 @@
           <RT·entry key="A gate waits for its invoker to take the result">
             The gate writes the result to descriptor 3 after the interpreter has finished, and waits while the invoking program's end of it is full. A program that opens descriptor 3 and never reads it leaves the gate waiting, and once the gate has isolated itself, account A cannot end it; root can. The journal has been played by then, so the wait delays only the gate's exit. A deadline, <a href="#sec-deadline"><RT·Counter·read snapshot="sec-deadline" key="counter count"></RT·Counter·read></a>, would bound it.
           </RT·entry>
-          <RT·entry key="Man_In_Grey cannot tell whether the interpreter did the right thing">
+          <RT·entry key="Man-In-Grey cannot tell whether the interpreter did the right thing">
             The gate learns only how the interpreter ended, and what it wrote. Its verdict line says it reached its end; whether the files it made are what the journal meant is the interpreter's own claim, so the interpreter, like the guard, is installed code the application developer writes, and is to be tested as such.
           </RT·entry>
         </RT·dictionary>
@@ -1121,7 +1123,7 @@
         <RT·name>Road map</RT·name>
         <ol>
           <li>Gates holding only the capabilities their instruction language needs, in place of setuid root.</li>
-          <li>A language for installing programs, so that installing a gate, guard and interpreter is itself done through Man_In_Grey.</li>
+          <li>A language for installing programs, so that installing a gate, guard and interpreter is itself done through Man-In-Grey.</li>
           <li>Transactional play: a journal takes effect wholly or not at all; see <a href="#sec-transaction"><RT·Counter·read snapshot="sec-transaction" key="counter count"></RT·Counter·read></a>.</li>
           <li>Later, interpreters in a compiled language in place of Python.</li>
         </ol>
@@ -1230,9 +1232,9 @@
       <RT·section id="sec-open">
         <RT·name>Open question</RT·name>
         <ul>
-          <li>Whether composers are given settings chosen when Man_In_Grey is run, such as a settings file every composer receives.</li>
+          <li>Whether composers are given settings chosen when Man-In-Grey is run, such as a settings file every composer receives.</li>
           <li>Whether constraints name files only exactly, as now, or also by pattern.</li>
-          <li>Where installed gates live, and how <RT·code>Man_In_Grey</RT·code> is told which gate a journal goes to.</li>
+          <li>Where installed gates live, and how <RT·code>Man-In-Grey</RT·code> is told which gate a journal goes to.</li>
         </ul>
       </RT·section>
 

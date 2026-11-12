@@ -1,6 +1,6 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-Smoke·Language - the language definition of smoke, the tester's smoke test.
+Smoke·Language - the language definition of Smoke, the tester's smoke test.
 
 Data only; see Language.py for its form. A constrained form of the POSIX
 file interface, made to exercise every part of the journal's form: a handle
@@ -18,7 +18,7 @@ an instruction produces, an argument both read and written, and a result.
                        far, which a journal can make its result
 """
 
-NAME = "smoke"
+NAME = "Smoke"
 
 DEFINITION = {
   "list_type": [

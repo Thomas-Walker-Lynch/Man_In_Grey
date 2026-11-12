@@ -1,9 +1,9 @@
 #!/usr/bin/env -S python3 -B
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-Smoke·Guard - the guard of the smoke instruction language.
+Smoke·Guard - the guard of the Smoke instruction language.
 
-Started by the gate Man_In_Grey_gate·smoke, with the gate's real and
+Started by the gate Man_In_Grey__Gate·Smoke, with the gate's real and
 effective ids, and with the journal on standard input. It checks the
 journal: first with the well-formed guard, against the language definition
 in Smoke·Language.py, then with the language's own checks in
@@ -13,7 +13,7 @@ lines are name: and version:.
 
 When every check passes, it writes one line to standard output,
 
-  guard smoke check passed
+  guard Smoke check passed
 
 and exits 0. That line and that status together are the only verdict the
 gate admits a journal on.
@@ -38,7 +38,7 @@ Exit status: 0 when every check passed, 1 when a check refused the journal,
 # written by whoever installs the gate, between the two marks below, and
 # install_gate can put them in from a file and keeps them when it installs
 # the guard again. A predicate allows only by answering True. As promoted
-# with Man_In_Grey, is_allowed_account refuses every account.
+# with Man-In-Grey, is_allowed_account refuses every account.
 #
 # They are called only after the modules below are checked and imported, so
 # they can call Guard·LibraryConstraint, the library of predicates that recur,
@@ -68,7 +68,7 @@ sys.dont_write_bytecode = True
 import stat
 from pathlib import Path
 
-LANGUAGE = "smoke"
+LANGUAGE = "Smoke"
 VERSION = "4"
 
 HERE_DPATH = Path(__file__).resolve().parent

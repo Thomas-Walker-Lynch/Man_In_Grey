@@ -1,12 +1,12 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-EmplaceBio·GuardCheck - the guard's checks of the emplace_bio instruction language: a bio page.
+Emplace_Bio·GuardCheck - the guard's checks of the Emplace_Bio instruction language: a bio page.
 
 A host publishes one bio page for each permitted account, as
 <user_name>.html in a directory its web server serves, with the picture
 beside it as <user_name>.png or <user_name>.jpg. The web server's account
 owns the directory, so a person cannot write there. He gives his page's
-display name, text and picture as instructions, and the emplace_bio gate,
+display name, text and picture as instructions, and the Emplace_Bio gate,
 owned by the web server's account, places the page.
 
 A journal names no file. The file names come from the user name of
@@ -17,7 +17,7 @@ nothing a person gives becomes markup. Decoration travels out of band, as a
 list of styles beside each run of text, and each style becomes one fixed
 tag with no attribute.
 
-The instructions and their types are in EmplaceBio·Language.py. The
+The instructions and their types are in Emplace_Bio·Language.py. The
 journal describes the whole page: a run that gives no picture removes the
 picture an earlier run placed.
 
@@ -29,14 +29,14 @@ LIST_CHECK:
                once, text comes only within a paragraph and no paragraph is
                empty, at most one picture, every style one of STYLE and none
                twice, and no control character in any text
-  constraint   the predicates at the top of the guard, EmplaceBio·Guard.py:
+  constraint   the predicates at the top of the guard, Emplace_Bio·Guard.py:
                is_allowed_account, is_allowed_text_size and
                is_allowed_picture_size, and page_directory(), where the
                pages go
   content      the picture is a PNG or a JPEG
   filesystem   the page directory, and the files the page can occupy
 
-The implementation of the instructions is in EmplaceBio·LibraryInstruction.py.
+The implementation of the instructions is in Emplace_Bio·LibraryInstruction.py.
 """
 
 

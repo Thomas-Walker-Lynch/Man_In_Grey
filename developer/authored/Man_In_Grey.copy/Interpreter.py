@@ -1,6 +1,6 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-Interpreter - the general interpreter of Man_In_Grey.
+Interpreter - the general interpreter of Man-In-Grey.
 
 The interpreter plays a journal the guard has passed. It carries out the
 instructions and does not judge them, with one exception: it makes the
@@ -9,7 +9,7 @@ malformed journal never reaches execution.
 
 A language gives the implementation of its instructions as a class,
 LibraryInstruction, in its instruction library module, such as
-EmplaceBio·LibraryInstruction.py. An instance is made once for each journal, and
+Emplace_Bio·LibraryInstruction.py. An instance is made once for each journal, and
 holds whatever the instructions build up between them. For each operation
 specifier in the definition the class has a function of that name, given the
 instruction's arguments by position:
@@ -32,7 +32,7 @@ specifiers the definition lists, never by a name taken from the journal.
 
 This module is a library. An instruction language's interpreter program
 calls interpret(), writes the result to descriptor 3 and then its verdict;
-see EmplaceBio·Interpreter.py.
+see Emplace_Bio·Interpreter.py.
 """
 
 import copy
